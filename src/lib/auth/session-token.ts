@@ -84,7 +84,7 @@ export function sessionCookieOptions(): {
   domain?: string;
 } {
   const secure = process.env.NODE_ENV === "production";
-  const domain = process.env[AUTH_COOKIE_DOMAIN_ENV];
+  const domain = process.env[AUTH_COOKIE_DOMAIN_ENV]?.replace(/^\./, "");
   return {
     httpOnly: true,
     secure,
