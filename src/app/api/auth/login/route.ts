@@ -41,7 +41,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const role = await resolveRoleFromPassword(password);
+  console.log("[auth/login] env", process.env.SITE_PASSWORD_USER_OVERRIDE, process.env.SITE_PASSWORD_USER_HASH);
+const role = await resolveRoleFromPassword(password);
   if (!role) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
