@@ -1,0 +1,75 @@
+{
+  "description": "Golden 200 — minimal canonical purchase with asIsValue (bridge_purchase, policy-backed loan.amount + deterministic cash lines).",
+  "httpStatus": 200,
+  "request": {
+    "schemaVersion": "deal_analyze.v1",
+    "deal": {
+      "purpose": "purchase",
+      "productType": "bridge_purchase",
+      "purchasePrice": 350000,
+      "termMonths": null
+    },
+    "property": { "asIsValue": 400000 }
+  },
+  "response": {
+    "schemaVersion": "deal_analyze.v1",
+    "analysis": {
+      "status": "incomplete",
+      "flags": [
+        {
+          "code": "POLICY_CONFIG_FALLBACK",
+          "severity": "info",
+          "message": "Published calculator_assumptions and/or rates rule_sets were unavailable or invalid; this response used embedded default policy configuration from the deal engine."
+        },
+        {
+          "code": "PROPERTY_CONTEXT_PARTIAL",
+          "severity": "info",
+          "message": "Only one of ARV or as-is value was provided; v1 stub treats this as partial property context."
+        },
+        {
+          "code": "BORROWER_CONTEXT_INCOMPLETE",
+          "severity": "low",
+          "message": "Borrower FICO was not provided; analysis is marked incomplete for v1 stub rules."
+        }
+      ]
+    },
+    "loan": {
+      "purpose": "purchase",
+      "productType": "bridge_purchase",
+      "termMonths": null,
+      "rehabBudget": 0,
+      "purchasePrice": 350000,
+      "amount": 262500,
+      "acquisitionLoanAmount": 262500,
+      "rehabLoanAmount": 0,
+      "ltcPercent": 75
+    },
+    "pricing": {
+      "status": "indicative",
+      "noteRatePercent": null,
+      "marginBps": null,
+      "discountPoints": null,
+      "lockDays": null
+    },
+    "cashToClose": {
+      "status": "indicative",
+      "estimatedTotal": 98000,
+      "items": [
+        { "label": "Borrower equity", "amount": 87500 },
+        { "label": "Estimated points", "amount": 1750 },
+        { "label": "Estimated lender fees", "amount": 3500 },
+        { "label": "Estimated closing costs", "amount": 5250 },
+        { "label": "Holdback / reserve (if applicable)", "amount": 0 },
+        { "label": "Total estimated cash to close", "amount": 98000 }
+      ]
+    },
+    "risks": [
+      {
+        "code": "MISSING_BORROWER_PRICING_INPUT",
+        "severity": "medium",
+        "title": "Borrower inputs incomplete for pricing",
+        "detail": "FICO was not provided; pricing fields remain non-authoritative until inputs are complete."
+      }
+    ]
+  }
+}

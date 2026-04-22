@@ -1,0 +1,24 @@
+{
+  "description": "Golden 400 — schemaVersion other than deal_analyze.v1 (UNSUPPORTED_SCHEMA_VERSION).",
+  "httpStatus": 400,
+  "request": {
+    "schemaVersion": "deal_analyze.v0",
+    "deal": {
+      "purpose": "purchase",
+      "productType": "X",
+      "purchasePrice": 1,
+      "termMonths": null
+    },
+    "property": { "arv": 2 }
+  },
+  "response": {
+    "error": "schemaVersion must be exactly \"deal_analyze.v1\".",
+    "code": "UNSUPPORTED_SCHEMA_VERSION",
+    "issues": [
+      {
+        "path": "schemaVersion",
+        "message": "Got \"deal_analyze.v0\"."
+      }
+    ]
+  }
+}

@@ -23,7 +23,9 @@ node_modules
 
 # misc
 .DS_Store
+/tmp
 *.pem
+.local-documents
 
 # debug
 npm-debug.log*

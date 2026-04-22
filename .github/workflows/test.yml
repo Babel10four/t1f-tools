@@ -1,0 +1,40 @@
+# CONFIG-001A: Postgres service enables DB-backed rule_sets lifecycle integration tests.
+name: Test
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: t1f_rule_sets_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d t1f_rule_sets_test"
+          --health-interval 4s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      RULE_SETS_INTEGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/t1f_rule_sets_test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install, test, typecheck, build
+        run: |
+          npm ci
+          npm test
+          npx tsc --noEmit
+          npm run build

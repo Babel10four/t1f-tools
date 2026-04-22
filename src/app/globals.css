@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafafa;
+  --foreground: #18181b;
+  /* Workbench / brand (BRAND-001 + Credit Copilot shell) */
+  --brand: #285c2e;
+  --brand-hover: #214a26;
+  --brand-muted: rgba(40, 92, 46, 0.08);
+  --brand-foreground: #ffffff;
+  --bubble-user-bg: #f3f6f3;
+  --text-primary: #18181b;
+  --text-muted: #71717a;
+  --surface-page: #fafafa;
+  --surface-chrome: #ffffff;
+  --border-subtle: #e4e4e7;
 }
 
 @theme inline {
@@ -16,11 +27,17 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --surface-page: #0a0a0a;
+    --surface-chrome: #18181b;
+    --border-subtle: #27272a;
+    --text-primary: #fafafa;
+    --text-muted: #a1a1aa;
+    --bubble-user-bg: rgba(40, 92, 46, 0.18);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
