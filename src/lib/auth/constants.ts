@@ -7,4 +7,8 @@ export const AUTH_SECRET_ENV = "AUTH_SECRET";
 export const SITE_PASSWORD_USER_HASH_ENV = "SITE_PASSWORD_USER_HASH";
 export const SITE_PASSWORD_ADMIN_HASH_ENV = "SITE_PASSWORD_ADMIN_HASH";
 
+/** Optional plaintext; checked before bcrypt (admin first). Escape `$` as `\\$` in `.env`. */
+export const SITE_PASSWORD_USER_OVERRIDE_ENV = "SITE_PASSWORD_USER_OVERRIDE";
+export const SITE_PASSWORD_ADMIN_OVERRIDE_ENV = "SITE_PASSWORD_ADMIN_OVERRIDE";
+
 export type AuthRole = "user" | "admin";
