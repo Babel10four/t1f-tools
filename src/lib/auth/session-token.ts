@@ -1,5 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
-import { AUTH_COOKIE_NAME, AUTH_SECRET_ENV, type AuthRole } from "./constants";
+import {
+  AUTH_COOKIE_DOMAIN_ENV,
+  AUTH_COOKIE_NAME,
+  AUTH_SECRET_ENV,
+  type AuthRole,
+} from "./constants";
 
 const JWT_ALG = "HS256";
 const SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 7; // 7d — keep in sync with cookie maxAge
@@ -76,14 +81,17 @@ export function sessionCookieOptions(): {
   sameSite: "lax";
   path: string;
   maxAge: number;
+  domain?: string;
 } {
   const secure = process.env.NODE_ENV === "production";
+  const domain = process.env[AUTH_COOKIE_DOMAIN_ENV];
   return {
     httpOnly: true,
     secure,
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_MAX_AGE_SEC,
+    ...(domain ? { domain } : {}),
   };
 }
 
@@ -93,6 +101,7 @@ export function clearedSessionCookieOptions(): {
   sameSite: "lax";
   path: string;
   maxAge: number;
+  domain?: string;
 } {
   return {
     ...sessionCookieOptions(),
