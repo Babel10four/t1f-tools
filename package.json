@@ -13,7 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "data:001": "tsx scripts/data-001-initial-policy-load.ts",
     "data:rural-001": "tsx scripts/rural-data-001-initial-rural-rules-load.ts",
-    "data:credit-001": "tsx scripts/credit-data-001-bind-credit-policy.ts"
+    "data:credit-001": "tsx scripts/credit-data-001-bind-credit-policy.ts  "
   },
   "dependencies": {
     "@vercel/blob": "^2.3.3",
