@@ -1,5 +1,8 @@
 /** httpOnly cookie storing signed JWT with `role` + opaque `sid` (ACCESS-001 / ACCESS-001A). */
-export const AUTH_COOKIE_NAME = "t1f_session";
+export const AUTH_COOKIE_NAME = "t1f_session_v2";
+
+/** Optional cookie domain (recommended for custom domains like t1f.tools). */
+export const AUTH_COOKIE_DOMAIN_ENV = "AUTH_COOKIE_DOMAIN";
 
 /** HS256 signing key from env (min length enforced at verify time). */
 export const AUTH_SECRET_ENV = "AUTH_SECRET";
