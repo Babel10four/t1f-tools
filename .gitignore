@@ -40,6 +40,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Generated public docs assets (source of truth: docs/TS Example)
+/public/docs
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

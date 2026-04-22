@@ -4,6 +4,15 @@
 **Last updated:** 2026-04-22  
 **Scope:** **Design only** — architecture, placement, contracts, observability, testing, rollout; **no** deal-engine contract change unless a **versioned** ticket approves it.
 
+**Public URLs (same deployment; attach custom domain `t1f.tools` in Vercel → Domains):**
+
+| What | Path |
+|------|------|
+| Docs hub | `/docs` |
+| This spec (HTML) | `/docs/specs/user-term-sheet-calculator` |
+| This spec (raw Markdown) | `/docs/specs/user-term-sheet-calculator/raw` |
+| TS Example assets (PDF, screenshots) | `/docs/ts-example/<filename>` (URL-encoded names) |
+
 **Non-negotiable references (repo paths):**
 
 | Reference | Path |
