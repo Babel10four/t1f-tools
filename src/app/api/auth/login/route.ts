@@ -23,10 +23,7 @@ const DEFAULT_ADMIN_PATH = "/admin/dashboard";
  */
 export async function POST(request: Request) {
   if (!process.env[AUTH_SECRET_ENV] || process.env[AUTH_SECRET_ENV]!.length < 32) {
-    return NextResponse.json(
-      { error: "Server misconfiguration" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 503 });
   }
 
   let body: LoginBody;
@@ -41,27 +38,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  console.log("[auth/login] env", process.env.SITE_PASSWORD_USER_OVERRIDE, process.env.SITE_PASSWORD_USER_HASH);
-const role = await resolveRoleFromPassword(password);
+  const role = await resolveRoleFromPassword(password);
   if (!role) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  const sid = randomUUID();
-  const token = await signSessionToken(role, sid);
+  const token = await signSessionToken(role, randomUUID());
   if (!token) {
-    return NextResponse.json(
-      { error: "Server misconfiguration" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 503 });
   }
 
   const defaultPath = role === "admin" ? DEFAULT_ADMIN_PATH : DEFAULT_USER_PATH;
 
-  const res = NextResponse.json({
-    ok: true,
-    defaultPath,
-  });
+  const res = NextResponse.json({ ok: true, defaultPath });
   res.cookies.set(authCookieName(), token, sessionCookieOptions());
   return res;
 }
