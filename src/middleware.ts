@@ -12,19 +12,18 @@ function isLoginPath(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const session: any = { role: "user" }; await verifySessionToken(
-    request.cookies.get(authCookieName())?.value,
-  );
+  const cookieName = authCookieName();
+  const token = request.cookies.get(cookieName)?.value;
+  const session = await verifySessionToken(token);
 
   if (isLoginPath(pathname)) {
-    if (session?.role === "admin") {
-      return NextResponse.redirect(new URL(ADMIN_POST_LOGIN, request.url));
-    }
-    if (session?.role === "user") {
-      return NextResponse.redirect(new URL("/tools", request.url));
-    }
+    // prevent loops, logins should only redirect after a valid session
+    if (session?.role === "admin") return NextResponse.redirect(new URL(ADMIN_POST_LOGIN, request.url));
+    if (session?.role === "user") return NextResponse.redirect(new URL("/tools", request.url));
     return NextResponse.next();
   }
+
+  // …rest of file stays the same…
 
   const isApi = pathname.startsWith("/api/");
   if (!session) {
