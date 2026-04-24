@@ -46,13 +46,13 @@ describe("resolveRoleFromPassword", () => {
     expect(await resolveRoleFromPassword("same")).toBe("admin");
   });
 
-  it("uses admin override before user override and bcrypt", async () => {
+  it("uses admin override before user override; skips bcrypt when overrides exist", async () => {
     process.env[SITE_PASSWORD_ADMIN_OVERRIDE_ENV] = "HouseOfCredit!";
     process.env[SITE_PASSWORD_USER_OVERRIDE_ENV] = "Leveraged$Gainz";
     expect(await resolveRoleFromPassword("HouseOfCredit!")).toBe("admin");
     expect(await resolveRoleFromPassword("Leveraged$Gainz")).toBe("user");
-    expect(await resolveRoleFromPassword("admin-secret")).toBe("admin");
-    expect(await resolveRoleFromPassword("user-secret")).toBe("user");
+    expect(await resolveRoleFromPassword("admin-secret")).toBeNull();
+    expect(await resolveRoleFromPassword("user-secret")).toBeNull();
   });
 
   it("checks admin override before user override when both set", async () => {
