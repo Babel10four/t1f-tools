@@ -5,7 +5,10 @@ import {
   groupRisksBySeverity,
   sortAnalysisFlagsForDisplay,
 } from "../loan-structuring-assistant/display-helpers";
-import { formatPricingScalar } from "../pricing-calculator/pricing-display";
+import {
+  formatNoteRatePercentDisplay,
+  formatPricingScalar,
+} from "../pricing-calculator/pricing-display";
 import { TermSheetExportBar } from "./term-sheet-export-bar";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 
@@ -24,6 +27,16 @@ function purposeLabel(p: string): string {
     default:
       return p;
   }
+}
+
+function originationFromPointsDollars(
+  totalLoan: number | undefined,
+  pct: number | undefined,
+): number | undefined {
+  if (totalLoan === undefined || pct === undefined) {
+    return undefined;
+  }
+  return Math.round(totalLoan * (pct / 100) * 100) / 100;
 }
 
 function formatPreparedDate(ymd: string): string {
@@ -179,9 +192,9 @@ export function TermSheetPreview({
           ) : null}
           {loan.originationPointsPercent !== undefined ? (
             <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
-              <dt className="text-zinc-500">Points</dt>
+              <dt className="text-zinc-500">Lender points</dt>
               <dd className="text-right tabular-nums">
-                {loan.originationPointsPercent}%
+                {formatNoteRatePercentDisplay(loan.originationPointsPercent)}
               </dd>
             </div>
           ) : null}
@@ -201,7 +214,7 @@ export function TermSheetPreview({
           </div>
           {loan.originationFlatFee !== undefined ? (
             <div className="flex justify-between gap-4 py-3">
-              <dt className="text-zinc-500">Loan fee</dt>
+              <dt className="text-zinc-500">Lender loan fee</dt>
               <dd className="text-right tabular-nums">
                 {formatMoneyWholeDollars(loan.originationFlatFee)}
               </dd>
@@ -245,6 +258,35 @@ export function TermSheetPreview({
               {formatMoneyWholeDollars(loan.amount)}
             </dd>
           </div>
+          {loan.originationPointsPercent !== undefined &&
+          originationFromPointsDollars(loan.amount, loan.originationPointsPercent) !==
+            undefined ? (
+            <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
+              <dt className="text-zinc-500">
+                Est. origination (points on total loan)
+                <span className="mt-0.5 block font-normal text-zinc-400">
+                  {formatNoteRatePercentDisplay(loan.originationPointsPercent)} of{" "}
+                  {formatMoneyWholeDollars(loan.amount)}
+                </span>
+              </dt>
+              <dd className="text-right tabular-nums font-medium text-zinc-900 dark:text-zinc-100">
+                {formatMoneyWholeDollars(
+                  originationFromPointsDollars(
+                    loan.amount,
+                    loan.originationPointsPercent,
+                  )!,
+                )}
+              </dd>
+            </div>
+          ) : null}
+          {loan.originationFlatFee !== undefined ? (
+            <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
+              <dt className="text-zinc-500">Lender loan fee (charged)</dt>
+              <dd className="text-right tabular-nums font-medium text-zinc-900 dark:text-zinc-100">
+                {formatMoneyWholeDollars(loan.originationFlatFee)}
+              </dd>
+            </div>
+          ) : null}
           <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
             <dt className="text-zinc-500">LTV</dt>
             <dd className="text-right tabular-nums">

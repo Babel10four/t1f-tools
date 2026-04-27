@@ -1,6 +1,7 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
+import { formatNoteRatePercentDisplay } from "../pricing-calculator/pricing-display";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 
 function purposeLabel(p: string): string {
@@ -12,14 +13,6 @@ function purposeLabel(p: string): string {
     default:
       return p;
   }
-}
-
-function fmtRate(p: DealAnalyzeResponseV1["pricing"]): string {
-  const v = p.noteRatePercent;
-  if (v === null || v === undefined) {
-    return "—";
-  }
-  return `${v}%`;
 }
 
 /**
@@ -59,14 +52,20 @@ export function buildTermSheetPlainText(
     lines.push(`ARV: ${formatMoneyWholeDollars(request.property.arv)}`);
   }
   if (loan.originationPointsPercent !== undefined) {
-    lines.push(`Points: ${loan.originationPointsPercent}%`);
+    lines.push(
+      `Lender points: ${formatNoteRatePercentDisplay(loan.originationPointsPercent)}`,
+    );
   }
-  lines.push(`Rate: ${fmtRate(response.pricing)}`);
+  lines.push(
+    `Rate: ${formatNoteRatePercentDisplay(response.pricing.noteRatePercent)}`,
+  );
   lines.push(
     `Term: ${loan.termMonths === null || loan.termMonths === undefined ? "—" : `${loan.termMonths} months`}`,
   );
   if (loan.originationFlatFee !== undefined) {
-    lines.push(`Loan fee: ${formatMoneyWholeDollars(loan.originationFlatFee)}`);
+    lines.push(
+      `Lender loan fee: ${formatMoneyWholeDollars(loan.originationFlatFee)}`,
+    );
   }
   lines.push("");
   lines.push("TERMS OFFERED");

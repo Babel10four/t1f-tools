@@ -1,5 +1,6 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
+import { formatNoteRatePercentDisplay } from "../pricing-calculator/pricing-display";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 import { jsPDF } from "jspdf";
@@ -54,22 +55,6 @@ function purposeLabel(p: string): string {
     default:
       return p;
   }
-}
-
-function fmtRate(p: DealAnalyzeResponseV1["pricing"]): string {
-  const v = p.noteRatePercent;
-  if (v === null || v === undefined) {
-    return "—";
-  }
-  return `${v}%`;
-}
-
-function fmtRatePct(p: DealAnalyzeResponseV1["pricing"]): string {
-  const v = p.noteRatePercent;
-  if (v === null || v === undefined) {
-    return "—";
-  }
-  return `${v.toFixed(2)}%`;
 }
 
 function initialBasis(
@@ -283,11 +268,14 @@ export function downloadTermSheetPdf(
   inputRows.push({ label: "Rehab Advance", value: rehabAdvancePct(loan) });
   if (loan.originationPointsPercent !== undefined) {
     inputRows.push({
-      label: "Points",
-      value: `${loan.originationPointsPercent}%`,
+      label: "Lender points",
+      value: formatNoteRatePercentDisplay(loan.originationPointsPercent),
     });
   }
-  inputRows.push({ label: "Rate", value: fmtRate(pricing) });
+  inputRows.push({
+    label: "Rate",
+    value: formatNoteRatePercentDisplay(pricing.noteRatePercent),
+  });
   inputRows.push({
     label: "Term",
     value:
@@ -297,7 +285,7 @@ export function downloadTermSheetPdf(
   });
   if (loan.originationFlatFee !== undefined) {
     inputRows.push({
-      label: "Loan Fee",
+      label: "Lender loan fee",
       value: formatMoneyWholeDollars(loan.originationFlatFee),
     });
   }
@@ -323,8 +311,8 @@ export function downloadTermSheetPdf(
   const pts = loan.originationPointsPercent;
   const originationLabel =
     pts !== undefined
-      ? `Origination Fee (${pts}% points)`
-      : "Origination Fee";
+      ? `Origination from points (${formatNoteRatePercentDisplay(pts)})`
+      : "Origination from points";
 
   const rateForPayment = pricing.noteRatePercent;
   const termsRows: Row[] = [];
@@ -354,12 +342,13 @@ export function downloadTermSheetPdf(
   }
   if (loan.originationFlatFee !== undefined) {
     termsRows.push({
-      label: "Loan Fee",
+      label: "Lender loan fee",
       value: formatMoneyWholeDollars(loan.originationFlatFee),
     });
   }
-  const beforeLabel = `Monthly Payment (Before Rehab Drawn) @ ${fmtRatePct(pricing)}`;
-  const afterLabel = `Monthly Payment (After Rehab Drawn) @ ${fmtRatePct(pricing)}`;
+  const rateLabel = formatNoteRatePercentDisplay(pricing.noteRatePercent);
+  const beforeLabel = `Monthly Payment (Before Rehab Drawn) @ ${rateLabel}`;
+  const afterLabel = `Monthly Payment (After Rehab Drawn) @ ${rateLabel}`;
   termsRows.push({
     label: beforeLabel,
     value: monthlyInterestOnly(loan.acquisitionLoanAmount, rateForPayment),

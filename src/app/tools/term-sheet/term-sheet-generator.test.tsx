@@ -112,6 +112,26 @@ describe("TermSheetGeneratorClient", () => {
     expect(body).not.toHaveProperty("counterpartyLabel");
   });
 
+  it("posts lender points and loan fee in assumptions when provided", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    const form = screen.getByTestId("ts-form");
+    await user.type(within(form).getByTestId("ts-purchase-price"), "100000");
+    await user.type(within(form).getByTestId("ts-purchase-arv"), "200000");
+    await user.type(within(form).getByTestId("ts-origination-points"), "2");
+    await user.type(within(form).getByTestId("ts-origination-flat-fee"), "1500");
+    await user.click(screen.getByTestId("ts-generate-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("ts-preview")).toBeInTheDocument();
+    });
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.assumptions).toMatchObject({
+      originationPointsPercent: 2,
+      originationFlatFee: 1500,
+      borrowingRehabFunds: true,
+    });
+  });
+
   it("renders 4xx panel with error, code, and issues", async () => {
     vi.stubGlobal(
       "fetch",
@@ -204,6 +224,21 @@ describe("TermSheetPreview display rules", () => {
     render(<TermSheetPreview metadata={meta} response={response} />);
     const noteRow = screen.getByTestId("ts-pricing-note-rate");
     expect(noteRow).toHaveTextContent("—");
+  });
+
+  it("shows note rate without rounding away fractional precision", () => {
+    const response: DealAnalyzeResponseV1 = {
+      ...minimalSuccess,
+      pricing: {
+        status: "complete",
+        noteRatePercent: 9.125,
+        marginBps: null,
+        discountPoints: null,
+        lockDays: null,
+      },
+    };
+    render(<TermSheetPreview metadata={meta} response={response} />);
+    expect(screen.getByTestId("ts-pricing-note-rate")).toHaveTextContent("9.125%");
   });
 
   it("does not sum cash line items when estimatedTotal is null", () => {

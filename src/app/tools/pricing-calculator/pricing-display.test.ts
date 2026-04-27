@@ -25,4 +25,15 @@ describe("pricing-display", () => {
     expect(formatPricingScalar("noteRatePercent", p)).toBe("7.25%");
     expect(formatPricingScalar("marginBps", p)).toBe("150 bps");
   });
+
+  it("formats note rate without rounding away fractional precision", () => {
+    const p: DealAnalyzePricingOutV1 = {
+      status: "complete",
+      noteRatePercent: 9.125,
+      marginBps: null,
+      discountPoints: null,
+      lockDays: null,
+    };
+    expect(formatPricingScalar("noteRatePercent", p)).toBe("9.125%");
+  });
 });

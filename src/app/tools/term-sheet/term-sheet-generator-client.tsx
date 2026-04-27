@@ -322,7 +322,37 @@ export function TermSheetGeneratorClient() {
                 data-testid="ts-note-rate"
                 value={fields.noteRatePercent}
                 onChange={onField("noteRatePercent")}
-                placeholder="e.g. 9.5"
+                placeholder="e.g. 9.125"
+                inputMode="decimal"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                Lender points (%){" "}
+                <span className="font-normal text-zinc-500">(optional)</span>
+              </span>
+              <input
+                name="originationPointsPercent"
+                data-testid="ts-origination-points"
+                value={fields.originationPointsPercent}
+                onChange={onField("originationPointsPercent")}
+                placeholder="e.g. 2"
+                inputMode="decimal"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                Lender / loan fee ($){" "}
+                <span className="font-normal text-zinc-500">(optional)</span>
+              </span>
+              <input
+                name="originationFlatFee"
+                data-testid="ts-origination-flat-fee"
+                value={fields.originationFlatFee}
+                onChange={onField("originationFlatFee")}
+                placeholder="e.g. 1500"
                 inputMode="decimal"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
@@ -431,7 +461,37 @@ export function TermSheetGeneratorClient() {
                 name="noteRatePercent"
                 value={fields.noteRatePercent}
                 onChange={onField("noteRatePercent")}
-                placeholder="e.g. 9.5"
+                placeholder="e.g. 9.125"
+                inputMode="decimal"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                Lender points (%){" "}
+                <span className="font-normal text-zinc-500">(optional)</span>
+              </span>
+              <input
+                name="originationPointsPercent"
+                data-testid="ts-refi-origination-points"
+                value={fields.originationPointsPercent}
+                onChange={onField("originationPointsPercent")}
+                placeholder="e.g. 2"
+                inputMode="decimal"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                Lender / loan fee ($){" "}
+                <span className="font-normal text-zinc-500">(optional)</span>
+              </span>
+              <input
+                name="originationFlatFee"
+                data-testid="ts-refi-origination-flat-fee"
+                value={fields.originationFlatFee}
+                onChange={onField("originationFlatFee")}
+                placeholder="e.g. 1500"
                 inputMode="decimal"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
