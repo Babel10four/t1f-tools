@@ -11,10 +11,21 @@ import {
   toolAudiencesForHref,
 } from "./tool-visibility";
 
+/** User rail + nav: core rep tools; excludes pricing, comparator, rural, disclosure, JSON (launch). */
 const USER_ALLOWED_HREFS = new Set([
   "/tools",
+  "/tools/loan-structuring-assistant",
   "/tools/term-sheet",
+  "/tools/cash-to-close-estimator",
   "/tools/credit-copilot",
+]);
+
+const USER_HIDDEN_HREFS = new Set([
+  "/tools/pricing-calculator",
+  "/tools/pricing-comparator",
+  "/tools/rural-checker",
+  "/tools/disclosure-builder",
+  "/tools/deal-analyzer",
 ]);
 
 describe("tool-visibility (launch restriction)", () => {
@@ -24,7 +35,7 @@ describe("tool-visibility (launch restriction)", () => {
     }
   });
 
-  it("user sees only hub, Deal Sheet Builder, and Credit Copilot in rail + nav", () => {
+  it("user sees hub, deal / sheet / cash / policy in rail + nav; not pricing/compare/rural/discl/json", () => {
     const railHrefs = filterToolRailItems("user").map((i) => i.href);
     expect(new Set(railHrefs)).toEqual(USER_ALLOWED_HREFS);
 
@@ -32,23 +43,29 @@ describe("tool-visibility (launch restriction)", () => {
       filterNavSections("user").flatMap((s) => s.links.map((l) => l.href)),
     );
     expect(navHrefs).toEqual(USER_ALLOWED_HREFS);
+
+    for (const href of USER_HIDDEN_HREFS) {
+      expect(railHrefs).not.toContain(href);
+      expect(navHrefs.has(href)).toBe(false);
+    }
   });
 
-  it("user hub model hides intel and advanced; execution is term sheet only", () => {
+  it("user hub model hides intel and advanced; execution is deal + sheet + cash only", () => {
     const hub = filterHubPageModel("user");
     expect(hub.showIntelSection).toBe(false);
     expect(hub.showAdvancedSection).toBe(false);
     expect(hub.intelPlaceholders).toHaveLength(0);
     expect(hub.advancedTools).toHaveLength(0);
-    expect(hub.executionSequence).toHaveLength(1);
-    expect(hub.executionSequence[0]).toMatchObject({
-      kind: "live",
-      tool: { href: "/tools/term-sheet" },
-    });
+    expect(hub.executionSequence).toHaveLength(3);
+    expect(hub.executionSequence.map((x) => x.tool.href)).toEqual([
+      "/tools/loan-structuring-assistant",
+      "/tools/term-sheet",
+      "/tools/cash-to-close-estimator",
+    ]);
   });
 
-  it("user primary CTA targets Deal Sheet Builder", () => {
-    expect(primaryCtaHrefForRole("user")).toBe("/tools/term-sheet");
+  it("user primary CTA matches hub default (Deal Structuring Copilot)", () => {
+    expect(primaryCtaHrefForRole("user")).toBe("/tools/loan-structuring-assistant");
   });
 
   it("admin rail and nav match full canonical lists (no accidental filtering)", () => {

@@ -18,9 +18,11 @@ import { HUB_PRIMARY_CTA_HREF } from "@/lib/branding";
  */
 export const TOOL_HREF_AUDIENCES: Record<string, readonly ("user" | "admin")[]> = {
   [TOOL_HUB.href]: ["user", "admin"],
-  "/tools/loan-structuring-assistant": ["admin"],
+  /** Rep workflows — visible to standard users. */
+  "/tools/loan-structuring-assistant": ["user", "admin"],
   "/tools/term-sheet": ["user", "admin"],
-  "/tools/cash-to-close-estimator": ["admin"],
+  "/tools/cash-to-close-estimator": ["user", "admin"],
+  /** Launch: hide from user until re-enabled (see product / rail red-box scope). */
   "/tools/pricing-calculator": ["admin"],
   "/tools/pricing-comparator": ["admin"],
   "/tools/rural-checker": ["admin"],
@@ -97,24 +99,18 @@ export function filterNavSections(role: AuthRole): NavSection[] {
   })).filter((section) => section.links.length > 0);
 }
 
-export function primaryCtaHrefForRole(role: AuthRole): string {
-  if (role === "user") {
-    return "/tools/term-sheet";
-  }
+export function primaryCtaHrefForRole(_role: AuthRole): string {
   return HUB_PRIMARY_CTA_HREF;
 }
 
-export function primaryCtaLabelForRole(role: AuthRole): string {
-  if (role === "user") {
-    return LIVE_TOOLS.find((t) => t.href === "/tools/term-sheet")!.label;
-  }
+export function primaryCtaLabelForRole(_role: AuthRole): string {
   return LIVE_TOOLS[0]!.label;
 }
 
-/** Hero paragraph under the hub title — user copy omits JSON harness promise. */
+/** Hero paragraph under the hub title — user copy omits JSON harness and admin-only tools. */
 export function hubHeroDescriptionForRole(role: AuthRole): string {
   if (role === "user") {
-    return "Open Deal Sheet Builder for term-sheet-style previews from deal analysis, or Credit Copilot for grounded Q&A on published credit policy — focused workflows without advanced engineering tools.";
+    return "Use Deal Structuring, Deal Sheet Builder, and Cash to Close for analyze-backed workflows, or Credit Copilot for policy Q&A. Loan pricing, rural screening, disclosure stubs, and the JSON harness stay in the full workbench for elevated access.";
   }
   return "Pick a tool below or use the JSON harness under Advanced / Internal when you need raw requests — not a generic loan portal.";
 }
