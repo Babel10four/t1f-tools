@@ -1,5 +1,4 @@
 import { compare } from "bcryptjs";
-import { timingSafeEqual } from "node:crypto";
 import type { AuthRole } from "./constants";
 import {
   SITE_PASSWORD_ADMIN_HASH_ENV,
@@ -7,19 +6,6 @@ import {
   SITE_PASSWORD_USER_HASH_ENV,
   SITE_PASSWORD_USER_OVERRIDE_ENV,
 } from "./constants";
-
-function timingSafeEqualUtf8(a: string, b: string): boolean {
-  try {
-    const ba = Buffer.from(a, "utf8");
-    const bb = Buffer.from(b, "utf8");
-    if (ba.length !== bb.length) {
-      return false;
-    }
-    return timingSafeEqual(ba, bb);
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Compare plaintext to optional env overrides first, then bcrypt hashes
@@ -39,13 +25,13 @@ export async function resolveRoleFromPassword(
   const anyOverrideConfigured = hasAdminOverride || hasUserOverride;
 
   if (hasAdminOverride) {
-    if (timingSafeEqualUtf8(plaintext, adminOverride)) {
+    if (plaintext === adminOverride) {
       return "admin";
     }
   }
 
   if (hasUserOverride) {
-    if (timingSafeEqualUtf8(plaintext, userOverride)) {
+    if (plaintext === userOverride) {
       return "user";
     }
   }
