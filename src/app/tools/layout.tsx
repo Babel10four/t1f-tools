@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { HUB_BUILT_BY_LINE, HUB_SYSTEM_NAME } from "@/lib/branding";
 import { decideAccess } from "@/lib/auth/access";
 import { getSessionPayload } from "@/lib/auth/session-server";
@@ -34,13 +35,11 @@ export default async function ToolsLayout({
             {HUB_BUILT_BY_LINE}
           </p>
         </div>
-        <Link
-          href="/logout"
-          prefetch={false}
+        <LogoutButton
           className="shrink-0 text-sm font-medium text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline"
         >
           Log out
-        </Link>
+        </LogoutButton>
       </header>
       <ToolsWorkbenchShell>{children}</ToolsWorkbenchShell>
     </div>

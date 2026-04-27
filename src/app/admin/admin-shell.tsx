@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { ToolsNav } from "@/components/tools/tools-nav";
 import { ADMIN_PRIMARY_NAV } from "./admin-nav";
 
@@ -46,13 +47,11 @@ export function AdminShell({ children }: AdminShellProps) {
               >
                 Tool Hub
               </Link>
-              <Link
-                href="/logout"
-                prefetch={false}
+              <LogoutButton
                 className="text-sm font-medium text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
               >
                 Log out
-              </Link>
+              </LogoutButton>
             </div>
           </div>
 
