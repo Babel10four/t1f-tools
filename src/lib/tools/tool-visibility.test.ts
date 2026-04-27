@@ -11,13 +11,21 @@ import {
   toolAudiencesForHref,
 } from "./tool-visibility";
 
-/** User rail + nav: core rep tools; excludes pricing, comparator, rural, disclosure, JSON (launch). */
-const USER_ALLOWED_HREFS = new Set([
+/** User nav (hub + sections): includes Credit Copilot link — not duplicated on rail. */
+const USER_NAV_HREFS = new Set([
   "/tools",
   "/tools/loan-structuring-assistant",
   "/tools/term-sheet",
   "/tools/cash-to-close-estimator",
   "/tools/credit-copilot",
+]);
+
+/** User rail: same as nav minus Credit Copilot (panel is always adjacent). */
+const USER_RAIL_HREFS = new Set([
+  "/tools",
+  "/tools/loan-structuring-assistant",
+  "/tools/term-sheet",
+  "/tools/cash-to-close-estimator",
 ]);
 
 const USER_HIDDEN_HREFS = new Set([
@@ -35,14 +43,15 @@ describe("tool-visibility (launch restriction)", () => {
     }
   });
 
-  it("user sees hub, deal / sheet / cash / policy in rail + nav; not pricing/compare/rural/discl/json", () => {
+  it("user sees hub, deal / sheet / cash on rail (no Policy duplicate); nav adds Credit Copilot; hidden admin tools absent", () => {
     const railHrefs = filterToolRailItems("user").map((i) => i.href);
-    expect(new Set(railHrefs)).toEqual(USER_ALLOWED_HREFS);
+    expect(new Set(railHrefs)).toEqual(USER_RAIL_HREFS);
+    expect(railHrefs).not.toContain("/tools/credit-copilot");
 
     const navHrefs = new Set(
       filterNavSections("user").flatMap((s) => s.links.map((l) => l.href)),
     );
-    expect(navHrefs).toEqual(USER_ALLOWED_HREFS);
+    expect(navHrefs).toEqual(USER_NAV_HREFS);
 
     for (const href of USER_HIDDEN_HREFS) {
       expect(railHrefs).not.toContain(href);
@@ -68,9 +77,11 @@ describe("tool-visibility (launch restriction)", () => {
     expect(primaryCtaHrefForRole("user")).toBe("/tools/loan-structuring-assistant");
   });
 
-  it("admin rail and nav match full canonical lists (no accidental filtering)", () => {
+  it("admin rail omits Credit Copilot shortcut; nav is full canonical list", () => {
     expect(filterToolRailItems("admin").map((i) => i.href)).toEqual(
-      TOOL_RAIL_ITEMS.map((i) => i.href),
+      TOOL_RAIL_ITEMS.filter((i) => i.href !== "/tools/credit-copilot").map(
+        (i) => i.href,
+      ),
     );
     expect(filterNavSections("admin")).toEqual(TOOLS_NAV_SECTIONS);
   });

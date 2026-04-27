@@ -12,6 +12,9 @@ import type { ToolRailItem } from "@/app/tools/tool-rail-config";
 import { TOOL_RAIL_ITEMS } from "@/app/tools/tool-rail-config";
 import { HUB_PRIMARY_CTA_HREF } from "@/lib/branding";
 
+/** Credit Copilot lives in the workbench rail panel — hide duplicate rail shortcut. */
+const RAIL_EXCLUDED_HREFS = new Set<string>(["/tools/credit-copilot"]);
+
 /**
  * Single map: which roles may see each tool href in hub / rail / ToolsNav.
  * Omitted hrefs default to admin-only in {@link toolAudiencesForHref}.
@@ -51,7 +54,10 @@ export function hrefVisibleToRole(href: string, role: AuthRole): boolean {
 }
 
 export function filterToolRailItems(role: AuthRole): ToolRailItem[] {
-  return TOOL_RAIL_ITEMS.filter((item) => hrefVisibleToRole(item.href, role));
+  return TOOL_RAIL_ITEMS.filter(
+    (item) =>
+      hrefVisibleToRole(item.href, role) && !RAIL_EXCLUDED_HREFS.has(item.href),
+  );
 }
 
 export type HubPageModel = {

@@ -329,11 +329,15 @@ export async function runDealAnalyze(
     deal.purpose === "purchase" &&
     deal.purchasePrice !== undefined
   ) {
+    const equityLoan =
+      loan.acquisitionLoanAmount !== undefined
+        ? loan.acquisitionLoanAmount
+        : loan.amount;
     const built = cashToCloseLinesForPurpose(
       "purchase",
       {
         purchasePrice: deal.purchasePrice,
-        loanAmount: loan.amount,
+        loanAmount: equityLoan,
       },
       {
         ctcPointsPct: calc.ctcPointsPct,

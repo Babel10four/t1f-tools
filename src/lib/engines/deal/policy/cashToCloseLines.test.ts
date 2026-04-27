@@ -23,6 +23,17 @@ const REFINANCE_LABELS = [
 ] as const;
 
 describe("cashToCloseLines (TICKET-002 / business-rules)", () => {
+  it("purchase: borrower equity is purchase price minus initial/acquisition loan", () => {
+    const { items } = buildCashToCloseLinesPurchase({
+      purchasePrice: 100_000,
+      loanAmount: 90_000,
+    });
+    expect(items[0]).toMatchObject({
+      label: "Borrower equity",
+      amount: 10_000,
+    });
+  });
+
   it("purchase: exact labels, order, and line 6 equals sum of lines 1–5", () => {
     const { items, estimatedTotal } = buildCashToCloseLinesPurchase({
       purchasePrice: 350_000,

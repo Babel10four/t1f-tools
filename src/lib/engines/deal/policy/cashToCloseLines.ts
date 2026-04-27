@@ -37,6 +37,7 @@ function money(n: number): number {
  */
 export function buildCashToCloseLinesPurchase(params: {
   purchasePrice: number;
+  /** Initial / acquisition loan (not total loan incl. rehab) — borrower equity = purchasePrice − this. */
   loanAmount: number;
   ctcPointsPct?: number;
   ctcLenderFeesPct?: number;
