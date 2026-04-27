@@ -36,6 +36,7 @@ export default async function ToolsLayout({
         </div>
         <Link
           href="/logout"
+          prefetch={false}
           className="shrink-0 text-sm font-medium text-[var(--text-muted)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline"
         >
           Log out

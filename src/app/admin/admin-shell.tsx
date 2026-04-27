@@ -48,6 +48,7 @@ export function AdminShell({ children }: AdminShellProps) {
               </Link>
               <Link
                 href="/logout"
+                prefetch={false}
                 className="text-sm font-medium text-zinc-600 underline-offset-2 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
               >
                 Log out
