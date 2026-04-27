@@ -157,33 +157,8 @@ export function CashToCloseEstimatorClient() {
           Cash to Close Calculator
         </h1>
         <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Cash-first view of{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
-            POST /api/deal/analyze
-          </code>
-          . Not a final settlement statement, HUD-1, or Closing Disclosure — directional
-          internal estimate only. Raw JSON:{" "}
-          <a
-            href="/tools/deal-analyzer"
-            className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-100"
-          >
-            /tools/deal-analyzer
-          </a>
-          . Loan structuring:{" "}
-          <a
-            href="/tools/loan-structuring-assistant"
-            className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-100"
-          >
-            /tools/loan-structuring-assistant
-          </a>
-          . Pricing:{" "}
-          <a
-            href="/tools/pricing-calculator"
-            className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-100"
-          >
-            /tools/pricing-calculator
-          </a>
-          .
+          Estimate cash needed at closing from your deal inputs. For discussion only —
+          not a final settlement statement, HUD-1, or Closing Disclosure.
         </p>
       </header>
 
