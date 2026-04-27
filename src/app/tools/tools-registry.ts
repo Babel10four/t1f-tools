@@ -1,6 +1,9 @@
 /**
  * Single source of truth for /tools hub + shell navigation (TICKET-006, BRAND-001).
  * Keep labels, hrefs, and group membership in sync here only. Routes stay fixed — display names only.
+ *
+ * Role-based **visibility** (user vs admin) is filtered at render time — see
+ * {@link TOOL_HREF_AUDIENCES} in `@/lib/tools/tool-visibility` (do not fork href lists there).
  */
 
 export type LiveToolDef = {

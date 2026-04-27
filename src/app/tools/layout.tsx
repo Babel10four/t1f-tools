@@ -41,7 +41,9 @@ export default async function ToolsLayout({
           Log out
         </LogoutButton>
       </header>
-      <ToolsWorkbenchShell>{children}</ToolsWorkbenchShell>
+      <ToolsWorkbenchShell role={session?.role ?? "user"}>
+        {children}
+      </ToolsWorkbenchShell>
     </div>
   );
 }

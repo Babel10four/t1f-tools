@@ -79,7 +79,7 @@ export function AdminShell({ children }: AdminShellProps) {
               Deal workbench (same as /tools)
             </p>
             <div className="mt-3">
-              <ToolsNav />
+              <ToolsNav role="admin" />
             </div>
           </section>
         </header>

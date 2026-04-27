@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TOOL_RAIL_ITEMS } from "./tool-rail-config";
+import type { AuthRole } from "@/lib/auth/constants";
+import { filterToolRailItems } from "@/lib/tools/tool-visibility";
 import { ToolRailIcon } from "./tool-rail-icons";
 
 function isRailActive(pathname: string, href: string): boolean {
@@ -12,15 +13,20 @@ function isRailActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function ToolRail() {
+type ToolRailProps = {
+  role: AuthRole;
+};
+
+export function ToolRail({ role }: ToolRailProps) {
   const pathname = usePathname();
+  const items = filterToolRailItems(role);
 
   return (
     <nav
       className="flex shrink-0 flex-row gap-1 overflow-x-auto border-b border-[var(--border-subtle)] bg-[var(--surface-chrome)] px-2 py-2 lg:w-[72px] lg:flex-col lg:gap-0.5 lg:overflow-y-auto lg:overflow-x-visible lg:border-b-0 lg:border-r lg:px-1.5 lg:py-3"
       aria-label="Workbench tools"
     >
-      {TOOL_RAIL_ITEMS.map((item) => {
+      {items.map((item) => {
         const active = isRailActive(pathname, item.href);
         return (
           <Link

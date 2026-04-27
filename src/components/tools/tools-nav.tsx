@@ -1,13 +1,22 @@
 import Link from "next/link";
-import { TOOLS_NAV_SECTIONS } from "@/app/tools/tools-registry";
+import type { AuthRole } from "@/lib/auth/constants";
+import type { NavSection } from "@/app/tools/tools-registry";
+import { filterNavSections } from "@/lib/tools/tool-visibility";
+
+type ToolsNavProps = {
+  /** Default `admin` so admin shell shows full catalog without passing props. */
+  role?: AuthRole;
+};
 
 /**
  * Shared hub / workbench navigation (TICKET-006, BRAND-001) — reused by `/tools` and `/admin` shells.
  */
-export function ToolsNav() {
+export function ToolsNav({ role = "admin" }: ToolsNavProps) {
+  const sections = filterNavSections(role);
+
   return (
     <nav className="flex flex-col gap-6" aria-label="Tool navigation">
-      {TOOLS_NAV_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <div key={section.id}>
           <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-500">
             {section.title}
@@ -30,7 +39,7 @@ export function ToolsNav() {
 }
 
 function navLinkClassName(
-  sectionId: (typeof TOOLS_NAV_SECTIONS)[number]["id"],
+  sectionId: NavSection["id"],
   isPlaceholder: boolean,
 ): string {
   if (isPlaceholder) {
