@@ -1,12 +1,14 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
-import { formatMoney } from "../loan-structuring-assistant/display-helpers";
+import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 import { jsPDF } from "jspdf";
 
 const PDF_PAGE_W = 612;
 const PAGE_H = 792;
-const MARGIN = 48;
+/** Slightly tighter than legacy 48pt — widens the two data columns. */
+const MARGIN = 40;
+const COL_GAP = 30;
 const BRAND = { r: 40, g: 92, b: 46 };
 const TEXT_MUTED = { r: 82, g: 82, b: 82 };
 const LINE_GREY = { r: 200, g: 200, b: 200 };
@@ -128,7 +130,7 @@ function monthlyInterestOnly(
     return "—";
   }
   const m = (principal * (noteRatePercent / 100)) / 12;
-  return formatMoney(Math.round(m * 100) / 100);
+  return formatMoneyWholeDollars(Math.round(m * 100) / 100);
 }
 
 function originationFeeDollars(
@@ -138,7 +140,9 @@ function originationFeeDollars(
   if (totalLoan === undefined || pointsPercent === undefined) {
     return "—";
   }
-  return formatMoney(Math.round(totalLoan * (pointsPercent / 100) * 100) / 100);
+  return formatMoneyWholeDollars(
+    Math.round(totalLoan * (pointsPercent / 100) * 100) / 100,
+  );
 }
 
 type Row = { label: string; value: string };
@@ -155,7 +159,7 @@ function drawKvRow(
 ): number {
   const labelMax = colW * 0.48;
   const valueMax = colW * 0.48;
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
   const labelLines = doc.splitTextToSize(label, labelMax);
@@ -163,7 +167,7 @@ function drawKvRow(
   doc.setTextColor(0, 0, 0);
   const valueLines = doc.splitTextToSize(value, valueMax);
   const n = Math.max(labelLines.length, valueLines.length);
-  const lineGap = 10;
+  const lineGap = 13;
   for (let i = 0; i < n; i++) {
     const yy = yTop + i * lineGap;
     if (labelLines[i]) {
@@ -177,7 +181,7 @@ function drawKvRow(
       doc.text(valueLines[i]!, x + colW, yy, { align: "right" });
     }
   }
-  return n * lineGap + 4;
+  return n * lineGap + 10;
 }
 
 /**
@@ -191,10 +195,9 @@ export function downloadTermSheetPdf(
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const loan = response.loan;
   const pricing = response.pricing;
-  const colGap = 28;
-  const colW = (PDF_PAGE_W - MARGIN * 2 - colGap) / 2;
+  const colW = (PDF_PAGE_W - MARGIN * 2 - COL_GAP) / 2;
   const leftX = MARGIN;
-  const rightX = MARGIN + colW + colGap;
+  const rightX = MARGIN + colW + COL_GAP;
   let y = MARGIN;
 
   doc.setDrawColor(0, 0, 0);
@@ -226,11 +229,11 @@ export function downloadTermSheetPdf(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
   doc.text("Term Sheet", MARGIN, y);
-  y += 26;
+  y += 28;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(13);
   doc.text(metadata.propertyLabel.trim() || "—", MARGIN, y);
-  y += 18;
+  y += 20;
   doc.setFontSize(10);
   doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
   doc.text(
@@ -254,23 +257,23 @@ export function downloadTermSheetPdf(
   if (request?.deal.purchasePrice !== undefined) {
     inputRows.push({
       label: "Purchase Price",
-      value: formatMoney(request.deal.purchasePrice),
+      value: formatMoneyWholeDollars(request.deal.purchasePrice),
     });
   }
   if (request?.deal.payoffAmount !== undefined) {
     inputRows.push({
       label: "Payoff Amount",
-      value: formatMoney(request.deal.payoffAmount),
+      value: formatMoneyWholeDollars(request.deal.payoffAmount),
     });
   }
   inputRows.push({
     label: "Rehab Amount",
-    value: formatMoney(request?.deal.rehabBudget ?? loan.rehabBudget),
+    value: formatMoneyWholeDollars(request?.deal.rehabBudget ?? loan.rehabBudget),
   });
   if (request?.property?.arv !== undefined) {
     inputRows.push({
       label: "ARV",
-      value: formatMoney(request.property.arv),
+      value: formatMoneyWholeDollars(request.property.arv),
     });
   }
   inputRows.push({
@@ -295,7 +298,7 @@ export function downloadTermSheetPdf(
   if (loan.originationFlatFee !== undefined) {
     inputRows.push({
       label: "Loan Fee",
-      value: formatMoney(loan.originationFlatFee),
+      value: formatMoneyWholeDollars(loan.originationFlatFee),
     });
   }
 
@@ -328,19 +331,19 @@ export function downloadTermSheetPdf(
   if (loan.acquisitionLoanAmount !== undefined) {
     termsRows.push({
       label: initialLoanLabel,
-      value: formatMoney(loan.acquisitionLoanAmount),
+      value: formatMoneyWholeDollars(loan.acquisitionLoanAmount),
     });
   }
   if (loan.rehabLoanAmount !== undefined) {
     termsRows.push({
       label: "Rehab Loan",
-      value: formatMoney(loan.rehabLoanAmount),
+      value: formatMoneyWholeDollars(loan.rehabLoanAmount),
     });
   }
   if (loan.amount !== undefined) {
     termsRows.push({
       label: totalLoanLabel,
-      value: formatMoney(loan.amount),
+      value: formatMoneyWholeDollars(loan.amount),
     });
   }
   if (pts !== undefined && loan.amount !== undefined) {
@@ -352,7 +355,7 @@ export function downloadTermSheetPdf(
   if (loan.originationFlatFee !== undefined) {
     termsRows.push({
       label: "Loan Fee",
-      value: formatMoney(loan.originationFlatFee),
+      value: formatMoneyWholeDollars(loan.originationFlatFee),
     });
   }
   const beforeLabel = `Monthly Payment (Before Rehab Drawn) @ ${fmtRatePct(pricing)}`;
@@ -383,12 +386,12 @@ export function downloadTermSheetPdf(
 
   const headerY = y;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
   doc.text("Inputs", leftX, headerY);
   doc.text("Terms Offered", rightX, headerY);
   doc.setTextColor(0, 0, 0);
-  let yCursor = headerY + 16;
+  let yCursor = headerY + 22;
 
   const maxRows = Math.max(inputRows.length, termsRows.length);
   for (let i = 0; i < maxRows; i++) {
@@ -405,10 +408,10 @@ export function downloadTermSheetPdf(
       const hr = drawKvRow(doc, rightX, colW, yCursor, r.label, r.value);
       h = Math.max(h, hr);
     }
-    yCursor += h;
+    yCursor += Math.max(h, 24);
   }
 
-  yCursor += 8;
+  yCursor += 12;
   doc.setDrawColor(LINE_GREY.r, LINE_GREY.g, LINE_GREY.b);
   doc.line(MARGIN, yCursor, PDF_PAGE_W - MARGIN, yCursor);
   yCursor += 14;
@@ -417,7 +420,7 @@ export function downloadTermSheetPdf(
   doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
   for (const note of NOTES) {
     doc.text(note, MARGIN, yCursor);
-    yCursor += 12;
+    yCursor += 14;
   }
 
   doc.addPage();

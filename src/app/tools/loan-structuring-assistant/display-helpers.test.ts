@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { AnalysisFlag, DealAnalyzeRiskV1 } from "@/lib/engines/deal/schemas/canonical-response";
-import { groupRisksBySeverity, sortAnalysisFlagsForDisplay } from "./display-helpers";
+import {
+  formatMoneyWholeDollars,
+  groupRisksBySeverity,
+  sortAnalysisFlagsForDisplay,
+} from "./display-helpers";
 
 describe("sortAnalysisFlagsForDisplay", () => {
   it("places binding flags first (LTC then ARV), then preserves other flag order", () => {
@@ -17,6 +21,19 @@ describe("sortAnalysisFlagsForDisplay", () => {
       "OTHER",
       "Z",
     ]);
+  });
+});
+
+describe("formatMoneyWholeDollars", () => {
+  it("rounds to nearest dollar and omits cents", () => {
+    expect(formatMoneyWholeDollars(500_000)).toBe("$500,000");
+    expect(formatMoneyWholeDollars(3281.25)).toBe("$3,281");
+    expect(formatMoneyWholeDollars(3281.6)).toBe("$3,282");
+  });
+
+  it("matches formatMoney null handling", () => {
+    expect(formatMoneyWholeDollars(null)).toBe("—");
+    expect(formatMoneyWholeDollars(undefined)).toBe("—");
   });
 });
 

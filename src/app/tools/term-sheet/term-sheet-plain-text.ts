@@ -1,6 +1,6 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
-import { formatMoney } from "../loan-structuring-assistant/display-helpers";
+import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 
 function purposeLabel(p: string): string {
@@ -47,16 +47,16 @@ export function buildTermSheetPlainText(
     `Tier: ${request?.borrower?.experienceTier?.trim() ? request.borrower.experienceTier : "—"}`,
   );
   if (request?.deal.purchasePrice !== undefined) {
-    lines.push(`Purchase price: ${formatMoney(request.deal.purchasePrice)}`);
+    lines.push(`Purchase price: ${formatMoneyWholeDollars(request.deal.purchasePrice)}`);
   }
   if (request?.deal.payoffAmount !== undefined) {
-    lines.push(`Payoff amount: ${formatMoney(request.deal.payoffAmount)}`);
+    lines.push(`Payoff amount: ${formatMoneyWholeDollars(request.deal.payoffAmount)}`);
   }
   lines.push(
-    `Rehab amount: ${formatMoney(request?.deal.rehabBudget ?? loan.rehabBudget)}`,
+    `Rehab amount: ${formatMoneyWholeDollars(request?.deal.rehabBudget ?? loan.rehabBudget)}`,
   );
   if (request?.property?.arv !== undefined) {
-    lines.push(`ARV: ${formatMoney(request.property.arv)}`);
+    lines.push(`ARV: ${formatMoneyWholeDollars(request.property.arv)}`);
   }
   if (loan.originationPointsPercent !== undefined) {
     lines.push(`Points: ${loan.originationPointsPercent}%`);
@@ -66,17 +66,17 @@ export function buildTermSheetPlainText(
     `Term: ${loan.termMonths === null || loan.termMonths === undefined ? "—" : `${loan.termMonths} months`}`,
   );
   if (loan.originationFlatFee !== undefined) {
-    lines.push(`Loan fee: ${formatMoney(loan.originationFlatFee)}`);
+    lines.push(`Loan fee: ${formatMoneyWholeDollars(loan.originationFlatFee)}`);
   }
   lines.push("");
   lines.push("TERMS OFFERED");
   if (loan.acquisitionLoanAmount !== undefined) {
-    lines.push(`Initial / acquisition loan: ${formatMoney(loan.acquisitionLoanAmount)}`);
+    lines.push(`Initial / acquisition loan: ${formatMoneyWholeDollars(loan.acquisitionLoanAmount)}`);
   }
   if (loan.rehabLoanAmount !== undefined) {
-    lines.push(`Rehab loan: ${formatMoney(loan.rehabLoanAmount)}`);
+    lines.push(`Rehab loan: ${formatMoneyWholeDollars(loan.rehabLoanAmount)}`);
   }
-  lines.push(`Total loan: ${formatMoney(loan.amount)}`);
+  lines.push(`Total loan: ${formatMoneyWholeDollars(loan.amount)}`);
   lines.push(`LTV: ${loan.ltv !== undefined ? `${loan.ltv}%` : "—"}`);
   lines.push(`LTC: ${loan.ltcPercent !== undefined ? `${loan.ltcPercent}%` : "—"}`);
   lines.push("");

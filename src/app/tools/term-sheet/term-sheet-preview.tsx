@@ -1,7 +1,7 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import {
-  formatMoney,
+  formatMoneyWholeDollars,
   groupRisksBySeverity,
   sortAnalysisFlagsForDisplay,
 } from "../loan-structuring-assistant/display-helpers";
@@ -130,68 +130,68 @@ export function TermSheetPreview({
         ) : null}
       </header>
 
-      <section className="border-b border-zinc-200 py-4 dark:border-zinc-800">
+      <section className="border-b border-zinc-200 py-5 dark:border-zinc-800">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-900 dark:text-zinc-50">
           Inputs
         </h3>
-        <dl className="mt-3 space-y-2 text-sm">
-          <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+        <dl className="mt-4 space-y-0 text-[15px] leading-relaxed">
+          <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
             <dt className="text-zinc-500">Transaction type</dt>
             <dd className="text-right font-medium text-zinc-900 dark:text-zinc-100">
               {purposeLabel(loan.purpose)}
             </dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+          <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
             <dt className="text-zinc-500">Tier</dt>
             <dd className="text-right">
               {tier !== undefined && tier !== "" ? tier : "—"}
             </dd>
           </div>
           {request?.deal.purchasePrice !== undefined ? (
-            <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+            <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
               <dt className="text-zinc-500">Purchase price</dt>
               <dd className="text-right tabular-nums">
-                {formatMoney(request.deal.purchasePrice)}
+                {formatMoneyWholeDollars(request.deal.purchasePrice)}
               </dd>
             </div>
           ) : null}
           {request?.deal.payoffAmount !== undefined ? (
-            <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+            <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
               <dt className="text-zinc-500">Payoff amount</dt>
               <dd className="text-right tabular-nums">
-                {formatMoney(request.deal.payoffAmount)}
+                {formatMoneyWholeDollars(request.deal.payoffAmount)}
               </dd>
             </div>
           ) : null}
-          <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+          <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
             <dt className="text-zinc-500">Rehab amount</dt>
             <dd className="text-right tabular-nums">
-              {formatMoney(request?.deal.rehabBudget ?? loan.rehabBudget)}
+              {formatMoneyWholeDollars(request?.deal.rehabBudget ?? loan.rehabBudget)}
             </dd>
           </div>
           {request?.property?.arv !== undefined ? (
-            <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+            <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
               <dt className="text-zinc-500">ARV</dt>
               <dd className="text-right tabular-nums">
-                {formatMoney(request.property.arv)}
+                {formatMoneyWholeDollars(request.property.arv)}
               </dd>
             </div>
           ) : null}
           {loan.originationPointsPercent !== undefined ? (
-            <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+            <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
               <dt className="text-zinc-500">Points</dt>
               <dd className="text-right tabular-nums">
                 {loan.originationPointsPercent}%
               </dd>
             </div>
           ) : null}
-          <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+          <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
             <dt className="text-zinc-500">Rate</dt>
             <dd className="text-right">
               {formatPricingScalar("noteRatePercent", pricing)}
             </dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+          <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
             <dt className="text-zinc-500">Term</dt>
             <dd className="text-right">
               {loan.termMonths === null || loan.termMonths === undefined
@@ -200,38 +200,38 @@ export function TermSheetPreview({
             </dd>
           </div>
           {loan.originationFlatFee !== undefined ? (
-            <div className="flex justify-between gap-4 py-2">
+            <div className="flex justify-between gap-4 py-3">
               <dt className="text-zinc-500">Loan fee</dt>
               <dd className="text-right tabular-nums">
-                {formatMoney(loan.originationFlatFee)}
+                {formatMoneyWholeDollars(loan.originationFlatFee)}
               </dd>
             </div>
           ) : null}
         </dl>
       </section>
 
-      <section className="border-b border-zinc-200 py-4 dark:border-zinc-800">
+      <section className="border-b border-zinc-200 py-5 dark:border-zinc-800">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-900 dark:text-zinc-50">
           Terms offered
         </h3>
-        <dl className="mt-3 space-y-2 text-sm">
+        <dl className="mt-4 space-y-0 text-[15px] leading-relaxed">
           {loan.acquisitionLoanAmount !== undefined ? (
-            <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+            <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
               <dt className="text-zinc-500">Initial / acquisition loan</dt>
               <dd className="text-right tabular-nums font-medium text-zinc-900 dark:text-zinc-100">
-                {formatMoney(loan.acquisitionLoanAmount)}
+                {formatMoneyWholeDollars(loan.acquisitionLoanAmount)}
               </dd>
             </div>
           ) : null}
           {loan.rehabLoanAmount !== undefined ? (
-            <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+            <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
               <dt className="text-zinc-500">Rehab loan</dt>
               <dd className="text-right tabular-nums font-medium text-zinc-900 dark:text-zinc-100">
-                {formatMoney(loan.rehabLoanAmount)}
+                {formatMoneyWholeDollars(loan.rehabLoanAmount)}
               </dd>
             </div>
           ) : null}
-          <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+          <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
             <dt className="text-zinc-500">
               Total loan
               {totalPctArv !== undefined ? (
@@ -242,16 +242,16 @@ export function TermSheetPreview({
               ) : null}
             </dt>
             <dd className="text-right tabular-nums font-semibold text-zinc-900 dark:text-zinc-100">
-              {formatMoney(loan.amount)}
+              {formatMoneyWholeDollars(loan.amount)}
             </dd>
           </div>
-          <div className="flex justify-between gap-4 border-b border-zinc-100 py-2 dark:border-zinc-800/80">
+          <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
             <dt className="text-zinc-500">LTV</dt>
             <dd className="text-right tabular-nums">
               {loan.ltv !== undefined ? `${loan.ltv}%` : "—"}
             </dd>
           </div>
-          <div className="flex justify-between gap-4 py-2">
+          <div className="flex justify-between gap-4 py-3">
             <dt className="text-zinc-500">LTC</dt>
             <dd className="text-right tabular-nums">
               {loan.ltcPercent !== undefined ? `${loan.ltcPercent}%` : "—"}
@@ -293,7 +293,7 @@ export function TermSheetPreview({
           {cash.estimatedTotal === null ? (
             <span>Estimated total: not returned (line items are not summed here).</span>
           ) : (
-            <span>Estimated total: {formatMoney(cash.estimatedTotal)}</span>
+            <span>Estimated total: {formatMoneyWholeDollars(cash.estimatedTotal)}</span>
           )}
         </p>
         {cash.items.length === 0 ? (
@@ -305,7 +305,7 @@ export function TermSheetPreview({
             {cash.items.map((item, i) => (
               <li key={`${item.label}-${i}`} className="flex justify-between gap-4">
                 <span>{item.label}</span>
-                <span className="tabular-nums">{formatMoney(item.amount)}</span>
+                <span className="tabular-nums">{formatMoneyWholeDollars(item.amount)}</span>
               </li>
             ))}
           </ol>

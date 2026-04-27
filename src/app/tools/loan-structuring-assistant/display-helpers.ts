@@ -67,3 +67,16 @@ export function formatMoney(n: number | null | undefined): string {
     maximumFractionDigits: 2,
   }).format(n);
 }
+
+/** USD with no cents — term sheet PDF / export parity. */
+export function formatMoneyWholeDollars(n: number | null | undefined): string {
+  if (n === null || n === undefined) {
+    return "—";
+  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(n));
+}
