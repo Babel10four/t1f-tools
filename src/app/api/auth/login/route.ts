@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   }
 
   const defaultPath = role === "admin" ? DEFAULT_ADMIN_PATH : DEFAULT_USER_PATH;
-  const res = NextResponse.redirect(new URL(defaultPath, request.url));
+  const res = NextResponse.json({ ok: true, defaultPath });
   res.cookies.set(authCookieName(), token, sessionCookieOptions());
   return res;
 }
