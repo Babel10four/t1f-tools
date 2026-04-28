@@ -234,10 +234,8 @@ export function downloadTermSheetPdf(
   doc.setTextColor(0, 0, 0);
   y += 14;
 
-  const tier = request?.borrower?.experienceTier?.trim();
   const inputRows: Row[] = [
     { label: "Transaction Type", value: purposeLabel(loan.purpose) },
-    { label: "Tier", value: tier && tier !== "" ? tier : "—" },
   ];
   if (request?.deal.purchasePrice !== undefined) {
     inputRows.push({
@@ -265,7 +263,7 @@ export function downloadTermSheetPdf(
     label: "Initial Advance",
     value: initialAdvancePct(request, loan),
   });
-  inputRows.push({ label: "Rehab Advance", value: rehabAdvancePct(loan) });
+  inputRows.push({ label: "Rehab Funds", value: rehabAdvancePct(loan) });
   if (loan.originationPointsPercent !== undefined) {
     inputRows.push({
       label: "Lender points",

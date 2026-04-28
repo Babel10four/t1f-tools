@@ -14,7 +14,6 @@ import {
 /** User nav (hub + sections): includes Credit Copilot link — not duplicated on rail. */
 const USER_NAV_HREFS = new Set([
   "/tools",
-  "/tools/loan-structuring-assistant",
   "/tools/term-sheet",
   "/tools/cash-to-close-estimator",
   "/tools/credit-copilot",
@@ -23,12 +22,12 @@ const USER_NAV_HREFS = new Set([
 /** User rail: same as nav minus Credit Copilot (panel is always adjacent). */
 const USER_RAIL_HREFS = new Set([
   "/tools",
-  "/tools/loan-structuring-assistant",
   "/tools/term-sheet",
   "/tools/cash-to-close-estimator",
 ]);
 
 const USER_HIDDEN_HREFS = new Set([
+  "/tools/loan-structuring-assistant",
   "/tools/pricing-calculator",
   "/tools/pricing-comparator",
   "/tools/rural-checker",
@@ -43,7 +42,7 @@ describe("tool-visibility (launch restriction)", () => {
     }
   });
 
-  it("user sees hub, deal / sheet / cash on rail (no Policy duplicate); nav adds Credit Copilot; hidden admin tools absent", () => {
+  it("user sees hub, sheet / cash on rail (no Policy duplicate); nav adds Credit Copilot; hidden admin tools absent", () => {
     const railHrefs = filterToolRailItems("user").map((i) => i.href);
     expect(new Set(railHrefs)).toEqual(USER_RAIL_HREFS);
     expect(railHrefs).not.toContain("/tools/credit-copilot");
@@ -59,22 +58,21 @@ describe("tool-visibility (launch restriction)", () => {
     }
   });
 
-  it("user hub model hides intel and advanced; execution is deal + sheet + cash only", () => {
+  it("user hub model hides intel and advanced; execution is sheet + cash only", () => {
     const hub = filterHubPageModel("user");
     expect(hub.showIntelSection).toBe(false);
     expect(hub.showAdvancedSection).toBe(false);
     expect(hub.intelPlaceholders).toHaveLength(0);
     expect(hub.advancedTools).toHaveLength(0);
-    expect(hub.executionSequence).toHaveLength(3);
+    expect(hub.executionSequence).toHaveLength(2);
     expect(hub.executionSequence.map((x) => x.tool.href)).toEqual([
-      "/tools/loan-structuring-assistant",
       "/tools/term-sheet",
       "/tools/cash-to-close-estimator",
     ]);
   });
 
-  it("user primary CTA matches hub default (Deal Structuring Copilot)", () => {
-    expect(primaryCtaHrefForRole("user")).toBe("/tools/loan-structuring-assistant");
+  it("user primary CTA points to Deal Sheet Builder", () => {
+    expect(primaryCtaHrefForRole("user")).toBe("/tools/term-sheet");
   });
 
   it("admin rail omits Credit Copilot shortcut; nav is full canonical list", () => {

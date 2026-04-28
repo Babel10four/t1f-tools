@@ -105,6 +105,12 @@ export function TermSheetGeneratorClient() {
     bumpToEditing();
   };
 
+  const onBorrowingRehabChange = (next: "yes" | "no") => {
+    setFields((f) => ({ ...f, borrowingRehabFunds: next }));
+    setClientHint(null);
+    bumpToEditing();
+  };
+
   const runAnalyze = useCallback(async () => {
     const built = buildDealAnalyzeRequest(flow, fields);
     if (!built.ok) {
@@ -251,6 +257,33 @@ export function TermSheetGeneratorClient() {
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
             </label>
+            <div className="sm:col-span-2">
+              <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                Taking rehab funds?
+              </p>
+              <div className="mt-2 flex flex-wrap gap-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="borrowingRehabFunds"
+                    data-testid="ts-borrowing-rehab-yes"
+                    checked={fields.borrowingRehabFunds === "yes"}
+                    onChange={() => onBorrowingRehabChange("yes")}
+                  />
+                  Yes
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="borrowingRehabFunds"
+                    data-testid="ts-borrowing-rehab-no"
+                    checked={fields.borrowingRehabFunds === "no"}
+                    onChange={() => onBorrowingRehabChange("no")}
+                  />
+                  No
+                </label>
+              </div>
+            </div>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 ARV{" "}
@@ -390,6 +423,33 @@ export function TermSheetGeneratorClient() {
               At least one of payoff or requested amount is required (positive
               numbers).
             </p>
+            <div className="sm:col-span-2">
+              <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                Taking rehab funds?
+              </p>
+              <div className="mt-2 flex flex-wrap gap-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="borrowingRehabFunds-refi"
+                    data-testid="ts-refi-borrowing-rehab-yes"
+                    checked={fields.borrowingRehabFunds === "yes"}
+                    onChange={() => onBorrowingRehabChange("yes")}
+                  />
+                  Yes
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="borrowingRehabFunds-refi"
+                    data-testid="ts-refi-borrowing-rehab-no"
+                    checked={fields.borrowingRehabFunds === "no"}
+                    onChange={() => onBorrowingRehabChange("no")}
+                  />
+                  No
+                </label>
+              </div>
+            </div>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 As-is value{" "}
@@ -536,7 +596,7 @@ export function TermSheetGeneratorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Property label
+                Property Address
               </span>
               <input
                 data-testid="ts-meta-property"

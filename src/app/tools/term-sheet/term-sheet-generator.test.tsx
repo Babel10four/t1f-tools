@@ -132,6 +132,22 @@ describe("TermSheetGeneratorClient", () => {
     });
   });
 
+  it("posts borrowingRehabFunds=false when user selects no", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    const form = screen.getByTestId("ts-form");
+    await user.type(within(form).getByTestId("ts-purchase-price"), "100000");
+    await user.click(within(form).getByTestId("ts-borrowing-rehab-no"));
+    await user.click(screen.getByTestId("ts-generate-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("ts-preview")).toBeInTheDocument();
+    });
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.assumptions).toMatchObject({
+      borrowingRehabFunds: false,
+    });
+  });
+
   it("renders 4xx panel with error, code, and issues", async () => {
     vi.stubGlobal(
       "fetch",

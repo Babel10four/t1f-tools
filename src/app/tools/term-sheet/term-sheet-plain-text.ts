@@ -36,9 +36,6 @@ export function buildTermSheetPlainText(
   lines.push("");
   lines.push("INPUTS");
   lines.push(`Transaction type: ${purposeLabel(loan.purpose)}`);
-  lines.push(
-    `Tier: ${request?.borrower?.experienceTier?.trim() ? request.borrower.experienceTier : "—"}`,
-  );
   if (request?.deal.purchasePrice !== undefined) {
     lines.push(`Purchase price: ${formatMoneyWholeDollars(request.deal.purchasePrice)}`);
   }

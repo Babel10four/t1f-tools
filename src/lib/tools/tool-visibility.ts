@@ -21,8 +21,8 @@ const RAIL_EXCLUDED_HREFS = new Set<string>(["/tools/credit-copilot"]);
  */
 export const TOOL_HREF_AUDIENCES: Record<string, readonly ("user" | "admin")[]> = {
   [TOOL_HUB.href]: ["user", "admin"],
-  /** Rep workflows — visible to standard users. */
-  "/tools/loan-structuring-assistant": ["user", "admin"],
+  /** Internal tool — hidden for standard users. */
+  "/tools/loan-structuring-assistant": ["admin"],
   "/tools/term-sheet": ["user", "admin"],
   "/tools/cash-to-close-estimator": ["user", "admin"],
   /** Launch: hide from user until re-enabled (see product / rail red-box scope). */
@@ -106,6 +106,9 @@ export function filterNavSections(role: AuthRole): NavSection[] {
 }
 
 export function primaryCtaHrefForRole(_role: AuthRole): string {
+  if (_role === "user") {
+    return "/tools/term-sheet";
+  }
   return HUB_PRIMARY_CTA_HREF;
 }
 
@@ -116,7 +119,7 @@ export function primaryCtaLabelForRole(_role: AuthRole): string {
 /** Hero paragraph under the hub title — user copy omits JSON harness and admin-only tools. */
 export function hubHeroDescriptionForRole(role: AuthRole): string {
   if (role === "user") {
-    return "Use Deal Structuring, Deal Sheet Builder, and Cash to Close for analyze-backed workflows, or Credit Copilot for policy Q&A. Loan pricing, rural screening, disclosure stubs, and the JSON harness stay in the full workbench for elevated access.";
+    return "Use Deal Sheet Builder and Cash to Close for analyze-backed workflows, or Credit Copilot for policy Q&A. Deal structuring, loan pricing, rural screening, disclosure stubs, and the JSON harness stay in the full workbench for elevated access.";
   }
   return "Pick a tool below or use the JSON harness under Advanced / Internal when you need raw requests — not a generic loan portal.";
 }

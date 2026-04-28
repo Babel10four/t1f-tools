@@ -70,7 +70,6 @@ export function TermSheetPreview({
   const pricing = response.pricing;
   const cash = response.cashToClose;
   const loan = response.loan;
-  const tier = request?.borrower?.experienceTier;
 
   const totalPctArv =
     loan.amount !== undefined &&
@@ -152,12 +151,6 @@ export function TermSheetPreview({
             <dt className="text-zinc-500">Transaction type</dt>
             <dd className="text-right font-medium text-zinc-900 dark:text-zinc-100">
               {purposeLabel(loan.purpose)}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
-            <dt className="text-zinc-500">Tier</dt>
-            <dd className="text-right">
-              {tier !== undefined && tier !== "" ? tier : "—"}
             </dd>
           </div>
           {request?.deal.purchasePrice !== undefined ? (
