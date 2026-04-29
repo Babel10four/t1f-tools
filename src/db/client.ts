@@ -9,7 +9,7 @@ export function getDb() {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error(
-      "DATABASE_URL is not set — required for admin documents (CONTENT-001).",
+      "DATABASE_URL is not set. This deployment needs Postgres for published rule bindings (including Rural Checker), the admin document library, and analytics. Set DATABASE_URL in your host (e.g. Vercel → Environment Variables), then run schema migrations (see README and drizzle/*.sql).",
     );
   }
   if (!db) {

@@ -51,6 +51,13 @@ export async function POST(req: Request) {
     return Response.json(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Internal error";
+    const dbMissing =
+      message.includes("DATABASE_URL") && message.includes("not set");
+    const httpStatus = dbMissing ? 503 : 500;
+    const code = dbMissing ? "DATABASE_UNAVAILABLE" : "INTERNAL";
+    const clientMessage = dbMissing
+      ? "Database is not configured on this deployment. Add DATABASE_URL (Postgres) and apply migrations so Rural Checker can load published rural_rules. See the project README."
+      : message;
     enqueuePlatformEvent({
       req,
       eventType: "rural_check_run",
@@ -58,11 +65,11 @@ export async function POST(req: Request) {
       route: "/api/property/rural",
       status: "error",
       metadata: {
-        httpStatus: 500,
+        httpStatus,
         message: message.slice(0, 500),
         ...(addressLine ? { addressLine } : {}),
       },
     });
-    return jsonError(message, 500, "INTERNAL");
+    return jsonError(clientMessage, httpStatus, code);
   }
 }

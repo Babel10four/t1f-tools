@@ -43,7 +43,14 @@ PDF metadata lives in **Postgres**; file bytes in **Vercel Blob** (private) when
 
 | Variable | Purpose |
 |----------|---------|
-| `DATABASE_URL` | Postgres connection string (required for `/admin/documents`). |
+| `DATABASE_URL` | Postgres connection string. **Required in production** for `/admin/documents`, published **`rural_rules`** (Rural Checker), **`rule_sets`**, and the **`events`** analytics table (admin dashboard KPIs). Without it, those features return configuration errors. |
+
+### Production (e.g. Vercel)
+
+1. Create a Postgres instance (Neon, Supabase, RDS, etc.) and copy its connection string.
+2. In the host’s environment settings, set **`DATABASE_URL`** for **Production** (and **Preview** if you want branch deploys to work the same).
+3. Apply schema: from your machine run `npm run db:push` with `DATABASE_URL` set to that URL, or run `drizzle/0001_documents.sql` → `0002_rule_sets.sql` → `0003_events.sql` in order against the database.
+4. Redeploy the app. Seed or publish **`rural_rules`** and bindings if Rural Checker should score beyond `insufficient_info` (see `npm run data:rural-001` / admin Rules UI).
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob read/write token for private PDF storage (production). |
 | `LOCAL_DOCUMENT_ROOT` | Optional; overrides the local dev directory for PDFs when Blob is not configured. |
 

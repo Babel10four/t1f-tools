@@ -116,14 +116,26 @@ export function AdminDashboardView({ kpis }: Props) {
         <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           Dashboard
         </h1>
-        <p
-          className="text-sm text-amber-800 dark:text-amber-200"
+        <div
+          className="text-sm text-amber-900 dark:text-amber-100"
           data-testid="admin-dashboard-db-unavailable"
         >
-          Analytics database is unavailable (set <code className="rounded bg-zinc-100 px-1 text-xs dark:bg-zinc-800">DATABASE_URL</code>{" "}
-          and apply migrations including <code className="rounded bg-zinc-100 px-1 text-xs dark:bg-zinc-800">drizzle/0003_events.sql</code>
-          ). Event logging and KPIs require Postgres.
-        </p>
+          <p>
+            Postgres is not connected — the <code className="rounded bg-amber-100 px-1 text-xs dark:bg-amber-950/60">DATABASE_URL</code>{" "}
+            environment variable is missing or invalid on this deployment. The admin
+            dashboard, Rural Checker (published rules), and document library all need
+            the same database.
+          </p>
+          <p className="mt-2">
+            On <strong>Vercel</strong>: Project → Settings → Environment Variables → add{" "}
+            <code className="rounded bg-amber-100 px-1 text-xs dark:bg-amber-950/60">DATABASE_URL</code>{" "}
+            (e.g. from Neon or Supabase) for Production, redeploy, then run migrations (
+            <code className="rounded bg-amber-100 px-1 text-xs dark:bg-amber-950/60">npm run db:push</code>{" "}
+            locally against that URL, or apply <code className="rounded bg-amber-100 px-1 text-xs dark:bg-amber-950/60">drizzle/*.sql</code>{" "}
+            in order, including <code className="rounded bg-amber-100 px-1 text-xs dark:bg-amber-950/60">0003_events.sql</code>{" "}
+            for analytics events).
+          </p>
+        </div>
       </div>
     );
   }
