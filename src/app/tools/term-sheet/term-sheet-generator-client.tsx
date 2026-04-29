@@ -2,31 +2,21 @@
 
 import { useCallback, useState } from "react";
 import type { ChangeEvent } from "react";
+import { DisclosureBanner } from "@/components/tools/disclosure-banner";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
+import {
+  TERM_SHEET_DISCLAIMER_DETAILS,
+  TERM_SHEET_DISCLAIMER_SUMMARY,
+} from "@/lib/tools/disclaimer-copy";
 import {
   buildDealAnalyzeRequest,
   type LoanAssistantFields,
   type LoanAssistantFlow,
 } from "../loan-structuring-assistant/build-deal-analyze-request";
+import { useDealFormSession } from "../shared/use-deal-form-session";
 import { TermSheetPreview } from "./term-sheet-preview";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
-
-const EMPTY_FIELDS: LoanAssistantFields = {
-  purchasePrice: "",
-  rehabBudget: "",
-  arv: "",
-  requestedLoanAmount: "",
-  termMonths: "",
-  fico: "",
-  experienceTier: "",
-  payoffAmount: "",
-  asIsValue: "",
-  borrowingRehabFunds: "yes",
-  originationPointsPercent: "",
-  originationFlatFee: "",
-  noteRatePercent: "",
-};
 
 const EMPTY_METADATA: TermSheetLocalMetadata = {
   internalDealLabel: "",
@@ -59,8 +49,7 @@ type UiPhase =
   | "error_5xx";
 
 export function TermSheetGeneratorClient() {
-  const [flow, setFlow] = useState<LoanAssistantFlow>("purchase");
-  const [fields, setFields] = useState<LoanAssistantFields>(EMPTY_FIELDS);
+  const { flow, setFlow, fields, setFields, clearSession } = useDealFormSession();
   const [metadata, setMetadata] = useState<TermSheetLocalMetadata>(() => ({
     ...EMPTY_METADATA,
     preparedDate: todayLocalYmd(),
@@ -169,14 +158,34 @@ export function TermSheetGeneratorClient() {
     }
   }, [flow, fields]);
 
+  const handleClearSavedDealInputs = useCallback(() => {
+    clearSession();
+    setMetadata({ ...EMPTY_METADATA, preparedDate: todayLocalYmd() });
+    setSuccessPayload(null);
+    setError4xx(null);
+    setError5xx(null);
+    setClientHint(null);
+    setPhase("idle");
+  }, [clearSession]);
+
   const showPreview = Boolean(successPayload && phase !== "submitting");
 
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Deal Sheet Builder
-        </h1>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Deal Sheet Builder
+          </h1>
+          <button
+            type="button"
+            data-testid="ts-clear-deal-session"
+            onClick={handleClearSavedDealInputs}
+            className="shrink-0 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Clear saved deal inputs
+          </button>
+        </div>
         <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
           Internal HTML preview from{" "}
           <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
@@ -191,10 +200,20 @@ export function TermSheetGeneratorClient() {
           </a>
           .
         </p>
+        <DisclosureBanner
+          summary={TERM_SHEET_DISCLAIMER_SUMMARY}
+          details={TERM_SHEET_DISCLAIMER_DETAILS.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        />
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Deal numbers (purchase/refi fields below) are saved in this browser tab for the Cash
+          to Close Calculator and other tools until you clear them or close the tab.
+        </p>
       </header>
 
       <form
-        className="flex flex-col gap-6"
+        className="flex flex-col gap-6 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
         data-testid="ts-form"
         onSubmit={(e) => {
           e.preventDefault();
@@ -228,6 +247,26 @@ export function TermSheetGeneratorClient() {
             </label>
           </div>
         </fieldset>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-zinc-800 dark:text-zinc-200">
+            Subject property address{" "}
+            <span className="font-normal text-zinc-500">(optional)</span>
+          </span>
+          <input
+            name="collateralPropertyAddress"
+            data-testid="ts-collateral-address"
+            value={fields.collateralPropertyAddress}
+            onChange={onField("collateralPropertyAddress")}
+            autoComplete="street-address"
+            placeholder="e.g. 100 Main St, City, ST 00000 — stored in admin analytics when you run"
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+          />
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            Not used by the deal engine. Helps the admin dashboard list which collateral
+            addresses were submitted with successful runs.
+          </span>
+        </label>
 
         {flow === "purchase" ? (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -313,7 +352,8 @@ export function TermSheetGeneratorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Term (months)
+                Term (months){" "}
+                <span className="font-normal text-zinc-500">(typical 6-18)</span>
               </span>
               <input
                 name="termMonths"
@@ -337,7 +377,8 @@ export function TermSheetGeneratorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Experience tier
+                Experience tier{" "}
+                <span className="font-normal text-zinc-500">(1, 2, or 3)</span>
               </span>
               <input
                 name="experienceTier"
@@ -480,7 +521,8 @@ export function TermSheetGeneratorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Term (months)
+                Term (months){" "}
+                <span className="font-normal text-zinc-500">(typical 6-18)</span>
               </span>
               <input
                 name="termMonths"
@@ -504,7 +546,8 @@ export function TermSheetGeneratorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Experience tier
+                Experience tier{" "}
+                <span className="font-normal text-zinc-500">(1, 2, or 3)</span>
               </span>
               <input
                 name="experienceTier"

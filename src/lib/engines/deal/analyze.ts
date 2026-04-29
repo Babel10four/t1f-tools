@@ -19,6 +19,10 @@ import { refinancePolicyMax } from "./policy/refinanceMax";
 import { buildDealAnalyzeRisks } from "./policy/risks";
 import { supportedProduct } from "./policy/support";
 import { applyLoanStructuring } from "./policy/loanStructuring";
+import {
+  enrichLoanWithLeveragePresentation,
+  isPurchaseNoRehabPolicyMappingPending,
+} from "./policy/leveragePresentation";
 
 function parseNoteRatePercentAssumption(
   assumptions: DealAnalyzeRequestV1["assumptions"],
@@ -235,6 +239,14 @@ export async function runDealAnalyze(
       ),
     );
   }
+  if (supported && isPurchaseNoRehabPolicyMappingPending(req)) {
+    extraFlags.push({
+      code: "POLICY_MAPPING_PENDING",
+      severity: "info",
+      message:
+        "Purchase without rehab: AIV-forward leverage display and governing LTV semantics await underwriting-signed policy mapping; use ltcPercent and binding flags for structure until then.",
+    });
+  }
 
   const { status: analysisStatus, flags: analysisFlags } = buildAnalysisFlags(
     req,
@@ -299,6 +311,7 @@ export async function runDealAnalyze(
 
   loan = attachLtv(loan, req, refi);
   loan = applyLoanStructuring(loan, req);
+  loan = enrichLoanWithLeveragePresentation(loan, req, refi, purchaseBreakdown);
 
   const risks = buildDealAnalyzeRisks(
     {
@@ -320,6 +333,8 @@ export async function runDealAnalyze(
     policyMaxDefined: policyMax !== undefined,
     borrowerFicoDefined:
       req.borrower?.fico !== undefined && typeof req.borrower.fico === "number",
+    leveragePolicyPresentationReady:
+      !isPurchaseNoRehabPolicyMappingPending(req),
   });
 
   let cash: DealAnalyzeResponseV1["cashToClose"];

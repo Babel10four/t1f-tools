@@ -30,6 +30,7 @@ const EMPTY_FIELDS: LoanAssistantFields = {
   originationPointsPercent: "",
   originationFlatFee: "",
   noteRatePercent: "",
+  collateralPropertyAddress: "",
 };
 
 type DealAnalyzeErrorBody = {

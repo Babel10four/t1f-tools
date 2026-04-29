@@ -2,9 +2,11 @@
 
 import { useCallback, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { ruralScreeningHeading } from "@/lib/engines/property/rural-evidence-report";
 import type {
   PropertyRuralResponseV1,
   RuralCheckResult,
+  RuralEvidenceCriterionStatus,
 } from "@/lib/engines/property/rural-types";
 
 type TriState = "" | "true" | "false";
@@ -30,18 +32,18 @@ function formatDensity(n: number | null | undefined): string {
   return `${Math.round(n).toLocaleString()} / mi²`;
 }
 
-function verdictLabel(result: RuralCheckResult): string {
-  switch (result) {
-    case "likely_rural":
-      return "Likely rural";
-    case "likely_not_rural":
-      return "Not likely rural";
-    case "needs_review":
-      return "Review suggested";
-    case "insufficient_info":
-      return "Insufficient information";
+function criterionBadgeClass(status: RuralEvidenceCriterionStatus): string {
+  switch (status) {
+    case "meets_rural_signal":
+      return "bg-amber-100 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100";
+    case "meets_not_rural_signal":
+      return "bg-zinc-200 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100";
+    case "inconclusive":
+      return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200";
+    case "public_data_unavailable":
+      return "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200";
     default: {
-      const _x: never = result;
+      const _x: never = status;
       return _x;
     }
   }
@@ -179,10 +181,15 @@ export function RuralCheckerClient() {
           Rural Eligibility Checker
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-[var(--text-muted)]">
-          Enter a U.S. address to pull Census population and CBSA context, optional
-          utility distance from OpenStreetMap, and a scored &quot;likely rural&quot; /
-          &quot;not likely rural&quot; read from published rural_rules. Not a final
-          determination — escalate borderline cases.
+          Enter a U.S. address for a criterion-by-criterion rural evidence report (Census
+          geocoder + ACS tract/block-group density, OSM service and highway distances)
+          alongside the published{" "}
+          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
+            rural_rules
+          </code>{" "}
+          score. Outcomes use Tier One–style headings (Likely Rural / Out of Policy,
+          Likely Not Rural, Manual UW Review Required). MLS comps and DOM are not
+          automated — see the evidence matrix.
         </p>
       </div>
 
@@ -203,8 +210,9 @@ export function RuralCheckerClient() {
             placeholder="e.g. 100 Main St, Montpelier, VT 05602"
           />
           <span className="text-xs text-[var(--text-muted)]">
-            Uses U.S. Census Geocoder + ACS (county population, density). MSA flag is
-            set when the address falls in a metropolitan CBSA.
+            Uses Census Geocoder + ACS (county totals; tract and block-group density
+            when matched). OSM Overpass for amenities and major highways
+            (straight-line). MSA flag follows metropolitan CBSA membership.
           </span>
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -319,13 +327,18 @@ export function RuralCheckerClient() {
               Screening outcome
             </p>
             <p className="mt-1 text-xl font-semibold tracking-tight">
-              {verdictLabel(response.result)}
+              {ruralScreeningHeading(response)}
             </p>
             <p className="mt-1 text-sm opacity-90">
               Confidence: <span className="font-medium">{response.certainty}</span> ·
               Engine:{" "}
               <span className="font-mono text-xs">{response.result}</span>
             </p>
+            {response.evidenceReport ? (
+              <p className="mt-2 border-t border-black/10 pt-2 text-sm opacity-95 dark:border-white/10">
+                {response.evidenceReport.coreRuralIndicatorsSummary}
+              </p>
+            ) : null}
           </div>
 
           {en?.attempted ? (
@@ -381,9 +394,84 @@ export function RuralCheckerClient() {
                 </div>
                 <div>
                   <dt className="text-xs font-medium uppercase">
-                    Population density (county)
+                    Population density (tract — Tier One primary)
+                  </dt>
+                  <dd>{formatDensity(en.tractPopulationDensityPerSqMi)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase">
+                    Population density (block group)
+                  </dt>
+                  <dd>{formatDensity(en.blockGroupPopulationDensityPerSqMi)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase">
+                    Population density (county, coarse)
                   </dt>
                   <dd>{formatDensity(en.populationDensityPerSqMi)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium uppercase">
+                    Block group (GEOID)
+                  </dt>
+                  <dd className="font-mono text-xs text-[var(--text-primary)]">
+                    {en.censusBlockGroupGeoid ?? "—"}
+                  </dd>
+                </div>
+                {en.osmServiceDistances ? (
+                  <>
+                    <div>
+                      <dt className="text-xs font-medium uppercase">
+                        Nearest post office (OSM, straight-line)
+                      </dt>
+                      <dd>
+                        {formatMi(en.osmServiceDistances.nearestPostOfficeStraightLineMiles)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium uppercase">
+                        Nearest hospital / clinic (OSM)
+                      </dt>
+                      <dd>
+                        {formatMi(
+                          en.osmServiceDistances.nearestHospitalOrUrgentStraightLineMiles,
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium uppercase">Nearest school (OSM)</dt>
+                      <dd>
+                        {formatMi(en.osmServiceDistances.nearestSchoolStraightLineMiles)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-medium uppercase">
+                        Nearest major retail (OSM)
+                      </dt>
+                      <dd>
+                        {formatMi(
+                          en.osmServiceDistances.nearestGroceryOrMajorRetailStraightLineMiles,
+                        )}
+                      </dd>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <dt className="text-xs font-medium uppercase">OSM caveat</dt>
+                      <dd className="text-xs">{en.osmServiceDistances.sourceNote}</dd>
+                    </div>
+                  </>
+                ) : null}
+                <div>
+                  <dt className="text-xs font-medium uppercase">
+                    Nearest motorway/trunk (OSM, straight-line)
+                  </dt>
+                  <dd>
+                    {formatMi(en.nearestMajorHighwayStraightLineMiles)}
+                    {en.majorHighwayMitigationNote ? (
+                      <span className="mt-1 block text-xs text-[var(--text-muted)]">
+                        {en.majorHighwayMitigationNote}
+                      </span>
+                    ) : null}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-xs font-medium uppercase">
@@ -413,6 +501,83 @@ export function RuralCheckerClient() {
               </dl>
               <p className="mt-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
                 {en.comparableGeographyNote}
+              </p>
+            </div>
+          ) : null}
+
+          {response.evidenceReport ? (
+            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-page)] p-4 text-sm">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                Rural evidence matrix (public data)
+              </h3>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Rules + evidence matrix — not an auto-approval. USDA RD maps are not
+                used as the Tier One determination here.
+              </p>
+              <ul className="mt-3 flex flex-col gap-3">
+                {response.evidenceReport.criteria.map((c) => (
+                  <li
+                    key={c.id}
+                    className="rounded-md border border-[var(--border-subtle)] bg-white p-3 dark:bg-zinc-950"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {c.title}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${criterionBadgeClass(c.status)}`}
+                      >
+                        {c.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[var(--text-muted)]">{c.narrative}</p>
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      <span className="font-medium text-[var(--text-primary)]">
+                        Sources:{" "}
+                      </span>
+                      {c.sources.join("; ")}
+                    </p>
+                    {c.limitation ? (
+                      <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-200/90">
+                        <span className="font-medium">Limitation: </span>
+                        {c.limitation}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              {response.evidenceReport.mitigants.length > 0 ? (
+                <div className="mt-4 border-t border-[var(--border-subtle)] pt-3">
+                  <h4 className="text-xs font-semibold uppercase text-[var(--text-muted)]">
+                    Mitigants
+                  </h4>
+                  <ul className="mt-2 list-inside list-disc text-[var(--text-muted)]">
+                    {response.evidenceReport.mitigants.map((m) => (
+                      <li key={m.label}>
+                        <span className="font-medium text-[var(--text-primary)]">
+                          {m.label}:{" "}
+                        </span>
+                        {m.detail}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <div className="mt-4 border-t border-[var(--border-subtle)] pt-3">
+                <h4 className="text-xs font-semibold uppercase text-[var(--text-muted)]">
+                  Data limitations
+                </h4>
+                <ul className="mt-2 list-inside list-disc text-xs text-[var(--text-muted)]">
+                  {response.evidenceReport.dataLimitations.map((d) => (
+                    <li key={d}>{d}</li>
+                  ))}
+                </ul>
+              </div>
+              <p className="mt-4 rounded-md bg-zinc-100 p-3 text-xs text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200">
+                <span className="font-semibold text-[var(--text-primary)]">
+                  Suggested UW action:{" "}
+                </span>
+                {response.evidenceReport.suggestedUwAction}
               </p>
             </div>
           ) : null}

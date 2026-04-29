@@ -22,6 +22,11 @@
           "message": "Published calculator_assumptions and/or rates rule_sets were unavailable or invalid; this response used embedded default policy configuration from the deal engine."
         },
         {
+          "code": "POLICY_MAPPING_PENDING",
+          "severity": "info",
+          "message": "Purchase without rehab: AIV-forward leverage display and governing LTV semantics await underwriting-signed policy mapping; use ltcPercent and binding flags for structure until then."
+        },
+        {
           "code": "PROPERTY_CONTEXT_PARTIAL",
           "severity": "info",
           "message": "Only one of ARV or as-is value was provided; v1 stub treats this as partial property context."
@@ -42,7 +47,9 @@
       "amount": 262500,
       "acquisitionLoanAmount": 262500,
       "rehabLoanAmount": 0,
-      "ltcPercent": 75
+      "ltcPercent": 75,
+      "bindingLeg": "ltc",
+      "aivLtv": 65.63
     },
     "pricing": {
       "status": "indicative",

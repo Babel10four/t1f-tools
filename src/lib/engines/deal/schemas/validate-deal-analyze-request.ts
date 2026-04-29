@@ -1,10 +1,51 @@
 import type { DealAnalyzeRequestV1 } from "./canonical-request";
+import {
+  DEAL_ANALYZE_PROGRAM_SCENARIO_VALUES,
+  type DealAnalyzeProgramScenarioV1,
+} from "./deal-engine-v1-enums";
 import type { ValidationIssue } from "./validation-issue";
 import type { UnknownRecord } from "@/lib/engines/types";
 
 /** Must match `DEAL_ALYZE_SCHEMA_VERSION` in `./deal-analyze-constants` (inline for reliable test runtime). */
 const DEAL_ALYZE_SCHEMA_VERSION = "deal_analyze.v1" as const;
 const DEAL_PURPOSES = ["purchase", "refinance"] as const;
+
+const ALLOWED_TOP_LEVEL_KEYS = new Set([
+  "schemaVersion",
+  "deal",
+  "property",
+  "borrower",
+  "assumptions",
+  "programContext",
+  /** Legacy / ignored inputs — stripped by normalize; still allowed on the wire (TICKET-001A). */
+  "loan",
+  "product",
+  "loanAmount",
+  "pricing",
+  "cashToClose",
+]);
+
+const ALLOWED_DEAL_KEYS = new Set([
+  "purpose",
+  "productType",
+  "purchasePrice",
+  "payoffAmount",
+  "requestedLoanAmount",
+  "rehabBudget",
+  "termMonths",
+]);
+
+const ALLOWED_PROPERTY_KEYS = new Set(["arv", "asIsValue"]);
+
+const ALLOWED_BORROWER_KEYS = new Set(["fico", "experienceTier"]);
+
+const ALLOWED_PROGRAM_CONTEXT_KEYS = new Set([
+  "scenario",
+  "refiSubtype",
+  "scopeOfWorkAmount",
+]);
+
+const PROGRAM_SCENARIO_SET = new Set<string>(DEAL_ANALYZE_PROGRAM_SCENARIO_VALUES);
 
 /** Explicit 400 codes from BUILD SPEC — TICKET-001 (+ TICKET-001A schema rules). */
 export type DealAnalyzeRequestErrorCode =
@@ -15,7 +56,8 @@ export type DealAnalyzeRequestErrorCode =
   | "MISSING_PRODUCT_TYPE"
   | "MISSING_PURCHASE_PRICE"
   | "MISSING_REFI_AMOUNT"
-  | "MISSING_COLLATERAL_VALUE";
+  | "MISSING_COLLATERAL_VALUE"
+  | "UNKNOWN_REQUEST_FIELD";
 
 export type ValidateDealAnalyzeFailure = {
   ok: false;
@@ -60,6 +102,31 @@ function isPurpose(v: unknown): v is (typeof DEAL_PURPOSES)[number] {
 }
 
 /**
+ * Rejects unknown top-level keys on the **raw** request body (before normalization strips them).
+ * Call from the HTTP handler before `normalizeDealAnalyzeRequest`.
+ */
+export function validateDealAnalyzeTopLevelKeysOnly(
+  input: UnknownRecord,
+): ValidateDealAnalyzeFailure | null {
+  for (const key of Object.keys(input)) {
+    if (!ALLOWED_TOP_LEVEL_KEYS.has(key)) {
+      return fail(
+        "UNKNOWN_REQUEST_FIELD",
+        `Unknown or unsupported top-level field "${key}".`,
+        [
+          {
+            path: key,
+            message:
+              "deal_analyze.v1 only allows schemaVersion, deal, property, borrower, assumptions, and programContext.",
+          },
+        ],
+      );
+    }
+  }
+  return null;
+}
+
+/**
  * Validates normalized canonical shape (numeric fields already numbers on canonical path).
  * Call after `normalizeDealAnalyzeRequest`.
  */
@@ -68,6 +135,22 @@ export function validateDealAnalyzeRequestV1(
 ): ValidateDealAnalyzeResult {
   if (!isPlainObject(input)) {
     return fail("INVALID_JSON", "Request body must be a JSON object.", []);
+  }
+
+  for (const key of Object.keys(input)) {
+    if (!ALLOWED_TOP_LEVEL_KEYS.has(key)) {
+      return fail(
+        "UNKNOWN_REQUEST_FIELD",
+        `Unknown or unsupported top-level field "${key}".`,
+        [
+          {
+            path: key,
+            message:
+              "deal_analyze.v1 only allows schemaVersion, deal, property, borrower, assumptions, and programContext.",
+          },
+        ],
+      );
+    }
   }
 
   if (input.schemaVersion === undefined) {
@@ -113,6 +196,21 @@ export function validateDealAnalyzeRequestV1(
   }
 
   const deal = input.deal;
+
+  for (const key of Object.keys(deal)) {
+    if (!ALLOWED_DEAL_KEYS.has(key)) {
+      return fail(
+        "UNKNOWN_REQUEST_FIELD",
+        `Unknown field "deal.${key}".`,
+        [
+          {
+            path: `deal.${key}`,
+            message: "Not a supported deal_analyze.v1 deal key.",
+          },
+        ],
+      );
+    }
+  }
 
   if (!("purpose" in deal) || deal.purpose === undefined || deal.purpose === null) {
     return fail("MISSING_PURPOSE", "`deal.purpose` is required.", []);
@@ -199,6 +297,20 @@ export function validateDealAnalyzeRequestV1(
         [{ path: "property", message: "Expected an object." }],
       );
     }
+    for (const key of Object.keys(property)) {
+      if (!ALLOWED_PROPERTY_KEYS.has(key)) {
+        return fail(
+          "UNKNOWN_REQUEST_FIELD",
+          `Unknown field "property.${key}".`,
+          [
+            {
+              path: `property.${key}`,
+              message: "Not a supported deal_analyze.v1 property key.",
+            },
+          ],
+        );
+      }
+    }
     if ("arv" in property && property.arv !== undefined) {
       if (!isFinitePositiveNumber(property.arv)) {
         return fail(
@@ -244,6 +356,20 @@ export function validateDealAnalyzeRequestV1(
       );
     }
     const b = input.borrower;
+    for (const key of Object.keys(b)) {
+      if (!ALLOWED_BORROWER_KEYS.has(key)) {
+        return fail(
+          "UNKNOWN_REQUEST_FIELD",
+          `Unknown field "borrower.${key}".`,
+          [
+            {
+              path: `borrower.${key}`,
+              message: "Not a supported deal_analyze.v1 borrower key.",
+            },
+          ],
+        );
+      }
+    }
     if ("fico" in b && b.fico !== undefined) {
       if (!isFiniteNonNegNumber(b.fico) || b.fico > 850) {
         return fail(
@@ -261,6 +387,89 @@ export function validateDealAnalyzeRequestV1(
     };
     if (Object.keys(borrower).length === 0) {
       borrower = undefined;
+    }
+  }
+
+  let programContext: DealAnalyzeRequestV1["programContext"] | undefined =
+    undefined;
+  if (input.programContext !== undefined) {
+    if (!isPlainObject(input.programContext)) {
+      return fail(
+        "INVALID_JSON",
+        "`programContext` must be an object when provided.",
+        [{ path: "programContext", message: "Expected an object." }],
+      );
+    }
+    const pc = input.programContext;
+    for (const key of Object.keys(pc)) {
+      if (!ALLOWED_PROGRAM_CONTEXT_KEYS.has(key)) {
+        return fail(
+          "UNKNOWN_REQUEST_FIELD",
+          `Unknown field "programContext.${key}".`,
+          [
+            {
+              path: `programContext.${key}`,
+              message: "Not a supported programContext key.",
+            },
+          ],
+        );
+      }
+    }
+    if ("scenario" in pc && pc.scenario !== undefined) {
+      if (
+        typeof pc.scenario !== "string" ||
+        !PROGRAM_SCENARIO_SET.has(pc.scenario)
+      ) {
+        return fail(
+          "INVALID_JSON",
+          "`programContext.scenario` must be one of the supported scenario literals when provided.",
+          [
+            {
+              path: "programContext.scenario",
+              message: `Expected one of: ${DEAL_ANALYZE_PROGRAM_SCENARIO_VALUES.join(", ")}.`,
+            },
+          ],
+        );
+      }
+    }
+    if ("refiSubtype" in pc && pc.refiSubtype !== undefined) {
+      if (typeof pc.refiSubtype !== "string" || pc.refiSubtype.trim() === "") {
+        return fail(
+          "INVALID_JSON",
+          "`programContext.refiSubtype` must be a non-empty string when provided.",
+          [{ path: "programContext.refiSubtype", message: "Invalid value." }],
+        );
+      }
+    }
+    if ("scopeOfWorkAmount" in pc && pc.scopeOfWorkAmount !== undefined) {
+      if (!isFiniteNonNegNumber(pc.scopeOfWorkAmount)) {
+        return fail(
+          "INVALID_JSON",
+          "`programContext.scopeOfWorkAmount` must be a finite non-negative number when provided.",
+          [
+            {
+              path: "programContext.scopeOfWorkAmount",
+              message: "Must be a JSON number ≥ 0.",
+            },
+          ],
+        );
+      }
+    }
+    const scenario =
+      typeof pc.scenario === "string" && PROGRAM_SCENARIO_SET.has(pc.scenario)
+        ? (pc.scenario as DealAnalyzeProgramScenarioV1)
+        : undefined;
+    programContext = {
+      ...(scenario !== undefined ? { scenario } : {}),
+      ...(typeof pc.refiSubtype === "string" && pc.refiSubtype.trim() !== ""
+        ? { refiSubtype: pc.refiSubtype.trim() }
+        : {}),
+      ...(isFiniteNonNegNumber(pc.scopeOfWorkAmount)
+        ? { scopeOfWorkAmount: pc.scopeOfWorkAmount }
+        : {}),
+    };
+    if (Object.keys(programContext).length === 0) {
+      programContext = undefined;
     }
   }
 
@@ -312,6 +521,7 @@ export function validateDealAnalyzeRequestV1(
     ...(isPlainObject(input.assumptions)
       ? { assumptions: input.assumptions }
       : {}),
+    ...(programContext ? { programContext } : {}),
   };
 
   return { ok: true, value };

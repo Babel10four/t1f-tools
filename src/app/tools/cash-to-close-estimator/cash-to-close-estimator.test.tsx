@@ -1,6 +1,10 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  DEAL_FORM_SESSION_STORAGE_KEY,
+  DEFAULT_DEAL_FORM_FIELDS,
+} from "../shared/deal-form-session";
 import { CashToCloseEstimatorClient } from "./cash-to-close-estimator-client";
 
 afterEach(() => {
@@ -17,7 +21,7 @@ function baseResponse(overrides: Record<string, unknown> = {}) {
     loan: {
       purpose: "purchase" as const,
       productType: "bridge_purchase",
-      termMonths: null as number | null,
+      termMonths: 12 as number | null,
       rehabBudget: 0,
       purchasePrice: 100_000,
       amount: 75_000,
@@ -25,7 +29,7 @@ function baseResponse(overrides: Record<string, unknown> = {}) {
     },
     pricing: {
       status: "complete",
-      noteRatePercent: null,
+      noteRatePercent: 10,
       marginBps: null,
       discountPoints: null,
       lockDays: null,
@@ -52,6 +56,7 @@ function baseResponse(overrides: Record<string, unknown> = {}) {
 
 describe("CashToCloseEstimatorClient", () => {
   beforeEach(() => {
+    sessionStorage.clear();
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -67,6 +72,39 @@ describe("CashToCloseEstimatorClient", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    sessionStorage.clear();
+  });
+
+  it("hydrates form fields from saved tab session", () => {
+    sessionStorage.setItem(
+      DEAL_FORM_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        flow: "purchase",
+        fields: {
+          ...DEFAULT_DEAL_FORM_FIELDS,
+          purchasePrice: "250000",
+          arv: "400000",
+        },
+      }),
+    );
+    render(<CashToCloseEstimatorClient />);
+    const form = screen.getByTestId("ctc-form");
+    expect(within(form).getByTestId("ctc-purchase-price")).toHaveValue("250000");
+    expect(within(form).getByTestId("ctc-purchase-arv")).toHaveValue("400000");
+  });
+
+  it("clear saved deal inputs removes session storage", async () => {
+    sessionStorage.setItem(
+      DEAL_FORM_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        flow: "purchase",
+        fields: { ...DEFAULT_DEAL_FORM_FIELDS, purchasePrice: "1" },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<CashToCloseEstimatorClient />);
+    await user.click(screen.getByTestId("ctc-clear-deal-session"));
+    expect(sessionStorage.getItem(DEAL_FORM_SESSION_STORAGE_KEY)).toBeNull();
   });
 
   it("purchase happy path posts bridge_purchase and shows cash-first results", async () => {
@@ -294,10 +332,11 @@ describe("CashToCloseEstimatorClient", () => {
     const root = screen.getByTestId("ctc-results");
     const sections = root.querySelectorAll("section");
     expect(sections[0]?.getAttribute("data-testid")).toBe("ctc-cash-summary-strip");
-    expect(sections[1]?.getAttribute("data-testid")).toBe("ctc-cash-line-items");
-    expect(sections[2]?.getAttribute("data-testid")).toBe("ctc-analysis-context");
-    expect(sections[3]?.getAttribute("data-testid")).toBe("ctc-risks-panel");
-    expect(sections[4]?.getAttribute("data-testid")).toBe("ctc-secondary-context");
+    expect(sections[1]?.getAttribute("data-testid")).toBe("ctc-client-handoff");
+    expect(sections[2]?.getAttribute("data-testid")).toBe("ctc-cash-line-items");
+    expect(sections[3]?.getAttribute("data-testid")).toBe("ctc-analysis-context");
+    expect(sections[4]?.getAttribute("data-testid")).toBe("ctc-risks-panel");
+    expect(sections[5]?.getAttribute("data-testid")).toBe("ctc-secondary-context");
   });
 
   it("preserves exact server line order and labels", async () => {
@@ -373,6 +412,99 @@ describe("CashToCloseEstimatorClient", () => {
     const lis = panel.querySelectorAll("ul li");
     expect(lis[0]?.textContent).toContain("SECOND");
     expect(lis[1]?.textContent).toContain("FIRST");
+  });
+
+  it("sends assumptions.noteRatePercent when Note rate field is filled", async () => {
+    const user = userEvent.setup();
+    render(<CashToCloseEstimatorClient />);
+    const form = screen.getByTestId("ctc-form");
+    await user.type(within(form).getByTestId("ctc-purchase-price"), "100000");
+    await user.type(within(form).getByTestId("ctc-purchase-arv"), "200000");
+    await user.type(within(form).getByTestId("ctc-note-rate"), "9.375");
+    await user.click(screen.getByTestId("ctc-estimate-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("ctc-results")).toBeInTheDocument();
+    });
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.assumptions?.noteRatePercent).toBe(9.375);
+  });
+
+  it("shows note rate and monthly payment section after estimate", async () => {
+    const user = userEvent.setup();
+    render(<CashToCloseEstimatorClient />);
+    const form = screen.getByTestId("ctc-form");
+    await user.type(within(form).getByTestId("ctc-purchase-price"), "100000");
+    await user.type(within(form).getByTestId("ctc-purchase-arv"), "200000");
+    await user.click(screen.getByTestId("ctc-estimate-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("ctc-result-note-rate")).toHaveTextContent("10%");
+    });
+    expect(screen.getByTestId("ctc-client-handoff")).toBeInTheDocument();
+  });
+
+  it("shows copy summary control after estimate", async () => {
+    const user = userEvent.setup();
+    render(<CashToCloseEstimatorClient />);
+    const form = screen.getByTestId("ctc-form");
+    await user.type(within(form).getByTestId("ctc-purchase-price"), "100000");
+    await user.type(within(form).getByTestId("ctc-purchase-arv"), "200000");
+    await user.click(screen.getByTestId("ctc-estimate-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("ctc-copy-summary")).toBeInTheDocument();
+    });
+  });
+
+  it("purchase display merges fees into Total points & fees and labels equity as Down payment", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify(
+              baseResponse({
+                loan: {
+                  purpose: "purchase" as const,
+                  productType: "bridge_purchase",
+                  termMonths: 12,
+                  rehabBudget: 0,
+                  purchasePrice: 100_000,
+                  amount: 90_000,
+                  ltv: 90,
+                },
+                cashToClose: {
+                  status: "complete",
+                  estimatedTotal: 20_000,
+                  items: [
+                    { label: "Borrower equity", amount: 10_000 },
+                    { label: "Estimated points", amount: 500 },
+                    { label: "Estimated lender fees", amount: 1_000 },
+                    { label: "Estimated closing costs", amount: 1_500 },
+                    { label: "Holdback / reserve (if applicable)", amount: 0 },
+                    { label: "Total estimated cash to close", amount: 13_000 },
+                  ],
+                },
+              }),
+            ),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<CashToCloseEstimatorClient />);
+    const form = screen.getByTestId("ctc-form");
+    await user.type(within(form).getByTestId("ctc-purchase-price"), "100000");
+    await user.type(within(form).getByTestId("ctc-purchase-arv"), "200000");
+    await user.click(screen.getByTestId("ctc-estimate-button"));
+    await waitFor(() => {
+      expect(screen.getByTestId("ctc-cash-lines-list")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Down payment")).toBeInTheDocument();
+    expect(screen.getByText(/10% of purchase price/)).toBeInTheDocument();
+    expect(screen.getByText("Total points & fees")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Third-party closing fees are estimated/),
+    ).toBeInTheDocument();
   });
 });
 

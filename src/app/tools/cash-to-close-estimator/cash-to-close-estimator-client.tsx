@@ -2,33 +2,25 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import { DisclosureBanner } from "@/components/tools/disclosure-banner";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
+import { CASH_TO_CLOSE_DISCLAIMER_SUMMARY } from "@/lib/tools/disclaimer-copy";
 import {
   buildDealAnalyzeRequest,
   type LoanAssistantFields,
   type LoanAssistantFlow,
 } from "../loan-structuring-assistant/build-deal-analyze-request";
+import { useDealFormSession } from "../shared/use-deal-form-session";
 import {
   formatMoney,
   groupRisksBySeverity,
 } from "../loan-structuring-assistant/display-helpers";
-
-const EMPTY_FIELDS: LoanAssistantFields = {
-  purchasePrice: "",
-  rehabBudget: "",
-  arv: "",
-  requestedLoanAmount: "",
-  termMonths: "",
-  fico: "",
-  experienceTier: "",
-  payoffAmount: "",
-  asIsValue: "",
-  borrowingRehabFunds: "yes",
-  originationPointsPercent: "",
-  originationFlatFee: "",
-  noteRatePercent: "",
-};
+import {
+  buildCashToCloseClientSummaryText,
+  estimateMonthlyPayments,
+  transformCashToCloseDisplayLines,
+} from "./cash-to-close-estimator-display";
 
 type DealAnalyzeErrorBody = {
   error?: string;
@@ -48,8 +40,7 @@ type UiPhase =
  * Cash-to-close-first UI (TICKET-005). Flags preserve **server order** (no client-side resort).
  */
 export function CashToCloseEstimatorClient() {
-  const [flow, setFlow] = useState<LoanAssistantFlow>("purchase");
-  const [fields, setFields] = useState<LoanAssistantFields>(EMPTY_FIELDS);
+  const { flow, setFlow, fields, setFields, clearSession } = useDealFormSession();
   const [phase, setPhase] = useState<UiPhase>("idle");
   const [clientHint, setClientHint] = useState<string | null>(null);
   const [successPayload, setSuccessPayload] = useState<{
@@ -58,6 +49,7 @@ export function CashToCloseEstimatorClient() {
   } | null>(null);
   const [error4xx, setError4xx] = useState<DealAnalyzeErrorBody | null>(null);
   const [error5xx, setError5xx] = useState<string | null>(null);
+  const [copyHint, setCopyHint] = useState<string | null>(null);
 
   const disabled = phase === "submitting";
 
@@ -148,22 +140,125 @@ export function CashToCloseEstimatorClient() {
     return groupRisksBySeverity(successPayload.response.risks);
   }, [successPayload]);
 
+  const displayCashLines = useMemo(() => {
+    if (!successPayload) {
+      return [];
+    }
+    const purpose =
+      successPayload.response.loan.purpose === "purchase"
+        ? "purchase"
+        : "refinance";
+    return transformCashToCloseDisplayLines(
+      successPayload.response.cashToClose.items,
+      {
+        purpose,
+        purchasePrice: successPayload.request.deal.purchasePrice,
+      },
+    );
+  }, [successPayload]);
+
+  const monthlyPayments = useMemo(() => {
+    if (!successPayload) {
+      return { interestOnlyPerMonth: null, amortizingPerMonth: null };
+    }
+    return estimateMonthlyPayments(
+      successPayload.response.loan,
+      successPayload.response.pricing,
+    );
+  }, [successPayload]);
+
   const showResults = Boolean(successPayload && phase !== "submitting");
+
+  const handleClearSavedDealInputs = useCallback(() => {
+    clearSession();
+    setSuccessPayload(null);
+    setError4xx(null);
+    setError5xx(null);
+    setClientHint(null);
+    setCopyHint(null);
+    setPhase("idle");
+  }, [clearSession]);
+
+  const copyClientSummary = useCallback(async () => {
+    if (!successPayload) {
+      return;
+    }
+    const text = buildCashToCloseClientSummaryText({
+      flow,
+      response: successPayload.response,
+      request: successPayload.request,
+    });
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        throw new Error("no clipboard API");
+      }
+      setCopyHint("Summary copied to clipboard.");
+      setTimeout(() => setCopyHint(null), 4000);
+    } catch {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (ok) {
+          setCopyHint("Summary copied to clipboard.");
+          setTimeout(() => setCopyHint(null), 4000);
+        } else {
+          throw new Error("execCommand copy failed");
+        }
+      } catch {
+        setCopyHint(
+          "Could not copy — use Select all in the summary or check browser permissions.",
+        );
+        setTimeout(() => setCopyHint(null), 5000);
+      }
+    }
+  }, [flow, successPayload]);
 
   return (
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Cash to Close Calculator
-        </h1>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Cash to Close Calculator
+          </h1>
+          <button
+            type="button"
+            data-testid="ctc-clear-deal-session"
+            onClick={handleClearSavedDealInputs}
+            className="shrink-0 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Clear saved deal inputs
+          </button>
+        </div>
         <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
           Estimate cash needed at closing from your deal inputs. For discussion only —
           not a final settlement statement, HUD-1, or Closing Disclosure.
         </p>
+        <DisclosureBanner
+          summary={CASH_TO_CLOSE_DISCLAIMER_SUMMARY}
+          details={
+            <p>
+              Keep this as an internal planning estimate. Confirm final figures with
+              title/closing documents before commitment.
+            </p>
+          }
+        />
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Deal numbers match the Term Sheet / Deal Sheet builder for this tab — they stay
+          filled when you switch tools until you clear them or close the tab.
+        </p>
       </header>
 
       <form
-        className="flex flex-col gap-6"
+        className="flex flex-col gap-6 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
         data-testid="ctc-form"
         onSubmit={(e) => {
           e.preventDefault();
@@ -197,6 +292,26 @@ export function CashToCloseEstimatorClient() {
             </label>
           </div>
         </fieldset>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-zinc-800 dark:text-zinc-200">
+            Subject property address{" "}
+            <span className="font-normal text-zinc-500">(optional)</span>
+          </span>
+          <input
+            name="collateralPropertyAddress"
+            data-testid="ctc-collateral-address"
+            value={fields.collateralPropertyAddress}
+            onChange={onField("collateralPropertyAddress")}
+            autoComplete="street-address"
+            placeholder="e.g. 100 Main St, City, ST 00000 — stored in admin analytics when you run"
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+          />
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            Not used by the deal engine. Logged with successful cash-to-close runs for the
+            admin dashboard.
+          </span>
+        </label>
 
         {flow === "purchase" ? (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -253,7 +368,8 @@ export function CashToCloseEstimatorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Term (months)
+                Term (months){" "}
+                <span className="font-normal text-zinc-500">(typical 6-18)</span>
               </span>
               <input
                 name="termMonths"
@@ -277,12 +393,31 @@ export function CashToCloseEstimatorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Experience tier
+                Experience tier{" "}
+                <span className="font-normal text-zinc-500">(1, 2, or 3)</span>
               </span>
               <input
                 name="experienceTier"
                 value={fields.experienceTier}
                 onChange={onField("experienceTier")}
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                Note rate (%){" "}
+                <span className="font-normal text-zinc-500">
+                  optional — used for note rate on screen, payment estimates, and copy/paste
+                  summary
+                </span>
+              </span>
+              <input
+                name="noteRatePercent"
+                data-testid="ctc-note-rate"
+                value={fields.noteRatePercent}
+                onChange={onField("noteRatePercent")}
+                placeholder="e.g. 10.25"
+                inputMode="decimal"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
             </label>
@@ -346,7 +481,8 @@ export function CashToCloseEstimatorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Term (months)
+                Term (months){" "}
+                <span className="font-normal text-zinc-500">(typical 6-18)</span>
               </span>
               <input
                 name="termMonths"
@@ -370,12 +506,31 @@ export function CashToCloseEstimatorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Experience tier
+                Experience tier{" "}
+                <span className="font-normal text-zinc-500">(1, 2, or 3)</span>
               </span>
               <input
                 name="experienceTier"
                 value={fields.experienceTier}
                 onChange={onField("experienceTier")}
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                Note rate (%){" "}
+                <span className="font-normal text-zinc-500">
+                  optional — used for note rate on screen, payment estimates, and copy/paste
+                  summary
+                </span>
+              </span>
+              <input
+                name="noteRatePercent"
+                data-testid="ctc-note-rate-refi"
+                value={fields.noteRatePercent}
+                onChange={onField("noteRatePercent")}
+                placeholder="e.g. 10.25"
+                inputMode="decimal"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
             </label>
@@ -483,6 +638,57 @@ export function CashToCloseEstimatorClient() {
             </dl>
           </section>
 
+          <section data-testid="ctc-client-handoff">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              Note rate &amp; monthly payments (for client / email)
+            </h2>
+            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              Display-only payment math from loan amount, note rate, and term — use for
+              indicative or confirmed terms; not a binding payment schedule.
+            </p>
+            <dl className="mt-3 space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">Note rate</dt>
+                <dd
+                  className="font-medium text-zinc-900 dark:text-zinc-100"
+                  data-testid="ctc-result-note-rate"
+                >
+                  {successPayload.response.pricing.noteRatePercent === null ||
+                  successPayload.response.pricing.noteRatePercent === undefined
+                    ? "—"
+                    : `${successPayload.response.pricing.noteRatePercent}%`}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">Est. monthly (interest-only)</dt>
+                <dd className="tabular-nums text-zinc-900 dark:text-zinc-100">
+                  {formatMoney(monthlyPayments.interestOnlyPerMonth)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-zinc-500">Est. monthly (fully amortizing)</dt>
+                <dd className="tabular-nums text-zinc-900 dark:text-zinc-100">
+                  {formatMoney(monthlyPayments.amortizingPerMonth)}
+                </dd>
+              </div>
+            </dl>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                data-testid="ctc-copy-summary"
+                onClick={() => void copyClientSummary()}
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Copy summary for client / email
+              </button>
+              {copyHint ? (
+                <span className="text-xs text-zinc-600 dark:text-zinc-400" role="status">
+                  {copyHint}
+                </span>
+              ) : null}
+            </div>
+          </section>
+
           <section data-testid="ctc-cash-line-items">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
               Cash to close line items
@@ -496,14 +702,28 @@ export function CashToCloseEstimatorClient() {
                 className="mt-3 divide-y divide-zinc-200 dark:divide-zinc-800"
                 data-testid="ctc-cash-lines-list"
               >
-                {successPayload.response.cashToClose.items.map((item, i) => (
+                {displayCashLines.map((item, i) => (
                   <li
-                    key={`${item.label}-${i}`}
+                    key={`${item.label}-${i}-${item.amount}`}
                     data-line-index={i}
-                    className="flex justify-between gap-4 py-2 text-sm"
+                    className="py-2 text-sm"
                   >
-                    <span>{item.label}</span>
-                    <span className="tabular-nums">{formatMoney(item.amount)}</span>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-zinc-900 dark:text-zinc-100">{item.label}</span>
+                      <span className="tabular-nums text-zinc-900 dark:text-zinc-100">
+                        {formatMoney(item.amount)}
+                      </span>
+                    </div>
+                    {item.sublabel ? (
+                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        {item.sublabel}
+                      </p>
+                    ) : null}
+                    {item.footnote ? (
+                      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                        {item.footnote}
+                      </p>
+                    ) : null}
                   </li>
                 ))}
               </ul>

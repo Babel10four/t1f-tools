@@ -1,9 +1,27 @@
-import { and, count, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { documents, platformEvents, ruleSets } from "@/db/schema";
+import type { AnalyticsStatus } from "./constants";
 import { ANALYZE_TOOL_KEYS } from "./kpi-semantics";
 
-const WINDOW_DAYS = 7;
+/** Preset windows (days) for admin dashboard filters — query `?window=7` etc. */
+export const DASHBOARD_WINDOW_PRESETS = [7, 30, 90, 180] as const;
+
+export type DashboardWindowDays = (typeof DASHBOARD_WINDOW_PRESETS)[number];
+
+const DEFAULT_WINDOW_DAYS: DashboardWindowDays = 7;
+const MAX_WINDOW_DAYS = 366;
+const DEFAULT_ADDRESS_LIST_LIMIT = 100;
+const MAX_ADDRESS_LIST_LIMIT = 250;
+
+export type DashboardAddressHit = {
+  createdAtIso: string;
+  address: string;
+  role: string;
+  status: AnalyticsStatus;
+  /** Rural screening engine result when present */
+  ruralResult?: string;
+};
 
 export type DashboardKpis = {
   windowDays: number;
@@ -19,7 +37,7 @@ export type DashboardKpis = {
     cashToCloseRuns: number;
     ruralCheckRuns: number;
     creditCopilotQuestions: number;
-    /** `deal_analyze_run` + tool_key = term_sheet (preview-only UI). */
+    /** `deal_analyze_run` + tool_key = term_sheet (Deal Sheet / Term Sheet builder preview). */
     termSheetPreviewRuns: number;
     /**
      * `term_sheet_generated` — emitted by POST /api/deal/terms only; reserved for a future
@@ -35,6 +53,12 @@ export type DashboardKpis = {
   toolUsageByToolKey: { toolKey: string | null; count: number }[];
   publishedDocumentCount: number;
   publishedRuleSets: { ruleType: string; versionLabel: string }[];
+  /** Success `deal_analyze_run` + term_sheet with non-empty `metadata.collateralPropertyAddress`. */
+  termSheetCollateralAddresses: DashboardAddressHit[];
+  /** Success `cash_to_close_run` with logged collateral address. */
+  cashToCloseCollateralAddresses: DashboardAddressHit[];
+  /** Rural checks with a logged `addressLine` (success or error). */
+  ruralCheckAddresses: DashboardAddressHit[];
 };
 
 const emptyTotals: DashboardKpis["totals"] = {
@@ -55,11 +79,55 @@ function utcDay(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function getDashboardKpis(): Promise<DashboardKpis> {
+function clampWindowDays(n: number): number {
+  if (!Number.isFinite(n) || n < 1) {
+    return DEFAULT_WINDOW_DAYS;
+  }
+  return Math.min(Math.floor(n), MAX_WINDOW_DAYS);
+}
+
+/**
+ * Parses `?window=` for admin dashboard. Accepts preset days or any 1–366.
+ */
+export function parseDashboardWindowDays(raw: string | undefined): number {
+  if (raw === undefined || raw === "") {
+    return DEFAULT_WINDOW_DAYS;
+  }
+  const n = Number.parseInt(raw, 10);
+  if (Number.isFinite(n) && (DASHBOARD_WINDOW_PRESETS as readonly number[]).includes(n)) {
+    return n;
+  }
+  return clampWindowDays(n);
+}
+
+export type GetDashboardKpisOptions = {
+  windowDays?: number;
+  addressListLimit?: number;
+};
+
+const nonEmptyCollateralSql = sql`trim(coalesce(${platformEvents.metadata}->>'collateralPropertyAddress','')) <> ''`;
+
+const nonEmptyRuralAddressSql = sql`trim(coalesce(${platformEvents.metadata}->>'addressLine','')) <> ''`;
+
+export async function getDashboardKpis(
+  options: GetDashboardKpisOptions = {},
+): Promise<DashboardKpis> {
+  const windowDays = clampWindowDays(options.windowDays ?? DEFAULT_WINDOW_DAYS);
+  const addressListLimit = Math.min(
+    Math.max(1, options.addressListLimit ?? DEFAULT_ADDRESS_LIST_LIMIT),
+    MAX_ADDRESS_LIST_LIMIT,
+  );
+
+  const emptyLists = {
+    termSheetCollateralAddresses: [] as DashboardAddressHit[],
+    cashToCloseCollateralAddresses: [] as DashboardAddressHit[],
+    ruralCheckAddresses: [] as DashboardAddressHit[],
+  };
+
   try {
     const db = getDb();
     const since = new Date();
-    since.setDate(since.getDate() - WINDOW_DAYS);
+    since.setDate(since.getDate() - windowDays);
 
     async function tally(eventType: string): Promise<number> {
       const [row] = await db
@@ -140,7 +208,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
 
     const toolUsageByDay = [...byDay.entries()]
       .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
-      .slice(0, 14)
+      .slice(0, Math.min(60, windowDays + 5))
       .map(([day, c]) => ({ day, count: c }));
 
     const toolUsageByToolKey = [...byTool.entries()]
@@ -162,8 +230,102 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
       .where(eq(ruleSets.status, "published"))
       .orderBy(desc(ruleSets.publishedAt));
 
+    const termSheetRows = await db
+      .select({
+        createdAt: platformEvents.createdAt,
+        metadata: platformEvents.metadata,
+        role: platformEvents.role,
+        status: platformEvents.status,
+      })
+      .from(platformEvents)
+      .where(
+        and(
+          gte(platformEvents.createdAt, since),
+          eq(platformEvents.eventType, "deal_analyze_run"),
+          eq(platformEvents.toolKey, ANALYZE_TOOL_KEYS.termSheetPreview),
+          eq(platformEvents.status, "success"),
+          nonEmptyCollateralSql,
+        ),
+      )
+      .orderBy(desc(platformEvents.createdAt))
+      .limit(addressListLimit);
+
+    const ctcRows = await db
+      .select({
+        createdAt: platformEvents.createdAt,
+        metadata: platformEvents.metadata,
+        role: platformEvents.role,
+        status: platformEvents.status,
+      })
+      .from(platformEvents)
+      .where(
+        and(
+          gte(platformEvents.createdAt, since),
+          eq(platformEvents.eventType, "cash_to_close_run"),
+          inArray(platformEvents.toolKey, [
+            ANALYZE_TOOL_KEYS.cashToCloseEstimator,
+            "cash_to_close",
+          ]),
+          nonEmptyCollateralSql,
+        ),
+      )
+      .orderBy(desc(platformEvents.createdAt))
+      .limit(addressListLimit);
+
+    const ruralRows = await db
+      .select({
+        createdAt: platformEvents.createdAt,
+        metadata: platformEvents.metadata,
+        role: platformEvents.role,
+        status: platformEvents.status,
+      })
+      .from(platformEvents)
+      .where(
+        and(
+          gte(platformEvents.createdAt, since),
+          eq(platformEvents.eventType, "rural_check_run"),
+          nonEmptyRuralAddressSql,
+        ),
+      )
+      .orderBy(desc(platformEvents.createdAt))
+      .limit(addressListLimit);
+
+    function mapCollateralRows(
+      rows: typeof termSheetRows,
+    ): DashboardAddressHit[] {
+      return rows.map((r) => {
+        const meta = r.metadata as Record<string, unknown>;
+        const addr =
+          typeof meta.collateralPropertyAddress === "string"
+            ? meta.collateralPropertyAddress.trim()
+            : "";
+        return {
+          createdAtIso: new Date(r.createdAt).toISOString(),
+          address: addr,
+          role: r.role,
+          status: r.status,
+        };
+      });
+    }
+
+    function mapRuralRows(rows: typeof ruralRows): DashboardAddressHit[] {
+      return rows.map((r) => {
+        const meta = r.metadata as Record<string, unknown>;
+        const addr =
+          typeof meta.addressLine === "string" ? meta.addressLine.trim() : "";
+        const res = meta.result;
+        return {
+          createdAtIso: new Date(r.createdAt).toISOString(),
+          address: addr,
+          role: r.role,
+          status: r.status,
+          ruralResult: typeof res === "string" ? res : undefined,
+        };
+      });
+    }
+
     return {
-      windowDays: WINDOW_DAYS,
+      windowDays,
       dbAvailable: true,
       totals: {
         loanStructuringAssistantRuns: await tallyTypedToolLegacy(
@@ -203,10 +365,13 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
         ruleType: r.ruleType,
         versionLabel: r.versionLabel,
       })),
+      termSheetCollateralAddresses: mapCollateralRows(termSheetRows),
+      cashToCloseCollateralAddresses: mapCollateralRows(ctcRows),
+      ruralCheckAddresses: mapRuralRows(ruralRows),
     };
   } catch {
     return {
-      windowDays: WINDOW_DAYS,
+      windowDays,
       dbAvailable: false,
       totals: { ...emptyTotals },
       errorsInWindow: 0,
@@ -214,6 +379,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
       toolUsageByToolKey: [],
       publishedDocumentCount: 0,
       publishedRuleSets: [],
+      ...emptyLists,
     };
   }
 }

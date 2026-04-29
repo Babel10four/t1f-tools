@@ -1,7 +1,9 @@
 import { DEAL_ANALYZE_SCHEMA_VERSION } from "./deal-analyze-constants";
 import type { DealPurpose } from "./deal-analyze-constants";
 import type {
+  DealAnalyzeBindingLegV1,
   DealAnalyzeCashToCloseStatus,
+  DealAnalyzeGoverningLeverageMetricV1,
   DealAnalyzePricingStatus,
 } from "./deal-engine-v1-enums";
 
@@ -42,9 +44,20 @@ export type DealAnalyzeLoanOutV1 = {
   amount?: number;
   /**
    * LTV in **0–100 percent** (e.g. `75` = 75%), **not** a 0–1 ratio.
+   * Legacy field: mirrors refinance basis or purchase-vs-ARV math from pre–POLICY-ENGINE-REWRITE
+   * rules. Prefer `governingLeverageMetric` + `arvLtv` / `aivLtv` for new consumers; for
+   * purchase without rehab, `governingLeverageMetric` may be omitted while policy mapping is pending.
    * @see docs/business-rules/deal-engine-v1-assumptions.md
    */
   ltv?: number;
+  /** ARV-based LTV (0–100) when ARV is known and loan amount is present. */
+  arvLtv?: number;
+  /** As-is (AIV) LTV (0–100) when as-is value is known and loan amount is present. */
+  aivLtv?: number;
+  /** Which metric governs leverage presentation when unambiguous; omitted on tie or pending mapping. */
+  governingLeverageMetric?: DealAnalyzeGoverningLeverageMetricV1;
+  /** Policy cap leg or refi basis that bound sizing (see `inferPurchaseBindingLeg` / refi basis). */
+  bindingLeg?: DealAnalyzeBindingLegV1;
   /**
    * Loan-to-cost: total loan ÷ cost basis in **0–100 percent** (same scale as `ltv`).
    * Purchase basis: purchase price + rehab. Refinance: payoff + rehab.

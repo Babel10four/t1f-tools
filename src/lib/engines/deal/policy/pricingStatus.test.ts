@@ -28,4 +28,14 @@ describe("pricingStatusForSupportedDeal", () => {
       }),
     ).toBe("indicative");
   });
+
+  it("returns indicative when leverage policy presentation is not ready even with FICO", () => {
+    expect(
+      pricingStatusForSupportedDeal({
+        policyMaxDefined: true,
+        borrowerFicoDefined: true,
+        leveragePolicyPresentationReady: false,
+      }),
+    ).toBe("indicative");
+  });
 });

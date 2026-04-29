@@ -1,5 +1,10 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
+import { DisclosureBanner } from "@/components/tools/disclosure-banner";
+import {
+  TERM_SHEET_DISCLAIMER_DETAILS,
+  TERM_SHEET_DISCLAIMER_SUMMARY,
+} from "@/lib/tools/disclaimer-copy";
 import {
   formatMoneyWholeDollars,
   groupRisksBySeverity,
@@ -88,14 +93,13 @@ export function TermSheetPreview({
         className="border-b border-zinc-200 pb-4 dark:border-zinc-800"
         data-testid="ts-disclaimer"
       >
-        <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-          <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
-            Indicative, non-binding preview only.
-          </strong>{" "}
-          This term sheet is for discussion purposes only and does not constitute a
-          commitment to lend. This is an internal workflow preview from API outputs; it
-          is not a rate lock, borrower-facing disclosure, or underwriting decision.
-        </p>
+        <DisclosureBanner
+          summary={TERM_SHEET_DISCLAIMER_SUMMARY}
+          detailLabel="Privacy / Disclaimer"
+          details={TERM_SHEET_DISCLAIMER_DETAILS.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        />
       </section>
 
       <TermSheetExportBar

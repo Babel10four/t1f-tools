@@ -11,12 +11,20 @@ export function AdvancedToolRow({ tool }: { tool: AdvancedToolDef }) {
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         {tool.description}
       </p>
-      <Link
-        href={tool.href}
-        className="mt-3 inline-flex text-sm font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100"
-      >
-        {tool.ctaLabel}
-      </Link>
+      <div className="mt-3 flex items-center gap-3">
+        <Link
+          href={tool.href}
+          className="inline-flex rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+        >
+          {tool.ctaLabel}
+        </Link>
+        <Link
+          href={tool.href}
+          className="text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-700"
+        >
+          View JSON harness
+        </Link>
+      </div>
     </div>
   );
 }

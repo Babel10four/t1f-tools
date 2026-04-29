@@ -110,6 +110,36 @@ describe("POST /api/deal/analyze (TICKET-001 / 001A)", () => {
     ).toBe(true);
   });
 
+  it("returns 400 UNKNOWN_REQUEST_FIELD for unsupported top-level field", async () => {
+    const res = await postJson({
+      schemaVersion: "deal_analyze.v1",
+      unknownTopLevel: true,
+      deal: {
+        purpose: "purchase",
+        productType: "bridge_purchase",
+        purchasePrice: 350_000,
+        termMonths: null,
+      },
+      property: { asIsValue: 400_000 },
+    });
+    await expect400(res, "UNKNOWN_REQUEST_FIELD");
+  });
+
+  it("returns 400 UNKNOWN_REQUEST_FIELD for unknown deal field", async () => {
+    const res = await postJson({
+      schemaVersion: "deal_analyze.v1",
+      deal: {
+        purpose: "purchase",
+        productType: "bridge_purchase",
+        purchasePrice: 350_000,
+        termMonths: null,
+        legacyExtra: 1,
+      },
+      property: { asIsValue: 400_000 },
+    });
+    await expect400(res, "UNKNOWN_REQUEST_FIELD");
+  });
+
   it("returns 400 UNSUPPORTED_SCHEMA_VERSION when schemaVersion is missing", async () => {
     const res = await postJson({
       deal: {
@@ -419,6 +449,33 @@ describe("POST /api/deal/analyze (TICKET-001 / 001A)", () => {
     };
     expect(json.pricing.status).toBe("complete");
     expect(json.cashToClose.status).toBe("complete");
+  });
+
+  it("purchase without rehab stays pricing indicative when FICO is present (POLICY_MAPPING_PENDING)", async () => {
+    const res = await postJson({
+      schemaVersion: "deal_analyze.v1",
+      deal: {
+        purpose: "purchase",
+        productType: "bridge_purchase",
+        purchasePrice: 350_000,
+        termMonths: null,
+      },
+      property: { asIsValue: 400_000, arv: 500_000 },
+      borrower: { fico: 720 },
+    });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as {
+      pricing: { status: string };
+      cashToClose: { status: string };
+      loan: { governingLeverageMetric?: string };
+      analysis: { flags: { code: string }[] };
+    };
+    expect(json.pricing.status).toBe("indicative");
+    expect(json.cashToClose.status).toBe("indicative");
+    expect(json.loan.governingLeverageMetric).toBeUndefined();
+    expect(
+      json.analysis.flags.some((f) => f.code === "POLICY_MAPPING_PENDING"),
+    ).toBe(true);
   });
 
   it("DOC-001: loan.ltv uses 0–100 percent scale (not 0–1 ratio)", async () => {

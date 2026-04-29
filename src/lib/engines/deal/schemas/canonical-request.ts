@@ -1,5 +1,6 @@
 import { DEAL_ANALYZE_SCHEMA_VERSION } from "./deal-analyze-constants";
 import type { DealPurpose } from "./deal-analyze-constants";
+import type { DealAnalyzeProgramContextV1 } from "./deal-program-context";
 
 export type { DealPurpose } from "./deal-analyze-constants";
 
@@ -35,4 +36,9 @@ export type DealAnalyzeRequestV1 = {
   borrower?: DealAnalyzeBorrowerV1;
   /** Optional opaque bag; not expanded in v1. */
   assumptions?: Record<string, unknown>;
+  /**
+   * Optional underwriting/program context (POLICY-ENGINE-REWRITE Phase B).
+   * Validators reject unknown keys here and on other canonical slices.
+   */
+  programContext?: DealAnalyzeProgramContextV1;
 };

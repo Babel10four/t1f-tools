@@ -100,6 +100,9 @@ const MOCK_KPIS: DashboardKpis = {
   publishedRuleSets: [
     { ruleType: "rates", versionLabel: "v1" },
   ],
+  termSheetCollateralAddresses: [],
+  cashToCloseCollateralAddresses: [],
+  ruralCheckAddresses: [],
 };
 
 describe("admin placeholder pages", () => {

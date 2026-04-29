@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEAL_FORM_SESSION_STORAGE_KEY } from "../shared/deal-form-session";
 import { TermSheetGeneratorClient } from "./term-sheet-generator-client";
 import { TermSheetPreview } from "./term-sheet-preview";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
@@ -38,6 +39,7 @@ const minimalSuccess: DealAnalyzeResponseV1 = {
 
 describe("TermSheetGeneratorClient", () => {
   beforeEach(() => {
+    sessionStorage.clear();
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -53,6 +55,36 @@ describe("TermSheetGeneratorClient", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    sessionStorage.clear();
+  });
+
+  it("clear saved deal inputs removes session storage", async () => {
+    sessionStorage.setItem(
+      DEAL_FORM_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        flow: "purchase",
+        fields: {
+          purchasePrice: "1",
+          rehabBudget: "",
+          arv: "",
+          requestedLoanAmount: "",
+          termMonths: "",
+          fico: "",
+          experienceTier: "",
+          payoffAmount: "",
+          asIsValue: "",
+          borrowingRehabFunds: "yes",
+          originationPointsPercent: "",
+          originationFlatFee: "",
+          noteRatePercent: "",
+          collateralPropertyAddress: "",
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    await user.click(screen.getByTestId("ts-clear-deal-session"));
+    expect(sessionStorage.getItem(DEAL_FORM_SESSION_STORAGE_KEY)).toBeNull();
   });
 
   it("purchase happy path posts canonical body and shows disclaimer + preview", async () => {

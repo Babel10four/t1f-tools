@@ -4,11 +4,15 @@ import {
 } from "@/lib/analytics/constants";
 import { enqueuePlatformEvent } from "@/lib/analytics/log-event";
 import { resolveAnalyzeAnalyticsContext } from "@/lib/analytics/resolve-analyze-context";
+import type { DealAnalyzeRequestV1 } from "./deal/schemas/canonical-request";
 import type { UnknownRecord } from "./types";
 import { runDealAnalyze } from "./deal/analyze";
 import { normalizeDealAnalyzeRequest } from "./deal/legacy/normalizeDealAnalyzeRequest";
 import { resolveDealAnalyzePolicy } from "./deal/policy/resolvePolicySnapshot";
-import { validateDealAnalyzeRequestV1 } from "./deal/schemas/validate-deal-analyze-request";
+import {
+  validateDealAnalyzeRequestV1,
+  validateDealAnalyzeTopLevelKeysOnly,
+} from "./deal/schemas/validate-deal-analyze-request";
 import type { ValidationIssue } from "./deal/schemas/validation-issue";
 
 export async function readJson(req: Request): Promise<UnknownRecord | null> {
@@ -103,21 +107,37 @@ export async function handleEnginePost<T>(
   }
 }
 
+const MAX_ANALYTICS_COLLATERAL_ADDRESS_CHARS = 500;
+
 function logDealAnalyze(
   req: Request,
   status: "success" | "error",
   metadata: Record<string, unknown>,
+  dealSnapshot?: DealAnalyzeRequestV1 | null,
 ): void {
   const ctx = resolveAnalyzeAnalyticsContext(
     req.headers.get(ANALYTICS_TOOL_KEY_HEADER),
   );
+  const extra: Record<string, unknown> = {};
+  if (dealSnapshot?.assumptions) {
+    const raw = dealSnapshot.assumptions.collateralPropertyAddress;
+    if (typeof raw === "string") {
+      const t = raw.trim();
+      if (t !== "") {
+        extra.collateralPropertyAddress = t.slice(
+          0,
+          MAX_ANALYTICS_COLLATERAL_ADDRESS_CHARS,
+        );
+      }
+    }
+  }
   enqueuePlatformEvent({
     req,
     eventType: ctx.eventType,
     toolKey: ctx.toolKey,
     route: "/api/deal/analyze",
     status,
-    metadata,
+    metadata: { ...metadata, ...extra },
   });
 }
 
@@ -177,6 +197,20 @@ export async function handleDealAnalyzePost(req: Request): Promise<Response> {
     );
   }
 
+  const topLevelErr = validateDealAnalyzeTopLevelKeysOnly(raw);
+  if (topLevelErr) {
+    logDealAnalyze(req, "error", {
+      phase: "validation",
+      httpStatus: 400,
+      code: topLevelErr.code,
+    });
+    return dealAnalyze400(
+      topLevelErr.message,
+      topLevelErr.code,
+      topLevelErr.issues,
+    );
+  }
+
   const { normalized, notes } = normalizeDealAnalyzeRequest(raw);
   const validated = validateDealAnalyzeRequestV1(normalized);
   if (!validated.ok) {
@@ -197,20 +231,30 @@ export async function handleDealAnalyzePost(req: Request): Promise<Response> {
       policySnapshot,
       includePolicyConfigFallbackFlag: true,
     });
-    logDealAnalyze(req, "success", {
-      phase: "engine",
-      httpStatus: 200,
-      normalizationNoteCount: notes.length,
-      policyConfigSource,
-    });
+    logDealAnalyze(
+      req,
+      "success",
+      {
+        phase: "engine",
+        httpStatus: 200,
+        normalizationNoteCount: notes.length,
+        policyConfigSource,
+      },
+      validated.value,
+    );
     return Response.json(result);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Internal error";
-    logDealAnalyze(req, "error", {
-      phase: "engine",
-      httpStatus: 500,
-      code: "INTERNAL",
-    });
+    logDealAnalyze(
+      req,
+      "error",
+      {
+        phase: "engine",
+        httpStatus: 500,
+        code: "INTERNAL",
+      },
+      validated.value,
+    );
     return jsonError(message, 500, "INTERNAL");
   }
 }

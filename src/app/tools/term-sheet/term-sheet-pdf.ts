@@ -1,5 +1,6 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
+import { TERM_SHEET_DISCLAIMER_DETAILS } from "@/lib/tools/disclaimer-copy";
 import { formatNoteRatePercentDisplay } from "../pricing-calculator/pricing-display";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
@@ -14,11 +15,7 @@ const BRAND = { r: 40, g: 92, b: 46 };
 const TEXT_MUTED = { r: 82, g: 82, b: 82 };
 const LINE_GREY = { r: 200, g: 200, b: 200 };
 
-const DISCLAIMER = [
-  "This term sheet is for discussion purposes only and does not constitute a commitment to lend.",
-  "All terms are subject to underwriting, appraisal/valuation, and final approval.",
-  "Rates, fees, and proceeds shown are estimates and may change.",
-] as const;
+const DISCLAIMER = TERM_SHEET_DISCLAIMER_DETAILS;
 
 const NOTES = [
   "No inspection necessary prior to close if photos are provided",

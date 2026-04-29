@@ -11,6 +11,8 @@ export const DEAL_ANALYZE_KNOWN_FLAG_CODES = [
   "PURCHASE_POLICY_MAX_BINDS_ARV",
   /** POLICY-ADOPTION-001A — embedded default policy when published rule_sets unavailable. */
   "POLICY_CONFIG_FALLBACK",
+  /** POLICY-ENGINE-REWRITE — AIV-forward / no-rehab purchase mapping not finalized. */
+  "POLICY_MAPPING_PENDING",
 ] as const;
 
 export type DealAnalyzeKnownFlagCode =
@@ -53,3 +55,41 @@ export const DEAL_ANALYZE_STABLE_RISK_CODES = [
 
 export type DealAnalyzeStableRiskCode =
   (typeof DEAL_ANALYZE_STABLE_RISK_CODES)[number];
+
+/** Governing leverage metric for explicit UIs (Phase A additive). */
+export const DEAL_ANALYZE_GOVERNING_LEVERAGE_METRIC_VALUES = [
+  "ltc",
+  "arv_ltv",
+  "aiv_ltv",
+] as const;
+
+export type DealAnalyzeGoverningLeverageMetricV1 =
+  (typeof DEAL_ANALYZE_GOVERNING_LEVERAGE_METRIC_VALUES)[number];
+
+/** Which cap leg or refi basis governed policy max / sizing. */
+export const DEAL_ANALYZE_BINDING_LEG_VALUES = [
+  "ltc",
+  "arv_ltv",
+  "advance_sum",
+  "tie",
+  "aiv_ltv",
+  "arv_ltv_refi",
+  "aiv_ltv_refi",
+  "none",
+] as const;
+
+export type DealAnalyzeBindingLegV1 =
+  (typeof DEAL_ANALYZE_BINDING_LEG_VALUES)[number];
+
+/** Optional underwriting scenario discriminator on `DealAnalyzeRequestV1.programContext`. */
+export const DEAL_ANALYZE_PROGRAM_SCENARIO_VALUES = [
+  "purchase_rehab",
+  "purchase_no_rehab",
+  "delayed_purchase_rehab",
+  "refinance_seasoned",
+  "refinance_platform",
+  "refinance_75pct_aiv_completed",
+] as const;
+
+export type DealAnalyzeProgramScenarioV1 =
+  (typeof DEAL_ANALYZE_PROGRAM_SCENARIO_VALUES)[number];

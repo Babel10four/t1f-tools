@@ -15,6 +15,7 @@ const base: Parameters<typeof buildDealAnalyzeRequest>[1] = {
   originationPointsPercent: "",
   originationFlatFee: "",
   noteRatePercent: "",
+  collateralPropertyAddress: "",
 };
 
 describe("buildDealAnalyzeRequest", () => {
@@ -52,6 +53,21 @@ describe("buildDealAnalyzeRequest", () => {
     expect(r.request.deal.payoffAmount).toBe(300_000);
     expect(r.request.property?.asIsValue).toBe(500_000);
     expect(r.request.deal.rehabBudget).toBe(0);
+  });
+
+  it("includes collateralPropertyAddress in assumptions when provided", () => {
+    const r = buildDealAnalyzeRequest("purchase", {
+      ...base,
+      purchasePrice: "100000",
+      collateralPropertyAddress: "  10 Oak St, Austin TX 78701  ",
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) {
+      return;
+    }
+    expect(r.request.assumptions?.collateralPropertyAddress).toBe(
+      "10 Oak St, Austin TX 78701",
+    );
   });
 
   it("fails refinance when neither payoff nor requested amount", () => {

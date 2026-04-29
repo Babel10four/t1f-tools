@@ -2,8 +2,10 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import { DisclosureBanner } from "@/components/tools/disclosure-banner";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
+import { DEAL_ANALYZE_DISCLAIMER_SUMMARY } from "@/lib/tools/disclaimer-copy";
 import {
   buildDealAnalyzeRequest,
   type LoanAssistantFields,
@@ -30,6 +32,7 @@ const EMPTY_FIELDS: LoanAssistantFields = {
   originationPointsPercent: "",
   originationFlatFee: "",
   noteRatePercent: "",
+  collateralPropertyAddress: "",
 };
 
 type DealAnalyzeErrorBody = {
@@ -228,10 +231,19 @@ export function LoanStructuringAssistantClient() {
           </a>
           .
         </p>
+        <DisclosureBanner
+          summary={DEAL_ANALYZE_DISCLAIMER_SUMMARY}
+          details={
+            <p>
+              Keep borrower-facing commitments out of this screen. Use this tool for
+              internal structuring and policy-aligned scenario checks.
+            </p>
+          }
+        />
       </header>
 
       <form
-        className="flex flex-col gap-6"
+        className="flex flex-col gap-6 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
         data-testid="loan-assistant-form"
         onSubmit={(e) => {
           e.preventDefault();
@@ -377,7 +389,8 @@ export function LoanStructuringAssistantClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Term (months)
+                Term (months){" "}
+                <span className="font-normal text-zinc-500">(typical 6-18)</span>
               </span>
               <input
                 name="termMonths"
@@ -401,7 +414,8 @@ export function LoanStructuringAssistantClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Experience tier
+                Experience tier{" "}
+                <span className="font-normal text-zinc-500">(1, 2, or 3)</span>
               </span>
               <input
                 name="experienceTier"
@@ -553,7 +567,8 @@ export function LoanStructuringAssistantClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Term (months)
+                Term (months){" "}
+                <span className="font-normal text-zinc-500">(typical 6-18)</span>
               </span>
               <input
                 name="termMonths"
@@ -577,7 +592,8 @@ export function LoanStructuringAssistantClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Experience tier
+                Experience tier{" "}
+                <span className="font-normal text-zinc-500">(1, 2, or 3)</span>
               </span>
               <input
                 name="experienceTier"

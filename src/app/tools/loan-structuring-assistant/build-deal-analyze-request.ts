@@ -22,7 +22,14 @@ export type LoanAssistantFields = {
   originationFlatFee: string;
   /** Indicative note rate (%), 0–100; sent as `assumptions.noteRatePercent`. */
   noteRatePercent: string;
+  /**
+   * Optional subject property mailing-style address for admin analytics only
+   * (`assumptions.collateralPropertyAddress`); not used by the deal engine.
+   */
+  collateralPropertyAddress: string;
 };
+
+const MAX_COLLATERAL_ADDRESS_CHARS = 500;
 
 function buildAssumptions(
   fields: LoanAssistantFields,
@@ -30,6 +37,10 @@ function buildAssumptions(
   const assumptions: Record<string, unknown> = {
     borrowingRehabFunds: fields.borrowingRehabFunds === "yes",
   };
+  const addr = fields.collateralPropertyAddress.trim();
+  if (addr !== "") {
+    assumptions.collateralPropertyAddress = addr.slice(0, MAX_COLLATERAL_ADDRESS_CHARS);
+  }
   const points = parseNonNegNumber(fields.originationPointsPercent);
   if (points !== undefined) {
     assumptions.originationPointsPercent = points;

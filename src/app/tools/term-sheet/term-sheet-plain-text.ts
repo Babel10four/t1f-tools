@@ -1,5 +1,6 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
+import { TERM_SHEET_DISCLAIMER_DETAILS } from "@/lib/tools/disclaimer-copy";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import { formatNoteRatePercentDisplay } from "../pricing-calculator/pricing-display";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
@@ -76,11 +77,6 @@ export function buildTermSheetPlainText(
   lines.push(`LTV: ${loan.ltv !== undefined ? `${loan.ltv}%` : "—"}`);
   lines.push(`LTC: ${loan.ltcPercent !== undefined ? `${loan.ltcPercent}%` : "—"}`);
   lines.push("");
-  lines.push(
-    "This term sheet is for discussion purposes only and does not constitute a commitment to lend.",
-  );
-  lines.push(
-    "All terms are subject to underwriting, appraisal/valuation, and final approval.",
-  );
+  lines.push(...TERM_SHEET_DISCLAIMER_DETAILS);
   return lines.join("\n");
 }

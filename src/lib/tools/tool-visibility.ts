@@ -1,5 +1,6 @@
 import type { AuthRole } from "@/lib/auth/constants";
 import {
+  CREDIT_COPILOT_TOOL,
   ADVANCED_TOOLS,
   EXECUTION_LAYER_SEQUENCE,
   INTEL_PLACEHOLDER_TOOLS,
@@ -12,8 +13,8 @@ import type { ToolRailItem } from "@/app/tools/tool-rail-config";
 import { TOOL_RAIL_ITEMS } from "@/app/tools/tool-rail-config";
 import { HUB_PRIMARY_CTA_HREF } from "@/lib/branding";
 
-/** Credit Copilot lives in the workbench rail panel — hide duplicate rail shortcut. */
-const RAIL_EXCLUDED_HREFS = new Set<string>(["/tools/credit-copilot"]);
+/** Keep only Hub + shipped tools in rail; placeholders still discoverable on hub cards. */
+const RAIL_EXCLUDED_HREFS = new Set<string>();
 
 /**
  * Single map: which roles may see each tool href in hub / rail / ToolsNav.
@@ -24,11 +25,11 @@ export const TOOL_HREF_AUDIENCES: Record<string, readonly ("user" | "admin")[]> 
   /** Internal tool — hidden for standard users. */
   "/tools/loan-structuring-assistant": ["admin"],
   "/tools/term-sheet": ["user", "admin"],
-  "/tools/cash-to-close-estimator": ["user", "admin"],
+  "/tools/cash-to-close-estimator": ["admin"],
   /** Launch: hide from user until re-enabled (see product / rail red-box scope). */
   "/tools/pricing-calculator": ["admin"],
   "/tools/pricing-comparator": ["admin"],
-  "/tools/rural-checker": ["admin"],
+  "/tools/rural-checker": ["user", "admin"],
   "/tools/disclosure-builder": ["admin"],
   "/tools/credit-copilot": ["user", "admin"],
   "/tools/deal-analyzer": ["admin"],
@@ -113,13 +114,29 @@ export function primaryCtaHrefForRole(_role: AuthRole): string {
 }
 
 export function primaryCtaLabelForRole(_role: AuthRole): string {
+  if (_role === "user") {
+    return "Deal Sheet Builder";
+  }
   return LIVE_TOOLS[0]!.label;
 }
 
 /** Hero paragraph under the hub title — user copy omits JSON harness and admin-only tools. */
 export function hubHeroDescriptionForRole(role: AuthRole): string {
   if (role === "user") {
-    return "Use Deal Sheet Builder and Cash to Close for analyze-backed workflows, or Credit Copilot for policy Q&A. Deal structuring, loan pricing, rural screening, disclosure stubs, and the JSON harness stay in the full workbench for elevated access.";
+    return "Start with Deal Sheet Builder to shape lender-ready terms, screen rural eligibility from the hub or Rural Checker (Census-backed context — not a legal determination), then use Credit Copilot for policy questions. Advanced execution tools stay available in admin mode.";
   }
   return "Pick a tool below or use the JSON harness under Advanced / Internal when you need raw requests — not a generic loan portal.";
+}
+
+type WorkflowStep = { href: string; label: string };
+
+const WORKFLOW_STEPS: WorkflowStep[] = [
+  { href: "/tools/loan-structuring-assistant", label: "1. Structure" },
+  { href: "/tools/term-sheet", label: "2. Deal Sheet" },
+  { href: "/tools/cash-to-close-estimator", label: "3. Cash to Close" },
+  { href: CREDIT_COPILOT_TOOL.href, label: "4. Policy Q&A" },
+];
+
+export function workflowStepsForRole(role: AuthRole): WorkflowStep[] {
+  return WORKFLOW_STEPS.filter((step) => hrefVisibleToRole(step.href, role));
 }

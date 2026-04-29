@@ -5,6 +5,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { HUB_BUILT_BY_LINE, HUB_SYSTEM_NAME } from "@/lib/branding";
 import { decideAccess } from "@/lib/auth/access";
 import { getSessionPayload } from "@/lib/auth/session-server";
+import { ToolTopNav } from "./tool-top-nav";
 import { ToolsWorkbenchShell } from "./tools-workbench-shell";
 
 export default async function ToolsLayout({
@@ -41,6 +42,7 @@ export default async function ToolsLayout({
           Log out
         </LogoutButton>
       </header>
+      <ToolTopNav role={session?.role ?? "user"} />
       <ToolsWorkbenchShell role={session?.role ?? "user"}>
         {children}
       </ToolsWorkbenchShell>

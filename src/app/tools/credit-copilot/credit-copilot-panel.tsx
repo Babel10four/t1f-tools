@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { CREDIT_COPILOT_PRIVACY_WARNING } from "@/lib/tools/disclaimer-copy";
 import type { CreditCopilotAskResponse } from "@/lib/credit-copilot/types";
 import { CreditCopilotResultPanels } from "./credit-copilot-result-panels";
 
@@ -161,7 +162,7 @@ export function CreditCopilotPanel({ className }: PanelProps) {
 
       <div className="shrink-0 border-t border-zinc-200 bg-white p-3">
         <p className="mb-2 text-[10px] leading-snug text-amber-900/80">
-          Do not paste SSN, DOB, or sensitive identifiers — general policy questions only.
+          {CREDIT_COPILOT_PRIVACY_WARNING}
         </p>
         <form id={formId} onSubmit={submit} className="flex gap-2">
           <label htmlFor={`${formId}-q`} className="sr-only">
@@ -182,7 +183,7 @@ export function CreditCopilotPanel({ className }: PanelProps) {
             disabled={disabled}
             className="shrink-0 rounded-md bg-[var(--brand)] px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-hover)] disabled:opacity-50"
           >
-            {disabled ? "…" : "Send"}
+            {disabled ? "…" : "Send ->"}
           </button>
         </form>
       </div>

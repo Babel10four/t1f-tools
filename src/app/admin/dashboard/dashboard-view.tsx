@@ -1,8 +1,88 @@
-import type { DashboardKpis } from "@/lib/analytics/dashboard";
+import Link from "next/link";
+import {
+  DASHBOARD_WINDOW_PRESETS,
+  type DashboardKpis,
+} from "@/lib/analytics/dashboard";
 
 type Props = {
   kpis: DashboardKpis;
 };
+
+function AddressTable({
+  title,
+  rows,
+  emptyHint,
+  showRuralResult,
+  testId,
+}: {
+  title: string;
+  rows: DashboardKpis["termSheetCollateralAddresses"];
+  emptyHint: string;
+  showRuralResult?: boolean;
+  testId: string;
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        {title}
+      </h3>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{emptyHint}</p>
+      ) : (
+        <div
+          className="mt-2 max-h-72 overflow-y-auto rounded-md border border-zinc-100 dark:border-zinc-800"
+          data-testid={testId}
+        >
+          <table className="w-full min-w-[200px] text-left text-sm">
+            <thead className="sticky top-0 bg-zinc-50 text-xs dark:bg-zinc-900">
+              <tr>
+                <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+                  Time (UTC)
+                </th>
+                <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+                  Address
+                </th>
+                <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+                  Role
+                </th>
+                {showRuralResult ? (
+                  <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+                    Result
+                  </th>
+                ) : null}
+                <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr
+                  key={`${row.createdAtIso}-${i}-${row.address.slice(0, 24)}`}
+                  className="border-t border-zinc-100 dark:border-zinc-800"
+                >
+                  <td className="px-2 py-1.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
+                    {row.createdAtIso.slice(0, 19).replace("T", " ")}
+                  </td>
+                  <td className="px-2 py-1.5 text-zinc-900 dark:text-zinc-100">
+                    {row.address}
+                  </td>
+                  <td className="px-2 py-1.5 text-zinc-600 dark:text-zinc-400">{row.role}</td>
+                  {showRuralResult ? (
+                    <td className="px-2 py-1.5 font-mono text-[11px] text-zinc-700 dark:text-zinc-300">
+                      {row.ruralResult ?? "—"}
+                    </td>
+                  ) : null}
+                  <td className="px-2 py-1.5 text-zinc-600 dark:text-zinc-400">{row.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function KpiCard({
   label,
@@ -55,9 +135,102 @@ export function AdminDashboardView({ kpis }: Props) {
           Dashboard
         </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Usage in the last <strong>{windowDays}</strong> days (shared-password session — no named users). See README for analytics behavior if writes fail.
+          Shared-password sessions — no named users. Counts and address lists use UTC
+          timestamps from the <code className="rounded bg-zinc-100 px-1 text-xs dark:bg-zinc-800">events</code> table. See README if analytics writes fail silently.
         </p>
       </div>
+
+      <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
+        <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Reporting window
+        </h2>
+        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
+          Current view: <strong>{kpis.windowDays}</strong> calendar days rolling from now
+          (UTC).
+        </p>
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Presets approximate days / weeks / months. All charts below use the same window.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {DASHBOARD_WINDOW_PRESETS.map((d) => {
+            const active = kpis.windowDays === d;
+            const label =
+              d === 7
+                ? "7 days"
+                : d === 30
+                  ? "30 days (~1 mo)"
+                  : d === 90
+                    ? "90 days (~3 mo)"
+                    : "180 days (~6 mo)";
+            return (
+              <Link
+                key={d}
+                href={`/admin/dashboard?window=${d}`}
+                className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  active
+                    ? "border-[var(--brand)] bg-[var(--brand-muted)] text-[var(--brand)]"
+                    : "border-zinc-300 bg-zinc-50 text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+                }`}
+                aria-current={active ? "true" : undefined}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Deal Sheet &amp; cash-to-close usage
+        </h2>
+        <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+          Successful runs in the selected window. Property addresses appear when users
+          enter the optional &quot;Subject property address&quot; field on the Term Sheet or
+          Cash to Close tools (logged on the server).
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <KpiCard
+            label="Term Sheet (Deal Sheet) builder runs"
+            value={totals.termSheetPreviewRuns}
+            hint="deal_analyze_run + tool_key term_sheet — preview / HTML path"
+          />
+          <KpiCard
+            label="Cash-to-close estimator runs"
+            value={totals.cashToCloseRuns}
+            hint="cash_to_close_run + tool_key cash_to_close_estimator (legacy cash_to_close counted)"
+          />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Logged property addresses
+        </h2>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <AddressTable
+            title="Term Sheet builder (collateral address)"
+            rows={kpis.termSheetCollateralAddresses}
+            emptyHint="No successful term-sheet runs with a logged address in this window."
+            testId="admin-address-term-sheet"
+          />
+          <AddressTable
+            title="Cash-to-close (collateral address)"
+            rows={kpis.cashToCloseCollateralAddresses}
+            emptyHint="No cash-to-close events with a logged address in this window."
+            testId="admin-address-cash-to-close"
+          />
+        </div>
+        <div className="mt-6">
+          <AddressTable
+            title="Rural Checker (street address submitted)"
+            rows={kpis.ruralCheckAddresses}
+            emptyHint="No rural checks with addressLine in metadata in this window."
+            showRuralResult
+            testId="admin-address-rural"
+          />
+        </div>
+      </section>
 
       <section>
         <h2 className="mb-2 text-sm font-medium text-zinc-800 dark:text-zinc-200">
@@ -84,16 +257,6 @@ export function AdminDashboardView({ kpis }: Props) {
             label="Pricing checks"
             value={totals.pricingCheckRuns}
             hint="pricing_check_run + tool_key pricing_calculator"
-          />
-          <KpiCard
-            label="Cash-to-close runs"
-            value={totals.cashToCloseRuns}
-            hint="cash_to_close_run + tool_key cash_to_close_estimator"
-          />
-          <KpiCard
-            label="Term Sheet preview runs"
-            value={totals.termSheetPreviewRuns}
-            hint="deal_analyze_run + tool_key term_sheet (preview HTML, not export)"
           />
           <KpiCard label="Rural checks" value={totals.ruralCheckRuns} />
           <KpiCard label="Credit copilot" value={totals.creditCopilotQuestions} />

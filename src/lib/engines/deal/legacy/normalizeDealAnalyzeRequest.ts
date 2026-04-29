@@ -188,6 +188,9 @@ export function normalizeDealAnalyzeRequest(raw: UnknownRecord): {
     ...(isPlainObject(raw.assumptions)
       ? { assumptions: raw.assumptions }
       : {}),
+    ...(isPlainObject(raw.programContext)
+      ? { programContext: raw.programContext }
+      : {}),
   };
 
   return { normalized, notes };

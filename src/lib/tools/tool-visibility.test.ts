@@ -11,26 +11,26 @@ import {
   toolAudiencesForHref,
 } from "./tool-visibility";
 
-/** User nav (hub + sections): includes Credit Copilot link — not duplicated on rail. */
+/** User nav (hub + sections): includes Credit Copilot + Rural Checker — not duplicated on rail. */
 const USER_NAV_HREFS = new Set([
   "/tools",
   "/tools/term-sheet",
-  "/tools/cash-to-close-estimator",
+  "/tools/rural-checker",
   "/tools/credit-copilot",
 ]);
 
-/** User rail: same as nav minus Credit Copilot (panel is always adjacent). */
+/** User rail: same core user-visible tools on the left rail. */
 const USER_RAIL_HREFS = new Set([
   "/tools",
   "/tools/term-sheet",
-  "/tools/cash-to-close-estimator",
+  "/tools/rural-checker",
+  "/tools/credit-copilot",
 ]);
 
 const USER_HIDDEN_HREFS = new Set([
   "/tools/loan-structuring-assistant",
   "/tools/pricing-calculator",
   "/tools/pricing-comparator",
-  "/tools/rural-checker",
   "/tools/disclosure-builder",
   "/tools/deal-analyzer",
 ]);
@@ -42,10 +42,9 @@ describe("tool-visibility (launch restriction)", () => {
     }
   });
 
-  it("user sees hub, sheet / cash on rail (no Policy duplicate); nav adds Credit Copilot; hidden admin tools absent", () => {
+  it("user sees only hub + sheet + policy in rail/nav; admin tools stay hidden", () => {
     const railHrefs = filterToolRailItems("user").map((i) => i.href);
     expect(new Set(railHrefs)).toEqual(USER_RAIL_HREFS);
-    expect(railHrefs).not.toContain("/tools/credit-copilot");
 
     const navHrefs = new Set(
       filterNavSections("user").flatMap((s) => s.links.map((l) => l.href)),
@@ -58,7 +57,7 @@ describe("tool-visibility (launch restriction)", () => {
     }
   });
 
-  it("user hub model hides intel and advanced; execution is sheet + cash only", () => {
+  it("user hub model hides intel and advanced; execution shows sheet + rural", () => {
     const hub = filterHubPageModel("user");
     expect(hub.showIntelSection).toBe(false);
     expect(hub.showAdvancedSection).toBe(false);
@@ -67,7 +66,7 @@ describe("tool-visibility (launch restriction)", () => {
     expect(hub.executionSequence).toHaveLength(2);
     expect(hub.executionSequence.map((x) => x.tool.href)).toEqual([
       "/tools/term-sheet",
-      "/tools/cash-to-close-estimator",
+      "/tools/rural-checker",
     ]);
   });
 
@@ -75,11 +74,9 @@ describe("tool-visibility (launch restriction)", () => {
     expect(primaryCtaHrefForRole("user")).toBe("/tools/term-sheet");
   });
 
-  it("admin rail omits Credit Copilot shortcut; nav is full canonical list", () => {
+  it("admin rail and nav keep full canonical list", () => {
     expect(filterToolRailItems("admin").map((i) => i.href)).toEqual(
-      TOOL_RAIL_ITEMS.filter((i) => i.href !== "/tools/credit-copilot").map(
-        (i) => i.href,
-      ),
+      TOOL_RAIL_ITEMS.map((i) => i.href),
     );
     expect(filterNavSections("admin")).toEqual(TOOLS_NAV_SECTIONS);
   });

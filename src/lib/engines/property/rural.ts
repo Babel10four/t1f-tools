@@ -4,6 +4,7 @@ import {
   type RuralRulesPayload,
 } from "@/lib/rule-sets/validate-payload";
 import type { UnknownRecord } from "../types";
+import { attachRuralEvidenceToResponse } from "./rural-evidence-report";
 import { enrichRuralAddress } from "./rural-enrichment";
 import {
   finalizeEvaluation,
@@ -136,22 +137,28 @@ export async function runPropertyRural(
     rulesResult.kind !== "rule_set"
   ) {
     if (!hasScreeningContext(merged)) {
-      return insufficientInfoSparse(null, ruralPolicyMeta, {
-        alsoWarnMissingPublishedRules: true,
-        enrichment,
-        addressLookupFailed: addressAttempted,
-      });
+      return attachRuralEvidenceToResponse(
+        insufficientInfoSparse(null, ruralPolicyMeta, {
+          alsoWarnMissingPublishedRules: true,
+          enrichment,
+          addressLookupFailed: addressAttempted,
+        }),
+      );
     }
-    return noConfigResponse(ruralPolicyMeta, { enrichment });
+    return attachRuralEvidenceToResponse(
+      noConfigResponse(ruralPolicyMeta, { enrichment }),
+    );
   }
 
   const ruleSetMeta = ruleSetMetaFromBinding(rulesResult);
 
   if (!hasScreeningContext(merged)) {
-    return insufficientInfoSparse(ruleSetMeta, ruralPolicyMeta, {
-      enrichment,
-      addressLookupFailed: addressAttempted,
-    });
+    return attachRuralEvidenceToResponse(
+      insufficientInfoSparse(ruleSetMeta, ruralPolicyMeta, {
+        enrichment,
+        addressLookupFailed: addressAttempted,
+      }),
+    );
   }
 
   const rawPayload = rulesResult.ruleSet.jsonPayload;
@@ -214,5 +221,7 @@ export async function runPropertyRural(
     };
   }
 
-  return mergeEnrichmentWarnings(out, enrichment);
+  return attachRuralEvidenceToResponse(
+    mergeEnrichmentWarnings(out, enrichment),
+  );
 }

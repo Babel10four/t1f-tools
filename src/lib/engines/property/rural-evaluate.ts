@@ -44,6 +44,7 @@ export function insufficientInfoSparse(
     ruralPolicy: ruralPolicyMeta,
     disclaimer: RURAL_SCREENING_DISCLAIMER,
     enrichment: options?.enrichment ?? null,
+    evidenceReport: null,
   };
 }
 
@@ -67,6 +68,7 @@ export function noConfigResponse(
     ruralPolicy: ruralPolicyMeta,
     disclaimer: RURAL_SCREENING_DISCLAIMER,
     enrichment: options?.enrichment ?? null,
+    evidenceReport: null,
   };
 }
 
@@ -252,5 +254,6 @@ export function finalizeEvaluation(
     ruralPolicy: ruralPolicyMeta,
     disclaimer: RURAL_SCREENING_DISCLAIMER,
     enrichment,
+    evidenceReport: null,
   };
 }

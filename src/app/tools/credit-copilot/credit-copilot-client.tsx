@@ -2,7 +2,12 @@
 
 import { useCallback, useState } from "react";
 import type { FormEvent } from "react";
+import { DisclosureBanner } from "@/components/tools/disclosure-banner";
 import type { CreditCopilotAskResponse } from "@/lib/credit-copilot/types";
+import {
+  CREDIT_COPILOT_DISCLAIMER_SUMMARY,
+  CREDIT_COPILOT_PRIVACY_WARNING,
+} from "@/lib/tools/disclaimer-copy";
 import { CreditCopilotResultPanels } from "./credit-copilot-result-panels";
 
 type UiPhase =
@@ -87,14 +92,16 @@ export function CreditCopilotClient() {
         </p>
       </header>
 
-      <div
-        className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
-        role="note"
-      >
-        <strong className="font-medium">Privacy:</strong> do not paste SSN, date of
-        birth, full borrower names, file numbers, or sensitive deal identifiers. Ask
-        general policy questions only.
-      </div>
+      <DisclosureBanner
+        summary={
+          <>
+            <strong className="font-medium">Privacy:</strong>{" "}
+            {CREDIT_COPILOT_PRIVACY_WARNING}
+          </>
+        }
+        details={<p>{CREDIT_COPILOT_DISCLAIMER_SUMMARY}</p>}
+        tone="warning"
+      />
 
       <form
         onSubmit={submit}
@@ -112,13 +119,15 @@ export function CreditCopilotClient() {
             placeholder="e.g. What documentation does the policy require for self-employed income?"
           />
         </label>
-        <button
-          type="submit"
-          disabled={disabled}
-          className="inline-flex w-fit items-center justify-center rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-hover)] disabled:opacity-60"
-        >
-          {disabled ? "Asking…" : "Ask"}
-        </button>
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={disabled}
+            className="inline-flex items-center justify-center rounded-md bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-hover)] disabled:opacity-60"
+          >
+            {disabled ? "Asking…" : "Ask ?"}
+          </button>
+        </div>
       </form>
 
       {phase === "idle" && !result ? (
