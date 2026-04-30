@@ -131,24 +131,14 @@ type Row = { label: string; value: string };
 
 type PdfDoc = InstanceType<typeof jsPDF>;
 
-function drawT1fWordmark(doc: PdfDoc, x: number, y: number): void {
-  const mark = [
-    [4, 5, 18, 6],
-    [24, 5, 18, 6],
-    [14, 14, 18, 6],
-    [34, 14, 18, 6],
-    [44, 5, 18, 6],
-    [54, 14, 18, 6],
-  ] as const;
-  doc.setFillColor(BRAND.r, BRAND.g, BRAND.b);
-  for (const [bx, by, w, h] of mark) {
-    doc.triangle(x + bx, y + by, x + bx + w, y + by, x + bx + w - 4, y + by + h, "F");
-    doc.triangle(x + bx, y + by, x + bx + w - 4, y + by + h, x + bx - 4, y + by + h, "F");
-  }
+/** Brand wordmark: bold italic “T1F” in forest green (matches preview SVG). */
+function drawT1fWordmark(doc: PdfDoc, x: number, yBaseline: number): void {
+  doc.setFont("helvetica", "bolditalic");
+  doc.setFontSize(22);
+  doc.setTextColor(BRAND.r, BRAND.g, BRAND.b);
+  doc.text("T1F", x, yBaseline, { angle: -10 });
+  doc.setFont("helvetica", "normal");
   doc.setTextColor(0, 0, 0);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text("T1F", x + 84, y + 20);
 }
 
 function drawKvRow(
@@ -205,15 +195,12 @@ export function downloadTermSheetPdf(
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);
 
-  drawT1fWordmark(doc, leftX, y - 1);
+  drawT1fWordmark(doc, leftX, y + 20);
 
   const rightBlockX = PDF_PAGE_W - MARGIN;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.text("T1F", rightBlockX, y + 14, { align: "right" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text("Tier One Funding Inc", rightBlockX, y + 28, { align: "right" });
+  doc.text("Tier One Funding Inc", rightBlockX, y + 22, { align: "right" });
 
   y += 48;
   doc.line(MARGIN, y, PDF_PAGE_W - MARGIN, y);
