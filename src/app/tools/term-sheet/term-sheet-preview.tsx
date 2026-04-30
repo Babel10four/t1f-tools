@@ -16,6 +16,7 @@ import {
 } from "../pricing-calculator/pricing-display";
 import { TermSheetExportBar } from "./term-sheet-export-bar";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
+import { T1fTermSheetLogo } from "@/components/branding/t1f-term-sheet-logo";
 
 export type { TermSheetLocalMetadata } from "./term-sheet-types";
 
@@ -109,6 +110,7 @@ export function TermSheetPreview({
       />
 
       <header className="border-b border-zinc-200 py-6 text-center dark:border-zinc-800">
+        <T1fTermSheetLogo className="mx-auto mb-2" />
         <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           Tier One Funding Inc
         </p>

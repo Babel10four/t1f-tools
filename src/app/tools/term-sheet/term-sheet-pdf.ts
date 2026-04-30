@@ -131,6 +131,26 @@ type Row = { label: string; value: string };
 
 type PdfDoc = InstanceType<typeof jsPDF>;
 
+function drawT1fWordmark(doc: PdfDoc, x: number, y: number): void {
+  const mark = [
+    [4, 5, 18, 6],
+    [24, 5, 18, 6],
+    [14, 14, 18, 6],
+    [34, 14, 18, 6],
+    [44, 5, 18, 6],
+    [54, 14, 18, 6],
+  ] as const;
+  doc.setFillColor(BRAND.r, BRAND.g, BRAND.b);
+  for (const [bx, by, w, h] of mark) {
+    doc.triangle(x + bx, y + by, x + bx + w, y + by, x + bx + w - 4, y + by + h, "F");
+    doc.triangle(x + bx, y + by, x + bx + w - 4, y + by + h, x + bx - 4, y + by + h, "F");
+  }
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text("T1F", x + 84, y + 20);
+}
+
 function drawKvRow(
   doc: PdfDoc,
   x: number,
@@ -185,16 +205,7 @@ export function downloadTermSheetPdf(
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);
 
-  doc.setFillColor(BRAND.r, BRAND.g, BRAND.b);
-  doc.rect(leftX, y, 34, 34, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("T", leftX + 17, y + 23, { align: "center" });
-
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(20);
-  doc.text("T1F", leftX + 42, y + 24);
+  drawT1fWordmark(doc, leftX, y - 1);
 
   const rightBlockX = PDF_PAGE_W - MARGIN;
   doc.setFont("helvetica", "bold");
