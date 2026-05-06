@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { DisclosureBanner } from "@/components/tools/disclosure-banner";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
@@ -15,6 +15,10 @@ import {
   type LoanAssistantFlow,
 } from "../loan-structuring-assistant/build-deal-analyze-request";
 import { useDealFormSession } from "../shared/use-deal-form-session";
+import {
+  TIER12_INITIAL_ADVANCE_PCT,
+  TIER12_REHAB_ADVANCE_PCT,
+} from "@/lib/engines/deal/policy/constants";
 import { TermSheetPreview } from "./term-sheet-preview";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 
@@ -48,6 +52,33 @@ type UiPhase =
   | "error_4xx"
   | "error_5xx";
 
+function parsePurchasePricePositive(s: string): number | null {
+  const t = s.trim();
+  if (t === "") return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+function parseNonNegativeMoney(s: string): number {
+  const t = s.trim();
+  if (t === "") return 0;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
+/** Rounded indicative total: 90% LTC-style acquisition slice + rehab when borrower takes rehab proceeds. */
+function purchaseRequestedLoanSuggestedString(fields: LoanAssistantFields): string | null {
+  const purchasePrice = parsePurchasePricePositive(fields.purchasePrice);
+  if (purchasePrice === null) return null;
+  const rehab = parseNonNegativeMoney(fields.rehabBudget);
+  const rehabPart =
+    fields.borrowingRehabFunds === "yes" ? TIER12_REHAB_ADVANCE_PCT * rehab : 0;
+  const acquisitionPart = TIER12_INITIAL_ADVANCE_PCT * purchasePrice;
+  return String(Math.round(acquisitionPart + rehabPart));
+}
+
 export function TermSheetGeneratorClient() {
   const { flow, setFlow, fields, setFields, clearSession } = useDealFormSession();
   const [metadata, setMetadata] = useState<TermSheetLocalMetadata>(() => ({
@@ -64,6 +95,40 @@ export function TermSheetGeneratorClient() {
   const [error5xx, setError5xx] = useState<string | null>(null);
 
   const disabled = phase === "submitting";
+
+  /** Last illustrative suggested total whenever driving inputs ran; excludes manual requested edits. */
+  const lastSuggestedPurchaseRequestedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (flow !== "purchase") {
+      lastSuggestedPurchaseRequestedRef.current = null;
+      return;
+    }
+
+    const next = purchaseRequestedLoanSuggestedString(fields);
+    if (next === null) {
+      lastSuggestedPurchaseRequestedRef.current = null;
+      return;
+    }
+
+    const cur = fields.requestedLoanAmount.trim();
+    const prevSuggestion = lastSuggestedPurchaseRequestedRef.current;
+    const stillTrackingSuggestion =
+      cur === "" ||
+      (prevSuggestion !== null && cur === prevSuggestion);
+
+    lastSuggestedPurchaseRequestedRef.current = next;
+
+    if (stillTrackingSuggestion && cur !== next) {
+      setFields((f) => ({ ...f, requestedLoanAmount: next }));
+    }
+  }, [
+    flow,
+    fields.purchasePrice,
+    fields.rehabBudget,
+    fields.borrowingRehabFunds,
+    setFields,
+  ]);
 
   const bumpToEditing = () => {
     if (phase === "success" || phase === "error_4xx" || phase === "error_5xx") {
@@ -289,6 +354,7 @@ export function TermSheetGeneratorClient() {
               </span>
               <input
                 name="rehabBudget"
+                data-testid="ts-purchase-rehab"
                 value={fields.rehabBudget}
                 onChange={onField("rehabBudget")}
                 placeholder="0"
@@ -349,6 +415,14 @@ export function TermSheetGeneratorClient() {
                 inputMode="decimal"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Suggested automatically as {Math.round(TIER12_INITIAL_ADVANCE_PCT * 100)}
+                % of purchase price
+                {fields.borrowingRehabFunds === "yes"
+                  ? ` plus ${Math.round(TIER12_REHAB_ADVANCE_PCT * 100)}% of rehab budget when Taking rehab funds? is Yes`
+                  : ` when Taking rehab funds? is No (rehab is excluded)`}{" "}
+                — edit anytime.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">

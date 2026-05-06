@@ -108,6 +108,46 @@ describe("TermSheetGeneratorClient", () => {
     expect(body.propertyLabel).toBeUndefined();
     expect(body.preparedBy).toBeUndefined();
     expect(body.preparedDate).toBeUndefined();
+    expect(body.deal.requestedLoanAmount).toBe(90_000);
+  });
+
+  it("autosuggests purchase requested loan as 90% of price plus rehab when borrowing rehab", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    const form = screen.getByTestId("ts-form");
+    await user.type(within(form).getByTestId("ts-purchase-price"), "100000");
+    await user.type(within(form).getByTestId("ts-purchase-rehab"), "25000");
+    await waitFor(() => {
+      expect(within(form).getByTestId("ts-purchase-requested")).toHaveValue("115000");
+    });
+  });
+
+  it("autosuggests purchase requested loan as 90% only when not borrowing rehab funds", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    const form = screen.getByTestId("ts-form");
+    await user.type(within(form).getByTestId("ts-purchase-price"), "100000");
+    await user.type(within(form).getByTestId("ts-purchase-rehab"), "25000");
+    await user.click(within(form).getByTestId("ts-borrowing-rehab-no"));
+    await waitFor(() => {
+      expect(within(form).getByTestId("ts-purchase-requested")).toHaveValue("90000");
+    });
+  });
+
+  it("stops overwriting requested loan after the borrower types a manual amount", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    const form = screen.getByTestId("ts-form");
+    await user.type(within(form).getByTestId("ts-purchase-price"), "100000");
+    await waitFor(() => {
+      expect(within(form).getByTestId("ts-purchase-requested")).toHaveValue("90000");
+    });
+    const requested = within(form).getByTestId("ts-purchase-requested");
+    await user.clear(requested);
+    await user.type(requested, "77777");
+    await user.clear(within(form).getByTestId("ts-purchase-price"));
+    await user.type(within(form).getByTestId("ts-purchase-price"), "200000");
+    expect(requested).toHaveValue("77777");
   });
 
   it("refinance happy path uses bridge_refinance", async () => {
