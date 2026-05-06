@@ -11,6 +11,10 @@ const PAGE_H = 792;
 /** Slightly tighter than legacy 48pt — widens the two data columns. */
 const MARGIN = 40;
 const COL_GAP = 30;
+/** Same asset as `T1fTermSheetLogo` / `public/t1f-logo-green.png`. */
+const TERM_SHEET_LOGO_PATH = "/t1f-logo-green.png";
+const TERM_SHEET_LOGO_PX = { w: 1023, h: 246 };
+const TERM_SHEET_LOGO_ASPECT = TERM_SHEET_LOGO_PX.w / TERM_SHEET_LOGO_PX.h;
 const BRAND = { r: 40, g: 92, b: 46 };
 const TEXT_MUTED = { r: 82, g: 82, b: 82 };
 const LINE_GREY = { r: 200, g: 200, b: 200 };
@@ -131,7 +135,7 @@ type Row = { label: string; value: string };
 
 type PdfDoc = InstanceType<typeof jsPDF>;
 
-/** Brand wordmark: bold italic “T1F” in forest green (matches preview SVG). */
+/** Fallback if the PNG cannot be loaded (offline, bad mock, etc.). */
 function drawT1fWordmark(doc: PdfDoc, x: number, yBaseline: number): void {
   doc.setFont("helvetica", "bolditalic");
   doc.setFontSize(22);
@@ -139,6 +143,24 @@ function drawT1fWordmark(doc: PdfDoc, x: number, yBaseline: number): void {
   doc.text("T1F", x, yBaseline, { angle: -10 });
   doc.setFont("helvetica", "normal");
   doc.setTextColor(0, 0, 0);
+}
+
+async function termSheetLogoDataUrl(): Promise<string | null> {
+  try {
+    const res = await fetch(TERM_SHEET_LOGO_PATH);
+    if (!res.ok) {
+      return null;
+    }
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(r.result as string);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
 
 function drawKvRow(
@@ -179,11 +201,12 @@ function drawKvRow(
 /**
  * Letter-size term sheet PDF aligned to docs/115 Lilley reference (T1F branding, two columns).
  */
-export function downloadTermSheetPdf(
+export async function downloadTermSheetPdf(
   metadata: TermSheetLocalMetadata,
   request: DealAnalyzeRequestV1 | undefined,
   response: DealAnalyzeResponseV1,
-): void {
+): Promise<void> {
+  const logoData = await termSheetLogoDataUrl();
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const loan = response.loan;
   const pricing = response.pricing;
@@ -195,7 +218,13 @@ export function downloadTermSheetPdf(
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);
 
-  drawT1fWordmark(doc, leftX, y + 20);
+  const logoH = 28;
+  const logoW = logoH * TERM_SHEET_LOGO_ASPECT;
+  if (logoData) {
+    doc.addImage(logoData, "PNG", leftX, y, logoW, logoH);
+  } else {
+    drawT1fWordmark(doc, leftX, y + 20);
+  }
 
   const rightBlockX = PDF_PAGE_W - MARGIN;
   doc.setFont("helvetica", "normal");
@@ -255,7 +284,7 @@ export function downloadTermSheetPdf(
     });
   }
   inputRows.push({
-    label: "Initial Advance",
+    label: "Acquisition Funds",
     value: initialAdvancePct(request, loan),
   });
   inputRows.push({ label: "Rehab Funds", value: rehabAdvancePct(loan) });
@@ -292,8 +321,8 @@ export function downloadTermSheetPdf(
   const initialPct = initialAdvancePct(request, loan);
   const initialLoanLabel =
     initialPct !== "—" && initialBasis(request) !== undefined
-      ? `Initial Loan (${initialPct} of ${basisLabel})`
-      : "Initial Loan";
+      ? `Acquisition Funds (${initialPct} of ${basisLabel})`
+      : "Acquisition Funds";
 
   const totalPct = totalPctOfArv(request, loan);
   const totalLoanLabel =

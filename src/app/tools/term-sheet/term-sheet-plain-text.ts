@@ -68,7 +68,7 @@ export function buildTermSheetPlainText(
   lines.push("");
   lines.push("TERMS OFFERED");
   if (loan.acquisitionLoanAmount !== undefined) {
-    lines.push(`Initial / acquisition loan: ${formatMoneyWholeDollars(loan.acquisitionLoanAmount)}`);
+    lines.push(`Acquisition funds: ${formatMoneyWholeDollars(loan.acquisitionLoanAmount)}`);
   }
   if (loan.rehabLoanAmount !== undefined) {
     lines.push(`Rehab loan: ${formatMoneyWholeDollars(loan.rehabLoanAmount)}`);

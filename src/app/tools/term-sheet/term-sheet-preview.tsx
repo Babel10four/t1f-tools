@@ -229,7 +229,7 @@ export function TermSheetPreview({
         <dl className="mt-4 space-y-0 text-[15px] leading-relaxed">
           {loan.acquisitionLoanAmount !== undefined ? (
             <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
-              <dt className="text-zinc-500">Initial / acquisition loan</dt>
+              <dt className="text-zinc-500">Acquisition funds</dt>
               <dd className="text-right tabular-nums font-medium text-zinc-900 dark:text-zinc-100">
                 {formatMoneyWholeDollars(loan.acquisitionLoanAmount)}
               </dd>

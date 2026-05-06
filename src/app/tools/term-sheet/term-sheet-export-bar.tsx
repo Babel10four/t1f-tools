@@ -30,7 +30,7 @@ export function TermSheetExportBar({
   }, [metadata, request, response]);
 
   const pdf = useCallback(() => {
-    downloadTermSheetPdf(metadata, request, response);
+    void downloadTermSheetPdf(metadata, request, response);
   }, [metadata, request, response]);
 
   return (
