@@ -4,6 +4,10 @@ import { TERM_SHEET_DISCLAIMER_DETAILS } from "@/lib/tools/disclaimer-copy";
 import { formatNoteRatePercentDisplay } from "../pricing-calculator/pricing-display";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
+import { buildTermSheetCtcInputRows } from "./term-sheet-cash-to-close-fields";
+import {
+  transformCashToCloseDisplayLines,
+} from "../cash-to-close-estimator/cash-to-close-estimator-display";
 import { jsPDF } from "jspdf";
 
 const PDF_PAGE_W = 612;
@@ -198,9 +202,151 @@ function drawKvRow(
   return n * lineGap + 10;
 }
 
+const TOTAL_CASH_LINE_LABEL = "Total estimated cash to close";
+
 /**
- * Letter-size term sheet PDF aligned to docs/115 Lilley reference (T1F branding, two columns).
+ * Cash-to-close on PDF page 2 (inputs + illustrative breakdown).
+ * Returns updated yCursor; may spill slightly if callers add overflow guards later.
  */
+function drawCashToCloseSectionPdf(
+  doc: PdfDoc,
+  yCursor: number,
+  request: DealAnalyzeRequestV1 | undefined,
+  response: DealAnalyzeResponseV1,
+): number {
+  let y = yCursor;
+  const loan = response.loan;
+  const cash = response.cashToClose;
+  const purchasePrice = request?.deal.purchasePrice;
+  const purpose = loan.purpose === "refinance" ? "refinance" : "purchase";
+  const displayLines = transformCashToCloseDisplayLines(cash.items, {
+    purpose,
+    purchasePrice,
+  });
+
+  doc.setDrawColor(LINE_GREY.r, LINE_GREY.g, LINE_GREY.b);
+  doc.setLineWidth(0.75);
+  doc.line(MARGIN, y, PDF_PAGE_W - MARGIN, y);
+  y += 18;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.text("Cash to close", MARGIN, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
+  const subHead = doc.splitTextToSize(
+    "Indicative estimate only — not a Closing Disclosure. Third-party fees are estimated.",
+    PDF_PAGE_W - MARGIN * 2,
+  );
+  doc.text(subHead, MARGIN, y + 14);
+  y += 14 + subHead.length * 11 + 12;
+
+  const fullColW = PDF_PAGE_W - MARGIN * 2;
+  const inputRows = buildTermSheetCtcInputRows(request, response);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
+  doc.text("Inputs", MARGIN, y);
+  y += 16;
+  doc.setTextColor(0, 0, 0);
+
+  for (const r of inputRows) {
+    const h = drawKvRow(doc, MARGIN, fullColW, y, r.label, r.value);
+    y += Math.max(h, 22);
+    if (y > PAGE_H - 220) {
+      doc.addPage();
+      y = MARGIN;
+    }
+  }
+
+  y += 6;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
+  doc.text("Estimate", MARGIN, y);
+  y += 18;
+
+  if (displayLines.length === 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
+    const msg =
+      cash.estimatedTotal === null
+        ? "No illustrative cash-to-close components were modeled for this scenario."
+        : "No breakdown lines returned.";
+    const wrapped = doc.splitTextToSize(msg, fullColW);
+    doc.text(wrapped, MARGIN, y);
+    y += wrapped.length * 12 + 14;
+    if (cash.estimatedTotal !== null) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Expected cash to close (total)", MARGIN, y);
+      doc.text(
+        formatMoneyWholeDollars(cash.estimatedTotal),
+        PDF_PAGE_W - MARGIN,
+        y,
+        { align: "right" },
+      );
+      y += 22;
+    }
+    return y;
+  }
+
+  const rightAmtX = PDF_PAGE_W - MARGIN;
+  const labelWrapW = fullColW * 0.55;
+  for (const line of displayLines) {
+    const totalRow = line.label === TOTAL_CASH_LINE_LABEL;
+    doc.setFont("helvetica", totalRow ? "bold" : "normal");
+    doc.setFontSize(totalRow ? 11 : 10);
+    doc.setTextColor(0, 0, 0);
+    const labelLines = doc.splitTextToSize(line.label, labelWrapW);
+    const linePitch = totalRow ? 13 : 12;
+
+    doc.text(labelLines[0]!, MARGIN, y);
+    doc.text(
+      formatMoneyWholeDollars(line.amount),
+      rightAmtX,
+      y,
+      { align: "right" },
+    );
+    let innerY = y + linePitch;
+    for (let li = 1; li < labelLines.length; li++) {
+      doc.text(labelLines[li]!, MARGIN, innerY);
+      innerY += linePitch;
+    }
+
+    y = Math.max(innerY, y + linePitch) + 2;
+
+    if (line.sublabel) {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8.5);
+      doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
+      const sub = doc.splitTextToSize(line.sublabel, fullColW - 16);
+      doc.text(sub, MARGIN + 12, y);
+      y += sub.length * 11 + 4;
+    }
+    if (line.footnote) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
+      const fn = doc.splitTextToSize(line.footnote, fullColW - 16);
+      doc.text(fn, MARGIN + 12, y);
+      y += fn.length * 10 + 6;
+    }
+
+    if (y > PAGE_H - 200) {
+      doc.addPage();
+      y = MARGIN;
+    }
+  }
+
+  return y;
+}
+
 export async function downloadTermSheetPdf(
   metadata: TermSheetLocalMetadata,
   request: DealAnalyzeRequestV1 | undefined,
@@ -436,6 +582,14 @@ export async function downloadTermSheetPdf(
 
   doc.addPage();
   yCursor = MARGIN;
+  yCursor = drawCashToCloseSectionPdf(doc, yCursor, request, response);
+  yCursor += 20;
+
+  if (yCursor > PAGE_H - 260) {
+    doc.addPage();
+    yCursor = MARGIN;
+  }
+
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(2);
   doc.line(MARGIN, yCursor, PDF_PAGE_W - MARGIN, yCursor);
