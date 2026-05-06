@@ -22,6 +22,10 @@ export function purposeLabelForCtc(p: string): string {
   }
 }
 
+/** Customer-facing lead-in under the cash estimate (PDF, preview, plain text). */
+export const TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS =
+  "Third-party assumed costs: title & escrow settlement fees and hazard insurance premiums are placeholders in this estimate; your title, escrow, and insurance providers will set final amounts at closing.";
+
 /** Same leg the deal engine uses for borrower equity on purchase CTC. */
 export function acquisitionFundsForCtce(
   loan: DealAnalyzeResponseV1["loan"],
@@ -37,20 +41,15 @@ export function illustrativeCtcFeePercentSummary(): string {
 }
 
 /**
- * Inputs behind the illustrative cash-to-close model (mirrors `analyze.ts` + policy constants).
+ * Deal inputs behind the illustrative cash-to-close estimate (mirrors engine + policy).
  */
 export function buildTermSheetCtcInputRows(
   request: DealAnalyzeRequestV1 | undefined,
   response: DealAnalyzeResponseV1,
 ): { label: string; value: string }[] {
   const loan = response.loan;
-  const cashToClose = response.cashToClose;
   const feeLine = illustrativeCtcFeePercentSummary();
   const rows: { label: string; value: string }[] = [
-    {
-      label: "Cash-to-close model status",
-      value: cashToClose.status.replace(/_/g, " "),
-    },
     { label: "Transaction type", value: purposeLabelForCtc(loan.purpose) },
   ];
 
@@ -62,8 +61,7 @@ export function buildTermSheetCtcInputRows(
     });
     const acq = acquisitionFundsForCtce(loan);
     rows.push({
-      label:
-        "Acquisition funds (for borrower equity; matches engine structuring)",
+      label: "Acquisition funds (applied to borrower equity)",
       value: acq !== undefined ? formatMoneyWholeDollars(acq) : "—",
     });
     rows.push({
@@ -86,11 +84,11 @@ export function buildTermSheetCtcInputRows(
     });
     const ref = loan.amount;
     rows.push({
-      label: "Recommended total loan (CTC reference in engine)",
+      label: "Total loan amount (basis for estimate)",
       value: ref !== undefined ? formatMoneyWholeDollars(ref) : "—",
     });
     rows.push({
-      label: "Illustrative fees as % of loan reference",
+      label: "Illustrative fees as % of loan amount",
       value: feeLine,
     });
   }

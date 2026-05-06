@@ -16,7 +16,7 @@ const FEE_LINE_LABELS = new Set([
 const TOTAL_CASH_LABEL = "Total estimated cash to close";
 
 const POINTS_FEES_FOOTNOTE =
-  "Includes estimated lender points, lender fees, and third-party closing costs. Third-party closing fees are estimated.";
+  "Combines illustrative lender points, lender fees, and a bundled closing-cost allowance. That allowance assumes third-party title & escrow settlement charges and hazard insurance premiums; final invoices from providers at closing govern.";
 
 export type CashToCloseDisplayLine = {
   label: string;

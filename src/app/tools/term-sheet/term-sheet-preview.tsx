@@ -16,7 +16,7 @@ import {
 } from "../pricing-calculator/pricing-display";
 import { transformCashToCloseDisplayLines } from "../cash-to-close-estimator/cash-to-close-estimator-display";
 import { TermSheetExportBar } from "./term-sheet-export-bar";
-import { buildTermSheetCtcInputRows } from "./term-sheet-cash-to-close-fields";
+import { buildTermSheetCtcInputRows, TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS } from "./term-sheet-cash-to-close-fields";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 import { T1fTermSheetLogo } from "@/components/branding/t1f-term-sheet-logo";
 
@@ -395,8 +395,9 @@ export function TermSheetPreview({
           Cash to close
         </h3>
         <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Indicative estimate only — not a Closing Disclosure. Third-party fees are
-          estimated. Same layout as PDF page&nbsp;two.
+          Indicative estimate only — not a Closing Disclosure. Assumed title,
+          escrow settlement, hazard insurance, and similar third-party fees are
+          placeholders.
         </p>
 
         <h4 className="mt-6 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
@@ -419,9 +420,13 @@ export function TermSheetPreview({
         <h4 className="mt-8 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           Estimate
         </h4>
+        <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+          {TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS}
+        </p>
         {cashDisplayLines.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-            No illustrative cash-to-close components modeled for this scenario.
+            No line-by-line cash to close breakdown is shown — regenerate after
+            filling in the deal inputs above, if applicable.
           </p>
         ) : (
           <dl className="mt-3 space-y-4 text-[15px] leading-relaxed" data-testid="ts-cash-items">
@@ -457,11 +462,11 @@ export function TermSheetPreview({
         )}
         <div className="mt-6 border-t border-dashed border-zinc-300 pt-4 dark:border-zinc-600">
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-            Expected total (cross-check from engine)
+            Estimated cash to close (total)
           </p>
           <p className="mt-2 text-sm" data-testid="ts-cash-total">
             {cash.estimatedTotal === null ? (
-              <span>Not returned for this scenario.</span>
+              <span>Not available for this scenario.</span>
             ) : (
               <span>
                 <strong>{formatMoneyWholeDollars(cash.estimatedTotal)}</strong>

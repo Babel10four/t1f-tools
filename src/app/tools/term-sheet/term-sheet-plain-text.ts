@@ -5,7 +5,10 @@ import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-h
 import { formatNoteRatePercentDisplay } from "../pricing-calculator/pricing-display";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 import { transformCashToCloseDisplayLines } from "../cash-to-close-estimator/cash-to-close-estimator-display";
-import { buildTermSheetCtcInputRows } from "./term-sheet-cash-to-close-fields";
+import {
+  buildTermSheetCtcInputRows,
+  TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
+} from "./term-sheet-cash-to-close-fields";
 
 function purposeLabel(p: string): string {
   switch (p) {
@@ -81,7 +84,7 @@ export function buildTermSheetPlainText(
   lines.push("");
   lines.push("CASH TO CLOSE");
   lines.push(
-    "Indicative estimate only — not a Closing Disclosure. Third-party fees are estimated.",
+    "Indicative estimate only — not a Closing Disclosure. Assumed title, escrow settlement, hazard insurance, and similar third-party fees are placeholders.",
   );
   lines.push("");
   lines.push("Inputs");
@@ -90,6 +93,8 @@ export function buildTermSheetPlainText(
   }
   lines.push("");
   lines.push("Estimate");
+  lines.push(TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS);
+  lines.push("");
   const cashPurpose = loan.purpose === "refinance" ? "refinance" : "purchase";
   const cashDisplay = transformCashToCloseDisplayLines(
     response.cashToClose.items,
@@ -100,7 +105,7 @@ export function buildTermSheetPlainText(
   );
   if (cashDisplay.length === 0) {
     lines.push(
-      "No illustrative cash-to-close components modeled for this scenario.",
+      "No line-by-line cash to close breakdown is shown — complete deal inputs and regenerate if needed.",
     );
   } else {
     for (const row of cashDisplay) {
@@ -116,8 +121,8 @@ export function buildTermSheetPlainText(
   lines.push("");
   lines.push(
     response.cashToClose.estimatedTotal === null
-      ? "Expected cash to close (engine total): not returned for this scenario."
-      : `Expected cash to close (engine total): ${formatMoneyWholeDollars(response.cashToClose.estimatedTotal)}`,
+      ? "Estimated cash to close (total): not available for this scenario."
+      : `Estimated cash to close (total): ${formatMoneyWholeDollars(response.cashToClose.estimatedTotal)}`,
   );
   lines.push("");
   lines.push(...TERM_SHEET_DISCLAIMER_DETAILS);

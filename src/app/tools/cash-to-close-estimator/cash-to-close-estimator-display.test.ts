@@ -34,7 +34,8 @@ describe("transformCashToCloseDisplayLines", () => {
       label: "Total points & fees",
       amount: 3_000,
     });
-    expect(out[1]?.footnote).toContain("Third-party closing fees are estimated");
+    expect(out[1]?.footnote).toMatch(/title.*escrow/i);
+    expect(out[1]?.footnote).toMatch(/hazard insurance/i);
     expect(out[out.length - 1]?.label).toBe("Total estimated cash to close");
   });
 
@@ -121,6 +122,6 @@ describe("buildCashToCloseClientSummaryText", () => {
     expect(text).toContain("interest-only");
     expect(text).toContain("Down payment:");
     expect(text).toContain("Total points & fees");
-    expect(text).toContain("Third-party closing fees are estimated");
+    expect(text).toMatch(/hazard insurance/i);
   });
 });

@@ -302,7 +302,7 @@ describe("TermSheetPreview display rules", () => {
       },
     };
     render(<TermSheetPreview metadata={meta} response={response} />);
-    expect(screen.getByTestId("ts-cash-total")).toHaveTextContent(/not returned/i);
+    expect(screen.getByTestId("ts-cash-total")).toHaveTextContent(/not available/i);
     expect(screen.getByTestId("ts-cash-total")).not.toHaveTextContent("$300.00");
     const items = screen.getByTestId("ts-cash-items");
     expect(items.textContent).toMatch(/A[\s\S]*B/);

@@ -4,7 +4,10 @@ import { TERM_SHEET_DISCLAIMER_DETAILS } from "@/lib/tools/disclaimer-copy";
 import { formatNoteRatePercentDisplay } from "../pricing-calculator/pricing-display";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
-import { buildTermSheetCtcInputRows } from "./term-sheet-cash-to-close-fields";
+import {
+  buildTermSheetCtcInputRows,
+  TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
+} from "./term-sheet-cash-to-close-fields";
 import {
   transformCashToCloseDisplayLines,
 } from "../cash-to-close-estimator/cash-to-close-estimator-display";
@@ -237,7 +240,7 @@ function drawCashToCloseSectionPdf(
   doc.setFontSize(9);
   doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
   const subHead = doc.splitTextToSize(
-    "Indicative estimate only — not a Closing Disclosure. Third-party fees are estimated.",
+    "Indicative estimate only — not a Closing Disclosure. Assumed title, escrow settlement, hazard insurance, and similar third-party fees are placeholders.",
     PDF_PAGE_W - MARGIN * 2,
   );
   doc.text(subHead, MARGIN, y + 14);
@@ -267,16 +270,24 @@ function drawCashToCloseSectionPdf(
   doc.setFontSize(10);
   doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
   doc.text("Estimate", MARGIN, y);
-  y += 18;
+  y += 14;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
+  const thirdPartyNote = doc.splitTextToSize(
+    TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
+    fullColW,
+  );
+  doc.text(thirdPartyNote, MARGIN, y);
+  y += thirdPartyNote.length * 11 + 10;
+  doc.setTextColor(0, 0, 0);
 
   if (displayLines.length === 0) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.setTextColor(TEXT_MUTED.r, TEXT_MUTED.g, TEXT_MUTED.b);
     const msg =
-      cash.estimatedTotal === null
-        ? "No illustrative cash-to-close components were modeled for this scenario."
-        : "No breakdown lines returned.";
+      "No line-by-line cash to close breakdown is shown — complete the relevant purchase or refinance amounts and regenerate, or underwriting may still be finalizing assumptions.";
     const wrapped = doc.splitTextToSize(msg, fullColW);
     doc.text(wrapped, MARGIN, y);
     y += wrapped.length * 12 + 14;
@@ -284,7 +295,7 @@ function drawCashToCloseSectionPdf(
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(0, 0, 0);
-      doc.text("Expected cash to close (total)", MARGIN, y);
+      doc.text("Estimated cash to close (total)", MARGIN, y);
       doc.text(
         formatMoneyWholeDollars(cash.estimatedTotal),
         PDF_PAGE_W - MARGIN,
