@@ -9,11 +9,12 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "db:push": "drizzle-kit push",
-    "db:generate": "drizzle-kit generate",
-    "data:001": "tsx scripts/data-001-initial-policy-load.ts",
-    "data:rural-001": "tsx scripts/rural-data-001-initial-rural-rules-load.ts",
-    "data:credit-001": "tsx scripts/credit-data-001-bind-credit-policy.ts  "
+    "db:push": "node --env-file-if-exists=.env --env-file-if-exists=.env.local ./node_modules/drizzle-kit/bin.cjs push",
+    "db:generate": "node --env-file-if-exists=.env --env-file-if-exists=.env.local ./node_modules/drizzle-kit/bin.cjs generate",
+    "db:verify": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/verify-db-connection.ts",
+    "data:001": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/data-001-initial-policy-load.ts",
+    "data:rural-001": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/rural-data-001-initial-rural-rules-load.ts",
+    "data:credit-001": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/credit-data-001-bind-credit-policy.ts"
   },
   "dependencies": {
     "@vercel/blob": "^2.3.3",
@@ -26,8 +27,8 @@
     "postgres": "^3.4.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-markdown": "^9.0.3",
-    "remark-gfm": "^4.0.0"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

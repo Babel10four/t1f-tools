@@ -136,6 +136,32 @@ Append-only **`events`** rows in Postgres (`drizzle/0003_events.sql` or `npm run
 
 **Spec:** `docs/specs/CONTENT-002.md`, `docs/specs/PLATFORM-DATA-001.md`.
 
+## Supabase Postgres (same app database)
+
+This repo does **not** use `@supabase/supabase-js` — only **`DATABASE_URL`** (standard Postgres). Supabase is just hosted Postgres.
+
+| Step | Who |
+|------|-----|
+| Create a Supabase project and set the **database password** (save it in a password manager). | You |
+| Copy the **direct** connection string (host like `db.<project-ref>.supabase.co`, port **5432**) from **Project Settings → Database → Connection parameters / URI**. Prefer this over the **pooler** (port 6543) for **`npm run db:push`** so Drizzle can run DDL reliably. | You |
+| Paste into `.env.local` as `DATABASE_URL=...` (include `?sslmode=require` if the Supabase UI shows it). URL-encode special characters in the password. | You |
+| Run `npm run db:verify` then `npm run db:push` with that env loaded. | You (local machine) |
+| Add the same `DATABASE_URL` to **Vercel → Environment Variables** (Production) and redeploy. | You |
+
+**Verify and migrate**
+
+```bash
+# from repo root — `db:verify` / `db:push` load `.env` then `.env.local` (Node --env-file-if-exists)
+npm run db:verify
+npm run db:push
+```
+
+`db:push` syncs `src/db/schema.ts` to the database (documents, rule_sets, **events** for the admin dashboard, tool_context_bindings). See `drizzle/*.sql` if you prefer raw SQL in order `0001` → `0004`.
+
+**Dashboard:** after `events` exists and the app can connect, `/admin/dashboard` shows KPIs (no extra Supabase configuration).
+
+**If `db:push` fails on a pooler URL:** switch `DATABASE_URL` to the **direct** 5432 URI for the migration, then optionally switch production to a **Transaction** pooler string later if you need more serverless connection efficiency.
+
 ## Getting Started
 
 First, run the development server:

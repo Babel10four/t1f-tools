@@ -14,9 +14,11 @@ CREATE TABLE IF NOT EXISTS tool_context_bindings (
   status TEXT NOT NULL CHECK (status IN ('draft', 'published', 'archived')),
   published_at TIMESTAMPTZ,
   archived_at TIMESTAMPTZ,
-  superseded_by_binding_id UUID REFERENCES tool_context_bindings (id) ON DELETE SET NULL,
+  superseded_by_binding_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   created_by_role TEXT,
+  CONSTRAINT tcb_superseded_by_fk FOREIGN KEY (superseded_by_binding_id)
+    REFERENCES tool_context_bindings (id) ON DELETE SET NULL,
   CONSTRAINT tool_context_bindings_one_target CHECK (
     (document_id IS NOT NULL AND rule_set_id IS NULL) OR
     (document_id IS NULL AND rule_set_id IS NOT NULL)

@@ -1,7 +1,7 @@
-import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   bigint,
   date,
+  foreignKey,
   jsonb,
   pgTable,
   text,
@@ -87,26 +87,34 @@ export const bindingTypesV1 = [
 ] as const;
 export type BindingTypeV1 = (typeof bindingTypesV1)[number];
 
-export const toolContextBindings = pgTable("tool_context_bindings", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  toolKey: text("tool_key").notNull(),
-  bindingType: text("binding_type").notNull().$type<BindingTypeV1>(),
-  documentId: uuid("document_id").references(() => documents.id, {
-    onDelete: "restrict",
-  }),
-  ruleSetId: uuid("rule_set_id").references(() => ruleSets.id, {
-    onDelete: "restrict",
-  }),
-  status: text("status").notNull().$type<"draft" | "published" | "archived">(),
-  publishedAt: timestamp("published_at", { withTimezone: true }),
-  archivedAt: timestamp("archived_at", { withTimezone: true }),
-  supersededByBindingId: uuid("superseded_by_binding_id").references(
-    (): AnyPgColumn => toolContextBindings.id,
-    { onDelete: "set null" },
-  ),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  createdByRole: text("created_by_role"),
-});
+export const toolContextBindings = pgTable(
+  "tool_context_bindings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    toolKey: text("tool_key").notNull(),
+    bindingType: text("binding_type").notNull().$type<BindingTypeV1>(),
+    documentId: uuid("document_id").references(() => documents.id, {
+      onDelete: "restrict",
+    }),
+    ruleSetId: uuid("rule_set_id").references(() => ruleSets.id, {
+      onDelete: "restrict",
+    }),
+    status: text("status").notNull().$type<"draft" | "published" | "archived">(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    /** Self-FK: explicit short name — Postgres max identifier length is 63 bytes. */
+    supersededByBindingId: uuid("superseded_by_binding_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdByRole: text("created_by_role"),
+  },
+  (table) => [
+    foreignKey({
+      name: "tcb_superseded_by_fk",
+      columns: [table.supersededByBindingId],
+      foreignColumns: [table.id],
+    }).onDelete("set null"),
+  ],
+);
 
 export type ToolContextBindingRow = typeof toolContextBindings.$inferSelect;
 export type ToolContextBindingInsert = typeof toolContextBindings.$inferInsert;
