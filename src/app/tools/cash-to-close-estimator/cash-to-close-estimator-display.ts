@@ -10,13 +10,13 @@ import { formatMoney } from "../loan-structuring-assistant/display-helpers";
 const FEE_LINE_LABELS = new Set([
   "Estimated points",
   "Estimated lender fees",
-  "Estimated closing costs",
 ]);
+const TITLE_INSURANCE_LABEL = "Estimated closing costs";
 
 const TOTAL_CASH_LABEL = "Total estimated cash to close";
 
 const POINTS_FEES_FOOTNOTE =
-  "Combines illustrative lender points, lender fees, and a bundled closing-cost allowance. That allowance assumes third-party title & escrow settlement charges and hazard insurance premiums; final invoices from providers at closing govern.";
+  "Combines illustrative lender points and lender fees only. Title/insurance are estimated separately and excluded from loan-cost totals.";
 
 export type CashToCloseDisplayLine = {
   label: string;
@@ -27,6 +27,20 @@ export type CashToCloseDisplayLine = {
   footnote?: string;
 };
 
+export type CashToCloseLoanCostSummary = {
+  basisLabel: "Down payment" | "Payoff / unwind amount";
+  basisAmount: number;
+  loanFees: number;
+  titleInsuranceEstimate: number;
+  /** (Daily Interest per diem * remaining days in month) + first full month in advance */
+  interestCosts: number | null;
+  perDiem: number | null;
+  remainingDaysInMonth: number | null;
+  firstFullMonthInterest: number | null;
+  /** basis + loan fees + interestCosts (title/insurance excluded) */
+  estimatedLoanCostsExcludingTitleInsurance: number | null;
+};
+
 function roundMoney(n: number): number {
   return Math.round(n * 100) / 100;
 }
@@ -34,7 +48,8 @@ function roundMoney(n: number): number {
 /**
  * UI-only presentation of server cash-to-close lines (does not change API contract).
  * - Purchase: "Borrower equity" → "Down payment" with % of purchase when price known.
- * - Merges points + lender fees + closing into one "Total points & fees" row.
+ * - Merges points + lender fees into one "Loan fees" row.
+ * - Breaks out title/insurance estimate from loan costs.
  */
 export function transformCashToCloseDisplayLines(
   items: DealAnalyzeCashLineV1[],
@@ -86,10 +101,19 @@ export function transformCashToCloseDisplayLines(
         i += 1;
       }
       out.push({
-        label: "Total points & fees",
+        label: "Loan fees (points + lender fees)",
         amount: roundMoney(sum),
         footnote: POINTS_FEES_FOOTNOTE,
       });
+      continue;
+    }
+
+    if (row.label === TITLE_INSURANCE_LABEL) {
+      out.push({
+        label: "Est. title / insurance (excluded from loan costs)",
+        amount: row.amount,
+      });
+      i += 1;
       continue;
     }
 
@@ -158,6 +182,94 @@ export function estimateMonthlyPayments(
   return { interestOnlyPerMonth, amortizingPerMonth };
 }
 
+function daysInMonth(year: number, monthZeroIndexed: number): number {
+  return new Date(year, monthZeroIndexed + 1, 0).getDate();
+}
+
+function sumByLabels(items: DealAnalyzeCashLineV1[], labels: Set<string>): number {
+  return roundMoney(
+    items.reduce((sum, row) => (labels.has(row.label) ? sum + row.amount : sum), 0),
+  );
+}
+
+function sumByLabel(items: DealAnalyzeCashLineV1[], label: string): number {
+  return roundMoney(
+    items.reduce((sum, row) => (row.label === label ? sum + row.amount : sum), 0),
+  );
+}
+
+/**
+ * Product-facing summary used by Cash to Close screen:
+ * - include: down payment/payoff + loan fees + interest costs
+ * - exclude: title/insurance estimate
+ */
+export function buildCashToCloseLoanCostSummary(input: {
+  flow: "purchase" | "refinance";
+  response: DealAnalyzeResponseV1;
+  asOfDate?: Date;
+}): CashToCloseLoanCostSummary {
+  const { flow, response } = input;
+  const asOf = input.asOfDate ?? new Date();
+  const basisLabel =
+    flow === "purchase" ? "Down payment" : "Payoff / unwind amount";
+  const basisAmount = sumByLabel(
+    response.cashToClose.items,
+    flow === "purchase" ? "Borrower equity" : "Payoff / unwind amount",
+  );
+  const loanFees = sumByLabels(response.cashToClose.items, FEE_LINE_LABELS);
+  const titleInsuranceEstimate = sumByLabel(
+    response.cashToClose.items,
+    TITLE_INSURANCE_LABEL,
+  );
+  const hasRecognizedBasisOrFees = basisAmount > 0 || loanFees > 0;
+
+  const principal =
+    response.loan.acquisitionLoanAmount ?? response.loan.amount ?? undefined;
+  const annualRatePct = response.pricing.noteRatePercent;
+  if (
+    !hasRecognizedBasisOrFees ||
+    principal === undefined ||
+    principal <= 0 ||
+    annualRatePct === null ||
+    annualRatePct === undefined ||
+    annualRatePct < 0
+  ) {
+    return {
+      basisLabel,
+      basisAmount,
+      loanFees,
+      titleInsuranceEstimate,
+      interestCosts: null,
+      perDiem: null,
+      remainingDaysInMonth: null,
+      firstFullMonthInterest: null,
+      estimatedLoanCostsExcludingTitleInsurance: null,
+    };
+  }
+
+  const remainingDays = Math.max(
+    0,
+    daysInMonth(asOf.getFullYear(), asOf.getMonth()) - asOf.getDate(),
+  );
+  const perDiem = roundMoney((principal * (annualRatePct / 100)) / 360);
+  const firstFullMonthInterest = roundMoney((principal * (annualRatePct / 100)) / 12);
+  const interestCosts = roundMoney(perDiem * remainingDays + firstFullMonthInterest);
+  const estimatedLoanCostsExcludingTitleInsurance = roundMoney(
+    basisAmount + loanFees + interestCosts,
+  );
+  return {
+    basisLabel,
+    basisAmount,
+    loanFees,
+    titleInsuranceEstimate,
+    interestCosts,
+    perDiem,
+    remainingDaysInMonth: remainingDays,
+    firstFullMonthInterest,
+    estimatedLoanCostsExcludingTitleInsurance,
+  };
+}
+
 export function buildCashToCloseClientSummaryText(input: {
   flow: "purchase" | "refinance";
   response: DealAnalyzeResponseV1;
@@ -170,6 +282,7 @@ export function buildCashToCloseClientSummaryText(input: {
     response.cashToClose.items,
     { purpose, purchasePrice },
   );
+  const summary = buildCashToCloseLoanCostSummary({ flow, response });
 
   const payments = estimateMonthlyPayments(response.loan, response.pricing);
   const lines: string[] = [];
@@ -215,12 +328,24 @@ export function buildCashToCloseClientSummaryText(input: {
     }
   }
   lines.push("");
+  lines.push(`${summary.basisLabel}: ${formatMoney(summary.basisAmount)}`);
+  lines.push(`Loan fees: ${formatMoney(summary.loanFees)}`);
   lines.push(
-    `Estimated cash to close (total): ${formatMoney(response.cashToClose.estimatedTotal)}`,
+    `Interest costs: ${formatMoney(summary.interestCosts)}${
+      summary.interestCosts === null
+        ? " (note rate required)"
+        : ` (per diem ${formatMoney(summary.perDiem)} * ${summary.remainingDaysInMonth} days + first full month ${formatMoney(summary.firstFullMonthInterest)})`
+    }`,
+  );
+  lines.push(
+    `Estimated loan costs (excludes title/insurance): ${formatMoney(summary.estimatedLoanCostsExcludingTitleInsurance)}`,
+  );
+  lines.push(
+    `Estimated title/insurance (excluded): ${formatMoney(summary.titleInsuranceEstimate)}`,
   );
   lines.push("");
   lines.push(
-    "Indicative internal estimate only — not a Closing Disclosure or final settlement. Third-party fees are estimated.",
+    "Indicative internal estimate only — not a Closing Disclosure or final settlement. Title/insurance are estimated separately and excluded from loan-cost totals.",
   );
   return lines.join("\n");
 }

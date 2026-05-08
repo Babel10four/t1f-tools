@@ -6,6 +6,7 @@ import type {
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import {
+  buildCashToCloseLoanCostSummary,
   buildCashToCloseClientSummaryText,
   estimateMonthlyPayments,
   transformCashToCloseDisplayLines,
@@ -31,11 +32,14 @@ describe("transformCashToCloseDisplayLines", () => {
       sublabel: "10% of purchase price",
     });
     expect(out[1]).toMatchObject({
-      label: "Total points & fees",
-      amount: 3_000,
+      label: "Loan fees (points + lender fees)",
+      amount: 1_500,
     });
-    expect(out[1]?.footnote).toMatch(/title.*escrow/i);
-    expect(out[1]?.footnote).toMatch(/hazard insurance/i);
+    expect(out[1]?.footnote).toMatch(/excluded from loan-cost totals/i);
+    expect(out[2]).toMatchObject({
+      label: "Est. title / insurance (excluded from loan costs)",
+      amount: 1_500,
+    });
     expect(out[out.length - 1]?.label).toBe("Total estimated cash to close");
   });
 
@@ -50,7 +54,45 @@ describe("transformCashToCloseDisplayLines", () => {
     ];
     const out = transformCashToCloseDisplayLines(items, { purpose: "refinance" });
     expect(out[0]?.label).toBe("Payoff / unwind amount");
-    expect(out[1]).toMatchObject({ label: "Total points & fees", amount: 6_000 });
+    expect(out[1]).toMatchObject({
+      label: "Loan fees (points + lender fees)",
+      amount: 3_000,
+    });
+    expect(out[2]).toMatchObject({
+      label: "Est. title / insurance (excluded from loan costs)",
+      amount: 3_000,
+    });
+  });
+});
+
+describe("buildCashToCloseLoanCostSummary", () => {
+  it("computes loan costs excluding title/insurance with per-diem interest formula", () => {
+    const response = {
+      loan: { amount: 90_000, acquisitionLoanAmount: 80_000 },
+      pricing: { noteRatePercent: 9 },
+      cashToClose: {
+        items: [
+          { label: "Borrower equity", amount: 20_000 },
+          { label: "Estimated points", amount: 900 },
+          { label: "Estimated lender fees", amount: 450 },
+          { label: "Estimated closing costs", amount: 1_200 },
+        ],
+      },
+    } as unknown as DealAnalyzeResponseV1;
+    const summary = buildCashToCloseLoanCostSummary({
+      flow: "purchase",
+      response,
+      asOfDate: new Date(2026, 4, 8), // May 8, 2026 -> 23 remaining days
+    });
+    expect(summary.basisLabel).toBe("Down payment");
+    expect(summary.basisAmount).toBe(20_000);
+    expect(summary.loanFees).toBe(1_350);
+    expect(summary.titleInsuranceEstimate).toBe(1_200);
+    expect(summary.perDiem).toBe(20);
+    expect(summary.remainingDaysInMonth).toBe(23);
+    expect(summary.firstFullMonthInterest).toBe(600);
+    expect(summary.interestCosts).toBe(1060);
+    expect(summary.estimatedLoanCostsExcludingTitleInsurance).toBe(22_410);
   });
 });
 
@@ -121,7 +163,8 @@ describe("buildCashToCloseClientSummaryText", () => {
     expect(text).toContain("Note rate: 10.25%");
     expect(text).toContain("interest-only");
     expect(text).toContain("Down payment:");
-    expect(text).toContain("Total points & fees");
-    expect(text).toMatch(/hazard insurance/i);
+    expect(text).toContain("Loan fees (points + lender fees)");
+    expect(text).toMatch(/Estimated title\/insurance \(excluded\)/i);
+    expect(text).toMatch(/per diem/i);
   });
 });

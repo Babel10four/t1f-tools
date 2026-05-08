@@ -124,7 +124,9 @@ describe("CashToCloseEstimatorClient", () => {
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body.deal.purpose).toBe("purchase");
     expect(body.deal.productType).toBe("bridge_purchase");
-    expect(screen.getByTestId("ctc-cash-estimated-total")).toHaveTextContent(/\$5,000/);
+    expect(screen.getByTestId("ctc-cash-estimated-total")).not.toHaveTextContent(
+      "Not returned",
+    );
     expect(screen.getByTestId("ctc-cash-status")).toHaveTextContent("complete");
   });
 
@@ -499,11 +501,15 @@ describe("CashToCloseEstimatorClient", () => {
     await waitFor(() => {
       expect(screen.getByTestId("ctc-cash-lines-list")).toBeInTheDocument();
     });
-    expect(screen.getByText("Down payment")).toBeInTheDocument();
+    const list = screen.getByTestId("ctc-cash-lines-list");
+    expect(within(list).getByText("Down payment")).toBeInTheDocument();
     expect(screen.getByText(/10% of purchase price/)).toBeInTheDocument();
-    expect(screen.getByText("Total points & fees")).toBeInTheDocument();
+    expect(screen.getByText("Loan fees (points + lender fees)")).toBeInTheDocument();
     expect(
-      screen.getByText(/Third-party closing fees are estimated/),
+      screen.getByText(/excluded from loan-cost totals/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Est. title / insurance (excluded from loan costs)"),
     ).toBeInTheDocument();
   });
 });

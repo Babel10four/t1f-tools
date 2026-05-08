@@ -17,6 +17,7 @@ import {
   groupRisksBySeverity,
 } from "../loan-structuring-assistant/display-helpers";
 import {
+  buildCashToCloseLoanCostSummary,
   buildCashToCloseClientSummaryText,
   estimateMonthlyPayments,
   transformCashToCloseDisplayLines,
@@ -166,6 +167,16 @@ export function CashToCloseEstimatorClient() {
       successPayload.response.pricing,
     );
   }, [successPayload]);
+
+  const loanCostSummary = useMemo(() => {
+    if (!successPayload) {
+      return null;
+    }
+    return buildCashToCloseLoanCostSummary({
+      flow,
+      response: successPayload.response,
+    });
+  }, [flow, successPayload]);
 
   const showResults = Boolean(successPayload && phase !== "submitting");
 
@@ -625,17 +636,48 @@ export function CashToCloseEstimatorClient() {
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500">Estimated total</dt>
+                <dt className="text-xs text-zinc-500">
+                  Est. loan costs (excludes title/insurance)
+                </dt>
                 <dd
                   className="text-sm font-medium text-zinc-900 dark:text-zinc-100"
                   data-testid="ctc-cash-estimated-total"
                 >
-                  {successPayload.response.cashToClose.estimatedTotal === null
+                  {loanCostSummary?.estimatedLoanCostsExcludingTitleInsurance === null ||
+                  loanCostSummary?.estimatedLoanCostsExcludingTitleInsurance === undefined
                     ? "Not returned"
-                    : formatMoney(successPayload.response.cashToClose.estimatedTotal)}
+                    : formatMoney(
+                        loanCostSummary.estimatedLoanCostsExcludingTitleInsurance,
+                      )}
                 </dd>
               </div>
             </dl>
+            {loanCostSummary ? (
+              <dl className="mt-3 grid gap-2 text-xs text-zinc-600 dark:text-zinc-400 sm:grid-cols-2">
+                <div className="flex justify-between gap-3">
+                  <dt>{loanCostSummary.basisLabel}</dt>
+                  <dd>{formatMoney(loanCostSummary.basisAmount)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>Loan fees</dt>
+                  <dd>{formatMoney(loanCostSummary.loanFees)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>Interest costs</dt>
+                  <dd>{formatMoney(loanCostSummary.interestCosts)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt>Est. title / insurance (excluded)</dt>
+                  <dd>{formatMoney(loanCostSummary.titleInsuranceEstimate)}</dd>
+                </div>
+              </dl>
+            ) : null}
+            {loanCostSummary?.interestCosts !== null ? (
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                Interest formula: (Daily Interest per diem × remaining days in month) +
+                first full month payment in advance.
+              </p>
+            ) : null}
           </section>
 
           <section data-testid="ctc-client-handoff">
