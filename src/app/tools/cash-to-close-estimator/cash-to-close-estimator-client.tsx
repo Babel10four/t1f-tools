@@ -666,14 +666,13 @@ export function CashToCloseEstimatorClient() {
                   <dt>Interest costs</dt>
                   <dd>{formatMoney(loanCostSummary.interestCosts)}</dd>
                 </div>
-                <div className="flex justify-between gap-3">
-                  <dt>Est. title / insurance (excluded)</dt>
-                  <dd>{formatMoney(loanCostSummary.titleInsuranceEstimate)}</dd>
-                </div>
               </dl>
             ) : null}
+            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              Title/insurance costs are not included in this cash-to-close estimate.
+            </p>
             {loanCostSummary?.interestCosts !== null ? (
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 Interest formula: (Daily Interest per diem × remaining days in month) +
                 first full month payment in advance.
               </p>

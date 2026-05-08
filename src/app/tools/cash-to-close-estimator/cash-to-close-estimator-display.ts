@@ -16,7 +16,7 @@ const TITLE_INSURANCE_LABEL = "Estimated closing costs";
 const TOTAL_CASH_LABEL = "Total estimated cash to close";
 
 const POINTS_FEES_FOOTNOTE =
-  "Combines illustrative lender points and lender fees only. Title/insurance are estimated separately and excluded from loan-cost totals.";
+  "Combines lender points and lender fees. Title/insurance costs are not included in the cash-to-close estimate.";
 
 export type CashToCloseDisplayLine = {
   label: string;
@@ -47,7 +47,7 @@ function roundMoney(n: number): number {
 
 /**
  * UI-only presentation of server cash-to-close lines (does not change API contract).
- * - Purchase: "Borrower equity" → "Down payment" with % of purchase when price known.
+ * - Purchase: "Borrower equity" → "Down payment".
  * - Merges points + lender fees into one "Loan fees" row.
  * - Breaks out title/insurance estimate from loan costs.
  */
@@ -72,22 +72,6 @@ export function transformCashToCloseDisplayLines(
   while (i < middle.length) {
     const row = middle[i]!;
 
-    if (
-      options.purpose === "purchase" &&
-      row.label === "Borrower equity" &&
-      options.purchasePrice !== undefined &&
-      options.purchasePrice > 0
-    ) {
-      const pct = roundMoney((row.amount / options.purchasePrice) * 100);
-      out.push({
-        label: "Down payment",
-        amount: row.amount,
-        sublabel: `${pct}% of purchase price`,
-      });
-      i += 1;
-      continue;
-    }
-
     if (options.purpose === "purchase" && row.label === "Borrower equity") {
       out.push({ label: "Down payment", amount: row.amount });
       i += 1;
@@ -109,10 +93,7 @@ export function transformCashToCloseDisplayLines(
     }
 
     if (row.label === TITLE_INSURANCE_LABEL) {
-      out.push({
-        label: "Est. title / insurance (excluded from loan costs)",
-        amount: row.amount,
-      });
+      // Deliberately omit title/insurance dollars from displayed totals and line items.
       i += 1;
       continue;
     }
@@ -341,7 +322,7 @@ export function buildCashToCloseClientSummaryText(input: {
     `Estimated loan costs (excludes title/insurance): ${formatMoney(summary.estimatedLoanCostsExcludingTitleInsurance)}`,
   );
   lines.push(
-    `Estimated title/insurance (excluded): ${formatMoney(summary.titleInsuranceEstimate)}`,
+    "Title/insurance: not included in this cash-to-close estimate.",
   );
   lines.push("");
   lines.push(

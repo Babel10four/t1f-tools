@@ -503,14 +503,11 @@ describe("CashToCloseEstimatorClient", () => {
     });
     const list = screen.getByTestId("ctc-cash-lines-list");
     expect(within(list).getByText("Down payment")).toBeInTheDocument();
-    expect(screen.getByText(/10% of purchase price/)).toBeInTheDocument();
     expect(screen.getByText("Loan fees (points + lender fees)")).toBeInTheDocument();
     expect(
-      screen.getByText(/excluded from loan-cost totals/i),
+      screen.getByText(/not included in this cash-to-close estimate/i),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Est. title / insurance (excluded from loan costs)"),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/Est\. title \/ insurance/i)).not.toBeInTheDocument();
   });
 });
 

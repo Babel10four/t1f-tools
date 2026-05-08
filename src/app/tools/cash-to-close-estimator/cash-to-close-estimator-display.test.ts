@@ -13,7 +13,7 @@ import {
 } from "./cash-to-close-estimator-display";
 
 describe("transformCashToCloseDisplayLines", () => {
-  it("renames borrower equity to Down payment with percent of purchase", () => {
+  it("renames borrower equity to Down payment and excludes title/insurance row", () => {
     const items = [
       { label: "Borrower equity", amount: 10_000 },
       { label: "Estimated points", amount: 500 },
@@ -29,18 +29,18 @@ describe("transformCashToCloseDisplayLines", () => {
     expect(out[0]).toMatchObject({
       label: "Down payment",
       amount: 10_000,
-      sublabel: "10% of purchase price",
     });
     expect(out[1]).toMatchObject({
       label: "Loan fees (points + lender fees)",
       amount: 1_500,
     });
-    expect(out[1]?.footnote).toMatch(/excluded from loan-cost totals/i);
-    expect(out[2]).toMatchObject({
-      label: "Est. title / insurance (excluded from loan costs)",
-      amount: 1_500,
-    });
+    expect(out[1]?.footnote).toMatch(
+      /not included in the cash-to-close estimate/i,
+    );
     expect(out[out.length - 1]?.label).toBe("Total estimated cash to close");
+    expect(
+      out.some((row) => row.label.includes("title / insurance")),
+    ).toBe(false);
   });
 
   it("merges fee lines on refinance without renaming payoff", () => {
@@ -58,10 +58,9 @@ describe("transformCashToCloseDisplayLines", () => {
       label: "Loan fees (points + lender fees)",
       amount: 3_000,
     });
-    expect(out[2]).toMatchObject({
-      label: "Est. title / insurance (excluded from loan costs)",
-      amount: 3_000,
-    });
+    expect(
+      out.some((row) => row.label.includes("title / insurance")),
+    ).toBe(false);
   });
 });
 
@@ -164,7 +163,7 @@ describe("buildCashToCloseClientSummaryText", () => {
     expect(text).toContain("interest-only");
     expect(text).toContain("Down payment:");
     expect(text).toContain("Loan fees (points + lender fees)");
-    expect(text).toMatch(/Estimated title\/insurance \(excluded\)/i);
+    expect(text).toMatch(/Title\/insurance: not included/i);
     expect(text).toMatch(/per diem/i);
   });
 });
