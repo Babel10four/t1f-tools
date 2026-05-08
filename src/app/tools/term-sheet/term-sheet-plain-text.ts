@@ -4,8 +4,8 @@ import { TERM_SHEET_DISCLAIMER_DETAILS } from "@/lib/tools/disclaimer-copy";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import { formatNoteRatePercentDisplay } from "../pricing-calculator/pricing-display";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
-import { transformCashToCloseDisplayLines } from "../cash-to-close-estimator/cash-to-close-estimator-display";
 import {
+  buildTermSheetCtcEstimateRows,
   buildTermSheetCtcInputRows,
   TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
 } from "./term-sheet-cash-to-close-fields";
@@ -95,35 +95,18 @@ export function buildTermSheetPlainText(
   lines.push("Estimate");
   lines.push(TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS);
   lines.push("");
-  const cashPurpose = loan.purpose === "refinance" ? "refinance" : "purchase";
-  const cashDisplay = transformCashToCloseDisplayLines(
-    response.cashToClose.items,
-    {
-      purpose: cashPurpose,
-      purchasePrice: request?.deal.purchasePrice,
-    },
-  );
-  if (cashDisplay.length === 0) {
+  const cashEstimateRows = buildTermSheetCtcEstimateRows(response);
+  if (cashEstimateRows.length === 0) {
     lines.push(
-      "No line-by-line cash to close breakdown is shown — complete deal inputs and regenerate if needed.",
+      "No cash-to-close estimate rows are shown — complete deal inputs and regenerate if needed.",
     );
   } else {
-    for (const row of cashDisplay) {
-      lines.push(`- ${row.label}: ${formatMoneyWholeDollars(row.amount)}`);
-      if (row.sublabel) {
-        lines.push(`  ${row.sublabel}`);
-      }
-      if (row.footnote) {
-        lines.push(`  ${row.footnote}`);
-      }
+    for (const row of cashEstimateRows) {
+      lines.push(`- ${row.label}: ${row.value}`);
     }
   }
   lines.push("");
-  lines.push(
-    response.cashToClose.estimatedTotal === null
-      ? "Estimated cash to close (total): not available for this scenario."
-      : `Estimated cash to close (total): ${formatMoneyWholeDollars(response.cashToClose.estimatedTotal)}`,
-  );
+  lines.push("Title/insurance costs are not included in this cash-to-close estimate.");
   lines.push("");
   lines.push(...TERM_SHEET_DISCLAIMER_DETAILS);
   return lines.join("\n");

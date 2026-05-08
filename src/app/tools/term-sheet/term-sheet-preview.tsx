@@ -14,9 +14,12 @@ import {
   formatNoteRatePercentDisplay,
   formatPricingScalar,
 } from "../pricing-calculator/pricing-display";
-import { transformCashToCloseDisplayLines } from "../cash-to-close-estimator/cash-to-close-estimator-display";
 import { TermSheetExportBar } from "./term-sheet-export-bar";
-import { buildTermSheetCtcInputRows, TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS } from "./term-sheet-cash-to-close-fields";
+import {
+  buildTermSheetCtcEstimateRows,
+  buildTermSheetCtcInputRows,
+  TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
+} from "./term-sheet-cash-to-close-fields";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 import { T1fTermSheetLogo } from "@/components/branding/t1f-term-sheet-logo";
 
@@ -76,7 +79,6 @@ export function TermSheetPreview({
   const sortedFlags = sortAnalysisFlagsForDisplay(response.analysis.flags);
   const riskGroups = groupRisksBySeverity(response.risks);
   const pricing = response.pricing;
-  const cash = response.cashToClose;
   const loan = response.loan;
 
   const totalPctArv =
@@ -86,12 +88,8 @@ export function TermSheetPreview({
       ? Math.round((loan.amount / request.property.arv) * 1000) / 10
       : undefined;
 
-  const cashPurpose = loan.purpose === "refinance" ? "refinance" : "purchase";
-  const cashDisplayLines = transformCashToCloseDisplayLines(cash.items, {
-    purpose: cashPurpose,
-    purchasePrice: request?.deal.purchasePrice,
-  });
   const cashModelInputRows = buildTermSheetCtcInputRows(request, response);
+  const cashEstimateRows = buildTermSheetCtcEstimateRows(response);
 
   return (
     <article
@@ -423,15 +421,15 @@ export function TermSheetPreview({
         <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
           {TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS}
         </p>
-        {cashDisplayLines.length === 0 ? (
+        {cashEstimateRows.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
             No line-by-line cash to close breakdown is shown — regenerate after
             filling in the deal inputs above, if applicable.
           </p>
         ) : (
           <dl className="mt-3 space-y-4 text-[15px] leading-relaxed" data-testid="ts-cash-items">
-            {cashDisplayLines.map((line, i) => {
-              const isTotal = line.label === "Total estimated cash to close";
+            {cashEstimateRows.map((line, i) => {
+              const isTotal = line.label.includes("Estimated cash to close");
               return (
                 <div
                   key={`${line.label}-${i}`}
@@ -441,39 +439,18 @@ export function TermSheetPreview({
                     <dt className={`text-zinc-700 dark:text-zinc-200 ${isTotal ? "font-semibold text-zinc-900 dark:text-zinc-50" : ""}`}>
                       {line.label}
                     </dt>
-                    <dd
-                      className={`tabular-nums ${isTotal ? "font-semibold text-zinc-900 dark:text-zinc-50" : "font-medium text-zinc-900 dark:text-zinc-100"}`}
-                    >
-                      {formatMoneyWholeDollars(line.amount)}
+                    <dd className={`tabular-nums ${isTotal ? "font-semibold text-zinc-900 dark:text-zinc-50" : "font-medium text-zinc-900 dark:text-zinc-100"}`}>
+                      {line.value}
                     </dd>
                   </div>
-                  {line.sublabel ? (
-                    <p className="mt-1 text-xs italic text-zinc-500">{line.sublabel}</p>
-                  ) : null}
-                  {line.footnote ? (
-                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                      {line.footnote}
-                    </p>
-                  ) : null}
                 </div>
               );
             })}
           </dl>
         )}
-        <div className="mt-6 border-t border-dashed border-zinc-300 pt-4 dark:border-zinc-600">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
-            Estimated cash to close (total)
-          </p>
-          <p className="mt-2 text-sm" data-testid="ts-cash-total">
-            {cash.estimatedTotal === null ? (
-              <span>Not available for this scenario.</span>
-            ) : (
-              <span>
-                <strong>{formatMoneyWholeDollars(cash.estimatedTotal)}</strong>
-              </span>
-            )}
-          </p>
-        </div>
+        <p className="mt-5 text-xs text-zinc-500 dark:text-zinc-400" data-testid="ts-cash-total">
+          Title/insurance costs are not included in this cash-to-close estimate.
+        </p>
       </section>
 
       <footer className="mt-6 border-t border-zinc-200 pt-4 text-center text-xs text-zinc-500 dark:border-zinc-800">

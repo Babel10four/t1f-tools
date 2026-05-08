@@ -1,15 +1,7 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
-import {
-  POLICY_CTC_CLOSING_COSTS_PCT,
-  POLICY_CTC_LENDER_FEES_PCT,
-  POLICY_CTC_POINTS_PCT,
-} from "@/lib/engines/deal/policy/constants";
+import { buildCashToCloseLoanCostSummary } from "../cash-to-close-estimator/cash-to-close-estimator-display";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
-
-function formatPolicyPctFraction(fraction: number): string {
-  return `${Math.round(fraction * 1000) / 10}%`;
-}
 
 export function purposeLabelForCtc(p: string): string {
   switch (p) {
@@ -24,7 +16,7 @@ export function purposeLabelForCtc(p: string): string {
 
 /** Customer-facing lead-in under the cash estimate (PDF, preview, plain text). */
 export const TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS =
-  "Third-party assumed costs: title & escrow settlement fees and hazard insurance premiums are placeholders in this estimate; your title, escrow, and insurance providers will set final amounts at closing.";
+  "Title, escrow settlement, hazard insurance, and similar third-party costs are not included in this cash-to-close estimate; your providers will set final amounts at closing.";
 
 /** Same leg the deal engine uses for borrower equity on purchase CTC. */
 export function acquisitionFundsForCtce(
@@ -36,19 +28,14 @@ export function acquisitionFundsForCtce(
   return loan.amount;
 }
 
-export function illustrativeCtcFeePercentSummary(): string {
-  return `${formatPolicyPctFraction(POLICY_CTC_POINTS_PCT)} points, ${formatPolicyPctFraction(POLICY_CTC_LENDER_FEES_PCT)} lender fees, ${formatPolicyPctFraction(POLICY_CTC_CLOSING_COSTS_PCT)} closing`;
-}
-
 /**
- * Deal inputs behind the illustrative cash-to-close estimate (mirrors engine + policy).
+ * Cash-to-close model inputs shown on term sheet exports.
  */
 export function buildTermSheetCtcInputRows(
   request: DealAnalyzeRequestV1 | undefined,
   response: DealAnalyzeResponseV1,
 ): { label: string; value: string }[] {
   const loan = response.loan;
-  const feeLine = illustrativeCtcFeePercentSummary();
   const rows: { label: string; value: string }[] = [
     { label: "Transaction type", value: purposeLabelForCtc(loan.purpose) },
   ];
@@ -64,16 +51,6 @@ export function buildTermSheetCtcInputRows(
       label: "Acquisition funds (applied to borrower equity)",
       value: acq !== undefined ? formatMoneyWholeDollars(acq) : "—",
     });
-    rows.push({
-      label: "Illustrative fees as % of purchase price",
-      value: feeLine,
-    });
-    if (price !== undefined) {
-      rows.push({
-        label: "Fee percentages apply to",
-        value: formatMoneyWholeDollars(price),
-      });
-    }
   } else {
     rows.push({
       label: "Payoff / basis (entered)",
@@ -87,11 +64,34 @@ export function buildTermSheetCtcInputRows(
       label: "Total loan amount (basis for estimate)",
       value: ref !== undefined ? formatMoneyWholeDollars(ref) : "—",
     });
-    rows.push({
-      label: "Illustrative fees as % of loan amount",
-      value: feeLine,
-    });
   }
 
+  return rows;
+}
+
+export function buildTermSheetCtcEstimateRows(
+  response: DealAnalyzeResponseV1,
+): { label: string; value: string }[] {
+  const flow = response.loan.purpose === "refinance" ? "refinance" : "purchase";
+  const summary = buildCashToCloseLoanCostSummary({ flow, response });
+  const rows: { label: string; value: string }[] = [
+    { label: summary.basisLabel, value: formatMoneyWholeDollars(summary.basisAmount) },
+    { label: "Loan fees", value: formatMoneyWholeDollars(summary.loanFees) },
+    { label: "Interest costs", value: formatMoneyWholeDollars(summary.interestCosts) },
+    {
+      label: "Estimated cash to close (excludes title/insurance)",
+      value: formatMoneyWholeDollars(summary.estimatedLoanCostsExcludingTitleInsurance),
+    },
+  ];
+  if (
+    summary.perDiem !== null &&
+    summary.remainingDaysInMonth !== null &&
+    summary.firstFullMonthInterest !== null
+  ) {
+    rows.push({
+      label: "Interest calc detail",
+      value: `${formatMoneyWholeDollars(summary.perDiem)} per diem × ${summary.remainingDaysInMonth} days + ${formatMoneyWholeDollars(summary.firstFullMonthInterest)} first full month`,
+    });
+  }
   return rows;
 }

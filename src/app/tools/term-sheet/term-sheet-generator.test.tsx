@@ -329,7 +329,7 @@ describe("TermSheetPreview display rules", () => {
     expect(screen.getByTestId("ts-pricing-note-rate")).toHaveTextContent("9.125%");
   });
 
-  it("does not expose a summed total when estimatedTotal is null", () => {
+  it("shows title/insurance exclusion note and estimate rows", () => {
     const response: DealAnalyzeResponseV1 = {
       ...minimalSuccess,
       cashToClose: {
@@ -342,15 +342,19 @@ describe("TermSheetPreview display rules", () => {
       },
     };
     render(<TermSheetPreview metadata={meta} response={response} />);
-    expect(screen.getByTestId("ts-cash-total")).toHaveTextContent(/not available/i);
-    expect(screen.getByTestId("ts-cash-total")).not.toHaveTextContent("$300.00");
+    expect(screen.getByTestId("ts-cash-total")).toHaveTextContent(
+      /not included in this cash-to-close estimate/i,
+    );
+    expect(screen.getByTestId("ts-cash-total")).not.toHaveTextContent("$300");
     const items = screen.getByTestId("ts-cash-items");
-    expect(items.textContent).toMatch(/A[\s\S]*B/);
+    expect(items.textContent).toMatch(/Down payment[\s\S]*Loan fees[\s\S]*Interest costs/);
   });
 
-  it("preserves cash line item order from server (display rows)", () => {
+  it("renders normalized estimate labels in order", () => {
     render(<TermSheetPreview metadata={meta} response={minimalSuccess} />);
     const items = screen.getByTestId("ts-cash-items");
-    expect(items.textContent).toMatch(/First line[\s\S]*Second line/);
+    expect(items.textContent).toMatch(
+      /Down payment[\s\S]*Loan fees[\s\S]*Interest costs[\s\S]*Estimated cash to close \(excludes title\/insurance\)/,
+    );
   });
 });
