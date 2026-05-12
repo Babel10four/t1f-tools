@@ -31,6 +31,11 @@ export type LogPlatformEventInput = {
   route: string;
   status: AnalyticsStatus;
   metadata?: Record<string, unknown>;
+  /**
+   * When the request cookie does not yet reflect the new session (e.g. successful login),
+   * pass the role and opaque session id to persist on the event row.
+   */
+  sessionOverride?: { role: string; sessionId: string };
 };
 
 /**
@@ -39,9 +44,11 @@ export type LogPlatformEventInput = {
  */
 export async function logPlatformEvent(input: LogPlatformEventInput): Promise<void> {
   try {
-    const session = await getSessionPayloadFromRequest(input.req);
-    const role = session?.role ?? "anonymous";
-    const sessionId = session?.sid ?? "none";
+    const fromCookie = await getSessionPayloadFromRequest(input.req);
+    const role =
+      input.sessionOverride?.role ?? fromCookie?.role ?? "anonymous";
+    const sessionId =
+      input.sessionOverride?.sessionId ?? fromCookie?.sid ?? "none";
 
     const db = getDb();
     await db.insert(platformEvents).values({

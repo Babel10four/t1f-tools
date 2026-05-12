@@ -18,7 +18,10 @@ import { recommendedLoanAmount } from "./policy/recommendedAmount";
 import { refinancePolicyMax } from "./policy/refinanceMax";
 import { buildDealAnalyzeRisks } from "./policy/risks";
 import { supportedProduct } from "./policy/support";
-import { applyLoanStructuring } from "./policy/loanStructuring";
+import {
+  applyLoanStructuring,
+  parseDealStructuringAssumptions,
+} from "./policy/loanStructuring";
 import {
   enrichLoanWithLeveragePresentation,
   isPurchaseNoRehabPolicyMappingPending,
@@ -337,6 +340,19 @@ export async function runDealAnalyze(
       !isPurchaseNoRehabPolicyMappingPending(req),
   });
 
+  const structuringAssumptions = parseDealStructuringAssumptions(req.assumptions);
+  const originationCtcInput =
+    loan.amount !== undefined &&
+    loan.amount > 0 &&
+    (structuringAssumptions.originationPointsPercent !== undefined ||
+      structuringAssumptions.originationFlatFee !== undefined)
+      ? {
+          feeBasisTotalLoan: loan.amount,
+          originationPointsPercent: structuringAssumptions.originationPointsPercent,
+          originationFlatFee: structuringAssumptions.originationFlatFee,
+        }
+      : undefined;
+
   let cash: DealAnalyzeResponseV1["cashToClose"];
   if (
     policyMax !== undefined &&
@@ -359,6 +375,7 @@ export async function runDealAnalyze(
         ctcLenderFeesPct: calc.ctcLenderFeesPct,
         ctcClosingCostsPct: calc.ctcClosingCostsPct,
       },
+      originationCtcInput,
     );
     cash = {
       status: pricingStatus,
@@ -380,6 +397,7 @@ export async function runDealAnalyze(
         ctcLenderFeesPct: calc.ctcLenderFeesPct,
         ctcClosingCostsPct: calc.ctcClosingCostsPct,
       },
+      originationCtcInput,
     );
     cash = {
       status: pricingStatus,

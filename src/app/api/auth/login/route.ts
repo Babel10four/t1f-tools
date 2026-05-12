@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { enqueuePlatformEvent } from "@/lib/analytics/log-event";
 import { AUTH_SECRET_ENV } from "@/lib/auth/constants";
 import { resolveRoleFromPassword } from "@/lib/auth/verify-password";
 import { authCookieName, sessionCookieOptions, signSessionToken } from "@/lib/auth/session-token";
@@ -32,14 +33,32 @@ export async function POST(request: Request) {
 
   const role = await resolveRoleFromPassword(password);
   if (!role) {
+    enqueuePlatformEvent({
+      req: request,
+      eventType: "session_login",
+      toolKey: null,
+      route: "/api/auth/login",
+      status: "error",
+      metadata: { reason: "invalid_credentials" },
+    });
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  const token = await signSessionToken(role, randomUUID());
+  const sessionId = randomUUID();
+  const token = await signSessionToken(role, sessionId);
   if (!token) {
     return NextResponse.json({ error: "Server misconfiguration" }, { status: 503 });
   }
 
+  enqueuePlatformEvent({
+    req: request,
+    eventType: "session_login",
+    toolKey: null,
+    route: "/api/auth/login",
+    status: "success",
+    metadata: { role },
+    sessionOverride: { role, sessionId },
+  });
   const defaultPath = role === "admin" ? DEFAULT_ADMIN_PATH : DEFAULT_USER_PATH;
   const res = NextResponse.json({ ok: true, defaultPath });
   res.cookies.set(authCookieName(), token, sessionCookieOptions());

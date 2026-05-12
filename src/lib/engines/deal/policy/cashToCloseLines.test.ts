@@ -48,6 +48,26 @@ describe("cashToCloseLines (TICKET-002 / business-rules)", () => {
     expect(estimatedTotal).toBe(items[5].amount);
   });
 
+  it("purchase: origination assumptions use total loan for points and flat lender fee dollars", () => {
+    const { items } = buildCashToCloseLinesPurchase({
+      purchasePrice: 715_000,
+      loanAmount: 643_500,
+      origination: {
+        feeBasisTotalLoan: 723_500,
+        originationPointsPercent: 0.65,
+        originationFlatFee: 1_195,
+      },
+    });
+    expect(items[1]).toMatchObject({
+      label: "Estimated points",
+      amount: 4_702.75,
+    });
+    expect(items[2]).toMatchObject({
+      label: "Estimated lender fees",
+      amount: 1_195,
+    });
+  });
+
   it("refinance: exact labels, order, and line 6 equals sum of lines 1–5", () => {
     const { items, estimatedTotal } = buildCashToCloseLinesRefinance({
       referenceAmount: 400_000,

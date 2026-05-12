@@ -123,9 +123,13 @@ Append-only **`events`** rows in Postgres (`drizzle/0003_events.sql` or `npm run
 
 **Failure behavior:** event inserts run in a **`try/catch`**; failures are **silent** (tools and admin flows are not blocked). If **`DATABASE_URL`** is missing or the **`events`** table is not migrated, the dashboard shows a short notice instead of KPI numbers.
 
-**Other instrumented routes (server-side):** `POST /api/deal/terms`, `POST /api/deal/structure`, `POST /api/property/rural`, `POST /api/voice/session`, admin document upload/publish, rule-set publish/rollback.
+**`npm run db:verify`** — checks TCP connectivity, confirms **`public.events`** exists, and prints row count (use after setting `DATABASE_URL`).
 
-**Semantics reference:** `docs/specs/ANALYTICS-001.md` (§ ANALYTICS-001A), `src/lib/analytics/kpi-semantics.ts`.
+**`POST /api/auth/login`** — logs **`session_login`** on success (with JWT `role` + opaque `sid` on the row) and on invalid password (**`status: error`**, no password stored).
+
+**Other instrumented routes (server-side):** `POST /api/deal/terms`, `POST /api/deal/structure`, `POST /api/property/analyze`, `POST /api/property/valuation`, `POST /api/intel/market`, `POST /api/intel/borrower`, `POST /api/intel/prospect`, `POST /api/property/rural`, `POST /api/voice/session`, admin document upload/publish, rule-set publish/rollback.
+
+**Semantics reference:** `docs/specs/ANALYTICS-001.md` (ANALYTICS-001A), `src/lib/analytics/kpi-semantics.ts`.
 
 ## Tool context bindings (CONTENT-002)
 

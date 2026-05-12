@@ -3,6 +3,7 @@
  * `tool_key` aligns with spec examples; optional headers use these values.
  */
 export const ANALYTICS_EVENT_TYPES = [
+  "session_login",
   "deal_analyze_run",
   "term_sheet_generated",
   "pricing_check_run",
@@ -11,6 +12,11 @@ export const ANALYTICS_EVENT_TYPES = [
   "credit_copilot_question",
   /** Voice harness — not Credit Copilot (TICKET-009A). */
   "voice_session_run",
+  "property_analyze_run",
+  "property_valuation_run",
+  "intel_market_run",
+  "intel_borrower_run",
+  "intel_prospect_run",
   "document_uploaded",
   "document_published",
   "rule_set_updated",
@@ -30,6 +36,16 @@ export const ANALYTICS_TOOL_KEYS = [
   /** Voice session API — not Credit Copilot (TICKET-009A). */
   "voice_operator",
   "deal_analyzer",
+  /** POST /api/property/analyze */
+  "property_analyzer",
+  /** POST /api/property/valuation */
+  "property_valuation",
+  /** POST /api/intel/market */
+  "market_intel",
+  /** POST /api/intel/borrower */
+  "borrower_intel",
+  /** POST /api/intel/prospect */
+  "prospect_intel",
 ] as const;
 
 export type AnalyticsToolKey = (typeof ANALYTICS_TOOL_KEYS)[number];

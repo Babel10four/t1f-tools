@@ -3,10 +3,81 @@ import {
   DASHBOARD_WINDOW_PRESETS,
   type DashboardKpis,
 } from "@/lib/analytics/dashboard";
+import { DashboardUsageCharts } from "./dashboard-usage-charts";
 
 type Props = {
   kpis: DashboardKpis;
 };
+
+function ActivityLogTable({ events }: { events: DashboardKpis["recentEvents"] }) {
+  if (events.length === 0) {
+    return (
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        No events in this window.
+      </p>
+    );
+  }
+  return (
+    <div
+      className="max-h-[28rem] overflow-auto rounded-md border border-zinc-100 dark:border-zinc-800"
+      data-testid="admin-activity-log"
+    >
+      <table className="w-full min-w-[640px] text-left text-sm">
+        <thead className="sticky top-0 bg-zinc-50 text-xs dark:bg-zinc-900">
+          <tr>
+            <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+              Time (UTC)
+            </th>
+            <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+              event_type
+            </th>
+            <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+              tool_key
+            </th>
+            <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+              route
+            </th>
+            <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+              role
+            </th>
+            <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+              status
+            </th>
+            <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
+              metadata
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {events.map((row) => (
+            <tr
+              key={row.id}
+              className="border-t border-zinc-100 dark:border-zinc-800"
+            >
+              <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
+                {row.createdAtIso.slice(0, 19).replace("T", " ")}
+              </td>
+              <td className="px-2 py-1.5 font-mono text-[11px] text-zinc-800 dark:text-zinc-200">
+                {row.eventType}
+              </td>
+              <td className="px-2 py-1.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
+                {row.toolKey ?? "—"}
+              </td>
+              <td className="px-2 py-1.5 font-mono text-[11px] text-zinc-600 dark:text-zinc-400">
+                {row.route}
+              </td>
+              <td className="px-2 py-1.5 text-zinc-600 dark:text-zinc-400">{row.role}</td>
+              <td className="px-2 py-1.5 text-zinc-600 dark:text-zinc-400">{row.status}</td>
+              <td className="max-w-[min(28rem,40vw)] break-words px-2 py-1.5 font-mono text-[10px] text-zinc-500 dark:text-zinc-400">
+                {row.metadataPreview || "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 function AddressTable({
   title,
@@ -109,7 +180,7 @@ function KpiCard({
 }
 
 export function AdminDashboardView({ kpis }: Props) {
-  const { totals, windowDays, dbAvailable } = kpis;
+  const { totals, dbAvailable } = kpis;
   if (!dbAvailable) {
     return (
       <div className="flex flex-col gap-4" data-testid="admin-dashboard">
@@ -192,6 +263,33 @@ export function AdminDashboardView({ kpis }: Props) {
         </div>
       </section>
 
+      <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
+        <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Utilization charts
+        </h2>
+        <p className="mb-4 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Same rolling window as above. The bar chart totals all events; the stacked chart
+          shows the dominant <code className="font-mono text-[11px]">event_type</code>{" "}
+          values per UTC day.
+        </p>
+        <DashboardUsageCharts
+          toolUsageByDay={kpis.toolUsageByDay}
+          stackedUsageByDay={kpis.stackedUsageByDay}
+          chartStackKeys={kpis.chartStackKeys}
+        />
+      </section>
+
+      <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
+        <h2 className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Activity log
+        </h2>
+        <p className="mb-3 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Newest first (up to 200 rows in the selected window). Metadata is truncated for
+          display.
+        </p>
+        <ActivityLogTable events={kpis.recentEvents} />
+      </section>
+
       <section>
         <h2 className="mb-2 text-sm font-medium text-zinc-800 dark:text-zinc-200">
           Deal Sheet &amp; cash-to-close usage
@@ -256,6 +354,11 @@ export function AdminDashboardView({ kpis }: Props) {
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <KpiCard
+            label="Successful logins"
+            value={totals.sessionLogins}
+            hint="session_login + success (shared-password auth)"
+          />
+          <KpiCard
             label="Deal Structuring Copilot runs"
             value={totals.loanStructuringAssistantRuns}
             hint="deal_analyze_run + tool_key loan_structuring_assistant"
@@ -276,6 +379,31 @@ export function AdminDashboardView({ kpis }: Props) {
             label="Term sheet terms API events (reserved)"
             value={totals.termSheetTermsApiEvents}
             hint="term_sheet_generated — POST /api/deal/terms; not the preview KPI"
+          />
+          <KpiCard
+            label="Property analyze API"
+            value={totals.propertyAnalyzeRuns}
+            hint="property_analyze_run"
+          />
+          <KpiCard
+            label="Property valuation API"
+            value={totals.propertyValuationRuns}
+            hint="property_valuation_run"
+          />
+          <KpiCard
+            label="Market intel API"
+            value={totals.intelMarketRuns}
+            hint="intel_market_run"
+          />
+          <KpiCard
+            label="Borrower intel API"
+            value={totals.intelBorrowerRuns}
+            hint="intel_borrower_run"
+          />
+          <KpiCard
+            label="Prospect intel API"
+            value={totals.intelProspectRuns}
+            hint="intel_prospect_run"
           />
         </div>
       </section>

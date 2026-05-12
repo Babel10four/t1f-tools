@@ -35,6 +35,30 @@ function money(n: number): number {
  * rounded with `money()`; line 6 amount equals sum of lines 1–5; `estimatedTotal`
  * must equal that same total (sum-of-lines contract, including the total row).
  */
+/** When any field is set, `Estimated points` / `Estimated lender fees` use actual origination on total loan (see assumptions), not CTC policy % of purchase price. */
+export type CashToCloseOriginationInputV1 = {
+  /** Total loan (acquisition + rehab) — same basis as term sheet “origination from points”. */
+  feeBasisTotalLoan: number;
+  /** Percent of `feeBasisTotalLoan` (e.g. 0.65 → 0.65%). Omitted or missing → 0 dollars for points. */
+  originationPointsPercent?: number;
+  /** Flat dollars for `Estimated lender fees`. Omitted → 0. */
+  originationFlatFee?: number;
+};
+
+function hasOriginationFeePath(
+  o: CashToCloseOriginationInputV1 | undefined,
+): o is CashToCloseOriginationInputV1 {
+  if (!o) {
+    return false;
+  }
+  if (!(o.feeBasisTotalLoan > 0)) {
+    return false;
+  }
+  return (
+    o.originationPointsPercent !== undefined || o.originationFlatFee !== undefined
+  );
+}
+
 export function buildCashToCloseLinesPurchase(params: {
   purchasePrice: number;
   /** Initial / acquisition loan (not total loan incl. rehab) — borrower equity = purchasePrice − this. */
@@ -42,6 +66,8 @@ export function buildCashToCloseLinesPurchase(params: {
   ctcPointsPct?: number;
   ctcLenderFeesPct?: number;
   ctcClosingCostsPct?: number;
+  /** Overrides policy CTC points/fees lines when present (Term Sheet / LSA origination fields). */
+  origination?: CashToCloseOriginationInputV1;
 }): { items: DealAnalyzeCashLineV1[]; estimatedTotal: number } {
   const {
     purchasePrice,
@@ -49,12 +75,23 @@ export function buildCashToCloseLinesPurchase(params: {
     ctcPointsPct = POLICY_CTC_POINTS_PCT,
     ctcLenderFeesPct = POLICY_CTC_LENDER_FEES_PCT,
     ctcClosingCostsPct = POLICY_CTC_CLOSING_COSTS_PCT,
+    origination,
   } = params;
   const ref = purchasePrice;
 
   const borrowerEquity = money(Math.max(0, purchasePrice - loanAmount));
-  const points = money(ref * ctcPointsPct);
-  const lenderFees = money(ref * ctcLenderFeesPct);
+  let points: number;
+  let lenderFees: number;
+  if (hasOriginationFeePath(origination)) {
+    const basis = origination.feeBasisTotalLoan;
+    const ptsPct = origination.originationPointsPercent ?? 0;
+    const flat = origination.originationFlatFee ?? 0;
+    points = money((basis * ptsPct) / 100);
+    lenderFees = money(flat);
+  } else {
+    points = money(ref * ctcPointsPct);
+    lenderFees = money(ref * ctcLenderFeesPct);
+  }
   const closing = money(ref * ctcClosingCostsPct);
   const holdback = 0;
   const components = [borrowerEquity, points, lenderFees, closing, holdback];
@@ -77,17 +114,29 @@ export function buildCashToCloseLinesRefinance(params: {
   ctcPointsPct?: number;
   ctcLenderFeesPct?: number;
   ctcClosingCostsPct?: number;
+  origination?: CashToCloseOriginationInputV1;
 }): { items: DealAnalyzeCashLineV1[]; estimatedTotal: number } {
   const {
     referenceAmount,
     ctcPointsPct = POLICY_CTC_POINTS_PCT,
     ctcLenderFeesPct = POLICY_CTC_LENDER_FEES_PCT,
     ctcClosingCostsPct = POLICY_CTC_CLOSING_COSTS_PCT,
+    origination,
   } = params;
   const ref = referenceAmount;
   const payoff = money(ref);
-  const points = money(ref * ctcPointsPct);
-  const lenderFees = money(ref * ctcLenderFeesPct);
+  let points: number;
+  let lenderFees: number;
+  if (hasOriginationFeePath(origination)) {
+    const basis = origination.feeBasisTotalLoan;
+    const ptsPct = origination.originationPointsPercent ?? 0;
+    const flat = origination.originationFlatFee ?? 0;
+    points = money((basis * ptsPct) / 100);
+    lenderFees = money(flat);
+  } else {
+    points = money(ref * ctcPointsPct);
+    lenderFees = money(ref * ctcLenderFeesPct);
+  }
   const closing = money(ref * ctcClosingCostsPct);
   const reserves = 0;
   const components = [payoff, points, lenderFees, closing, reserves];
@@ -115,6 +164,7 @@ export function cashToCloseLinesForPurpose(
     ctcLenderFeesPct: number;
     ctcClosingCostsPct: number;
   },
+  origination?: CashToCloseOriginationInputV1,
 ): { items: DealAnalyzeCashLineV1[]; estimatedTotal: number } {
   const mult = ctc
     ? {
@@ -125,8 +175,8 @@ export function cashToCloseLinesForPurpose(
     : {};
   if (purpose === "purchase") {
     const p = params as { purchasePrice: number; loanAmount: number };
-    return buildCashToCloseLinesPurchase({ ...p, ...mult });
+    return buildCashToCloseLinesPurchase({ ...p, ...mult, origination });
   }
   const p = params as { referenceAmount: number };
-  return buildCashToCloseLinesRefinance({ ...p, ...mult });
+  return buildCashToCloseLinesRefinance({ ...p, ...mult, origination });
 }

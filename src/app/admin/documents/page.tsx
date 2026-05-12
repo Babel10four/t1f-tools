@@ -10,23 +10,30 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminDocumentsPage() {
+  let initial: Awaited<ReturnType<typeof listDocuments>> | null = null;
+  let errorMessage: string | null = null;
+
   try {
-    const initial = await listDocuments();
-    return <DocumentsManager initial={initial} />;
+    initial = await listDocuments();
   } catch (e) {
-    const msg =
+    errorMessage =
       e instanceof Error
         ? e.message
         : "Database unavailable. Set DATABASE_URL and apply drizzle/0001_documents.sql (see README).";
+  }
+
+  if (errorMessage) {
     return (
       <div className="flex flex-col gap-4" data-testid="admin-documents">
         <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           Documents
         </h1>
         <p className="text-sm text-red-700 dark:text-red-300" role="alert">
-          {msg}
+          {errorMessage}
         </p>
       </div>
     );
   }
+
+  return <DocumentsManager initial={initial} />;
 }

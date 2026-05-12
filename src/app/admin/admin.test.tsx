@@ -92,17 +92,37 @@ const MOCK_KPIS: DashboardKpis = {
     documentUploads: 4,
     documentPublishes: 2,
     ruleSetUpdates: 1,
+    sessionLogins: 5,
+    propertyAnalyzeRuns: 0,
+    propertyValuationRuns: 0,
+    intelMarketRuns: 0,
+    intelBorrowerRuns: 0,
+    intelProspectRuns: 0,
   },
   errorsInWindow: 0,
   toolUsageByDay: [{ day: "2026-04-10", count: 5 }],
   toolUsageByToolKey: [{ toolKey: "loan_structuring", count: 3 }],
-  publishedDocumentCount: 2,
-  publishedRuleSets: [
-    { ruleType: "rates", versionLabel: "v1" },
+  stackedUsageByDay: [
+    { day: "2026-04-10", counts: { deal_analyze_run: 4, session_login: 1 } },
   ],
+  chartStackKeys: ["deal_analyze_run", "session_login"],
+  publishedDocumentCount: 2,
+  publishedRuleSets: [{ ruleType: "rates", versionLabel: "v1" }],
   termSheetCollateralAddresses: [],
   cashToCloseCollateralAddresses: [],
   ruralCheckAddresses: [],
+  recentEvents: [
+    {
+      id: "00000000-0000-4000-8000-000000000001",
+      createdAtIso: "2026-04-10T12:00:00.000Z",
+      eventType: "deal_analyze_run",
+      toolKey: "term_sheet",
+      role: "user",
+      route: "/api/deal/analyze",
+      status: "success",
+      metadataPreview: '{"httpStatus":200}',
+    },
+  ],
 };
 
 describe("admin placeholder pages", () => {
@@ -111,6 +131,8 @@ describe("admin placeholder pages", () => {
     expect(screen.getByTestId("admin-dashboard")).toBeInTheDocument();
     expect(screen.getByText(/Tool & API activity/i)).toBeInTheDocument();
     expect(screen.getByTestId("tool-usage-by-day")).toBeInTheDocument();
+    expect(screen.getByTestId("admin-activity-log")).toBeInTheDocument();
+    expect(screen.getByTestId("dashboard-usage-charts")).toBeInTheDocument();
   });
 
   it("dashboard explains missing DB when unavailable", () => {

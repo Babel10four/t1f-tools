@@ -71,6 +71,23 @@ describe("POLICY-ADOPTION-001", () => {
     expect(res.loan.amount).toBe(175_000);
   });
 
+  it("assumptions.origination* uses total loan for points and flat fee (not CTC % of purchase)", async () => {
+    const req: DealAnalyzeRequestV1 = {
+      ...minimalPurchase,
+      assumptions: {
+        originationPointsPercent: 0.65,
+        originationFlatFee: 1_195,
+      },
+    };
+    const res = await runDealAnalyze(req, {
+      policySnapshot: getFallbackPolicySnapshot(),
+    });
+    expect(res.loan.amount).toBe(262_500);
+    expect(res.cashToClose.items?.[1].amount).toBe(1_706.25);
+    expect(res.cashToClose.items?.[2].amount).toBe(1_195);
+    expect(res.cashToClose.estimatedTotal).toBe(95_651.25);
+  });
+
   it("published snapshot with higher CTC multipliers changes cash-to-close totals (labels unchanged)", async () => {
     const snap: DealAnalyzePolicySnapshot = {
       source: "published",

@@ -17,6 +17,9 @@ describe("getDashboardKpis", () => {
     expect(kpis.termSheetCollateralAddresses).toEqual([]);
     expect(kpis.cashToCloseCollateralAddresses).toEqual([]);
     expect(kpis.ruralCheckAddresses).toEqual([]);
+    expect(kpis.recentEvents).toEqual([]);
+    expect(kpis.stackedUsageByDay).toEqual([]);
+    expect(kpis.chartStackKeys).toEqual([]);
   });
 });
 

@@ -94,6 +94,15 @@ Aligned with [`TICKET-002`](../specs/TICKET-002.md) §9.
 - **`estimatedTotal`** — On supported policy paths, equals the **sixth line’s `amount`** (same as sum-of-lines contract).
 - **Unsupported `productType`** — **No** fabricated cash sketch: `cashToClose.status` = **`stub`**, `items` = **`[]`**, `estimatedTotal` = **`null`**.
 
+### Origination-aware loan fees (Term Sheet / LSA)
+
+When the normalized request includes **`assumptions.originationPointsPercent`** and/or **`assumptions.originationFlatFee`** (see `parseDealStructuringAssumptions` in `loanStructuring.ts`), **`Estimated points`** and **`Estimated lender fees`** are **not** computed from published `calculator_assumptions` CTC multipliers × purchase price. Instead:
+
+- **`Estimated points`** = `feeBasisTotalLoan × (originationPointsPercent / 100)` with `feeBasisTotalLoan` = policy-backed **`loan.amount`** (total loan).
+- **`Estimated lender fees`** = `originationFlatFee` (dollars).
+
+If neither assumption is sent, the legacy illustrative model applies: CTC points % and lender-fees % × **purchase price** (purchase) or × **reference amount** (refinance). **`Estimated closing costs`** still uses the purchase/reference amount × `ctcClosingCostsPct` (unchanged).
+
 ---
 
 ## Cash-to-close line labels

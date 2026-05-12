@@ -13,6 +13,9 @@ const DEFAULT_WINDOW_DAYS: DashboardWindowDays = 7;
 const MAX_WINDOW_DAYS = 366;
 const DEFAULT_ADDRESS_LIST_LIMIT = 100;
 const MAX_ADDRESS_LIST_LIMIT = 250;
+const DASHBOARD_RECENT_EVENTS_LIMIT = 200;
+/** Max distinct event_type series in stacked chart (remainder → `_other`). */
+const DASHBOARD_STACK_MAX_EVENT_TYPES = 11;
 
 export type DashboardAddressHit = {
   createdAtIso: string;
@@ -47,6 +50,13 @@ export type DashboardKpis = {
     documentUploads: number;
     documentPublishes: number;
     ruleSetUpdates: number;
+    /** Successful `session_login` events (shared-password auth). */
+    sessionLogins: number;
+    propertyAnalyzeRuns: number;
+    propertyValuationRuns: number;
+    intelMarketRuns: number;
+    intelBorrowerRuns: number;
+    intelProspectRuns: number;
   };
   errorsInWindow: number;
   toolUsageByDay: { day: string; count: number }[];
@@ -59,6 +69,28 @@ export type DashboardKpis = {
   cashToCloseCollateralAddresses: DashboardAddressHit[];
   /** Rural checks with a logged `addressLine` (success or error). */
   ruralCheckAddresses: DashboardAddressHit[];
+  /** Newest-first rows for the activity log (same window as KPIs). */
+  recentEvents: DashboardRecentEvent[];
+  /** Per-day counts by `event_type` for stacked chart (`_other` buckets long tail). */
+  stackedUsageByDay: DashboardStackedDayRow[];
+  /** Series keys aligned with `stackedUsageByDay[].counts` (includes `_other` when used). */
+  chartStackKeys: string[];
+};
+
+export type DashboardRecentEvent = {
+  id: string;
+  createdAtIso: string;
+  eventType: string;
+  toolKey: string | null;
+  role: string;
+  route: string;
+  status: AnalyticsStatus;
+  metadataPreview: string;
+};
+
+export type DashboardStackedDayRow = {
+  day: string;
+  counts: Record<string, number>;
 };
 
 const emptyTotals: DashboardKpis["totals"] = {
@@ -73,6 +105,12 @@ const emptyTotals: DashboardKpis["totals"] = {
   documentUploads: 0,
   documentPublishes: 0,
   ruleSetUpdates: 0,
+  sessionLogins: 0,
+  propertyAnalyzeRuns: 0,
+  propertyValuationRuns: 0,
+  intelMarketRuns: 0,
+  intelBorrowerRuns: 0,
+  intelProspectRuns: 0,
 };
 
 function utcDay(d: Date): string {
@@ -108,6 +146,18 @@ export type GetDashboardKpisOptions = {
 const nonEmptyCollateralSql = sql`trim(coalesce(${platformEvents.metadata}->>'collateralPropertyAddress','')) <> ''`;
 
 const nonEmptyRuralAddressSql = sql`trim(coalesce(${platformEvents.metadata}->>'addressLine','')) <> ''`;
+
+function formatMetadataPreview(meta: unknown): string {
+  if (meta === null || meta === undefined) {
+    return "";
+  }
+  try {
+    const s = JSON.stringify(meta);
+    return s.length > 280 ? `${s.slice(0, 277)}...` : s;
+  } catch {
+    return "";
+  }
+}
 
 export async function getDashboardKpis(
   options: GetDashboardKpisOptions = {},
@@ -192,6 +242,7 @@ export async function getDashboardKpis(
     const windowRows = await db
       .select({
         createdAt: platformEvents.createdAt,
+        eventType: platformEvents.eventType,
         toolKey: platformEvents.toolKey,
       })
       .from(platformEvents)
@@ -199,11 +250,59 @@ export async function getDashboardKpis(
 
     const byDay = new Map<string, number>();
     const byTool = new Map<string | null, number>();
+    const eventTypeTotals = new Map<string, number>();
+    const byDayAndEvent = new Map<string, Map<string, number>>();
     for (const r of windowRows) {
       const day = utcDay(new Date(r.createdAt));
       byDay.set(day, (byDay.get(day) ?? 0) + 1);
       const tk = r.toolKey ?? null;
       byTool.set(tk, (byTool.get(tk) ?? 0) + 1);
+      const et = r.eventType;
+      eventTypeTotals.set(et, (eventTypeTotals.get(et) ?? 0) + 1);
+      if (!byDayAndEvent.has(day)) {
+        byDayAndEvent.set(day, new Map());
+      }
+      const dem = byDayAndEvent.get(day)!;
+      dem.set(et, (dem.get(et) ?? 0) + 1);
+    }
+
+    const sortedEventTypes = [...eventTypeTotals.entries()].sort(
+      (a, b) => b[1] - a[1],
+    );
+    const topEventTypes = sortedEventTypes
+      .slice(0, DASHBOARD_STACK_MAX_EVENT_TYPES)
+      .map(([k]) => k);
+    const useOtherBucket = sortedEventTypes.length > topEventTypes.length;
+    const chartStackKeys =
+      topEventTypes.length === 0
+        ? ([] as string[])
+        : useOtherBucket
+          ? [...topEventTypes, "_other"]
+          : [...topEventTypes];
+
+    const stackedUsageByDay: DashboardStackedDayRow[] = [];
+    if (chartStackKeys.length > 0) {
+      const sortedDays = [...byDayAndEvent.keys()].sort((a, b) =>
+        a.localeCompare(b),
+      );
+      for (const day of sortedDays) {
+        const dem = byDayAndEvent.get(day)!;
+        const counts: Record<string, number> = {};
+        for (const k of chartStackKeys) {
+          if (k === "_other") {
+            let other = 0;
+            for (const [et, n] of dem) {
+              if (!topEventTypes.includes(et)) {
+                other += n;
+              }
+            }
+            counts[k] = other;
+          } else {
+            counts[k] = dem.get(k) ?? 0;
+          }
+        }
+        stackedUsageByDay.push({ day, counts });
+      }
     }
 
     const toolUsageByDay = [...byDay.entries()]
@@ -290,6 +389,33 @@ export async function getDashboardKpis(
       .orderBy(desc(platformEvents.createdAt))
       .limit(addressListLimit);
 
+    const recentRows = await db
+      .select({
+        id: platformEvents.id,
+        createdAt: platformEvents.createdAt,
+        eventType: platformEvents.eventType,
+        toolKey: platformEvents.toolKey,
+        role: platformEvents.role,
+        route: platformEvents.route,
+        status: platformEvents.status,
+        metadata: platformEvents.metadata,
+      })
+      .from(platformEvents)
+      .where(gte(platformEvents.createdAt, since))
+      .orderBy(desc(platformEvents.createdAt))
+      .limit(DASHBOARD_RECENT_EVENTS_LIMIT);
+
+    const recentEvents: DashboardRecentEvent[] = recentRows.map((r) => ({
+      id: r.id,
+      createdAtIso: new Date(r.createdAt).toISOString(),
+      eventType: r.eventType,
+      toolKey: r.toolKey ?? null,
+      role: r.role,
+      route: r.route,
+      status: r.status as AnalyticsStatus,
+      metadataPreview: formatMetadataPreview(r.metadata),
+    }));
+
     function mapCollateralRows(
       rows: typeof termSheetRows,
     ): DashboardAddressHit[] {
@@ -324,6 +450,20 @@ export async function getDashboardKpis(
       });
     }
 
+    async function tallyLoginSuccess(): Promise<number> {
+      const [row] = await db
+        .select({ c: count() })
+        .from(platformEvents)
+        .where(
+          and(
+            gte(platformEvents.createdAt, since),
+            eq(platformEvents.eventType, "session_login"),
+            eq(platformEvents.status, "success"),
+          ),
+        );
+      return Number(row?.c ?? 0);
+    }
+
     return {
       windowDays,
       dbAvailable: true,
@@ -356,6 +496,12 @@ export async function getDashboardKpis(
         documentUploads: await tally("document_uploaded"),
         documentPublishes: await tally("document_published"),
         ruleSetUpdates: await tally("rule_set_updated"),
+        sessionLogins: await tallyLoginSuccess(),
+        propertyAnalyzeRuns: await tally("property_analyze_run"),
+        propertyValuationRuns: await tally("property_valuation_run"),
+        intelMarketRuns: await tally("intel_market_run"),
+        intelBorrowerRuns: await tally("intel_borrower_run"),
+        intelProspectRuns: await tally("intel_prospect_run"),
       },
       errorsInWindow,
       toolUsageByDay,
@@ -368,6 +514,9 @@ export async function getDashboardKpis(
       termSheetCollateralAddresses: mapCollateralRows(termSheetRows),
       cashToCloseCollateralAddresses: mapCollateralRows(ctcRows),
       ruralCheckAddresses: mapRuralRows(ruralRows),
+      recentEvents,
+      stackedUsageByDay,
+      chartStackKeys,
     };
   } catch {
     return {
@@ -379,6 +528,9 @@ export async function getDashboardKpis(
       toolUsageByToolKey: [],
       publishedDocumentCount: 0,
       publishedRuleSets: [],
+      recentEvents: [],
+      stackedUsageByDay: [],
+      chartStackKeys: [],
       ...emptyLists,
     };
   }
