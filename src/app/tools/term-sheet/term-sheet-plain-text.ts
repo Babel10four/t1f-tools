@@ -4,9 +4,11 @@ import { TERM_SHEET_DISCLAIMER_DETAILS } from "@/lib/tools/disclaimer-copy";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import { formatNoteRatePercentDisplay } from "../pricing-calculator/pricing-display";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
+import { computeInitialLtcPercent } from "@/lib/engines/deal/policy/initial-ltc-display";
 import {
   buildTermSheetCtcEstimateRows,
   buildTermSheetCtcInputRows,
+  TERM_SHEET_CTC_PER_DIEM_CLOSING_NOTE,
   TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
 } from "./term-sheet-cash-to-close-fields";
 
@@ -80,7 +82,11 @@ export function buildTermSheetPlainText(
   }
   lines.push(`Total loan: ${formatMoneyWholeDollars(loan.amount)}`);
   lines.push(`LTV: ${loan.ltv !== undefined ? `${loan.ltv}%` : "—"}`);
-  lines.push(`LTC: ${loan.ltcPercent !== undefined ? `${loan.ltcPercent}%` : "—"}`);
+  const initialLtc =
+    request !== undefined
+      ? computeInitialLtcPercent(request, loan)
+      : undefined;
+  lines.push(`Initial LTC: ${initialLtc !== undefined ? `${initialLtc}%` : "—"}`);
   lines.push("");
   lines.push("CASH TO CLOSE");
   lines.push(
@@ -94,6 +100,7 @@ export function buildTermSheetPlainText(
   lines.push("");
   lines.push("Estimate");
   lines.push(TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS);
+  lines.push(TERM_SHEET_CTC_PER_DIEM_CLOSING_NOTE);
   lines.push("");
   const cashEstimateRows = buildTermSheetCtcEstimateRows(response);
   if (cashEstimateRows.length === 0) {

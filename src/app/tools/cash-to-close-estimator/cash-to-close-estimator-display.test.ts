@@ -8,7 +8,7 @@ import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical
 import {
   buildCashToCloseLoanCostSummary,
   buildCashToCloseClientSummaryText,
-  estimateMonthlyPayments,
+  estimateInterestOnlyMonthlyPayment,
   transformCashToCloseDisplayLines,
 } from "./cash-to-close-estimator-display";
 
@@ -81,22 +81,22 @@ describe("buildCashToCloseLoanCostSummary", () => {
     const summary = buildCashToCloseLoanCostSummary({
       flow: "purchase",
       response,
-      asOfDate: new Date(2026, 4, 8), // May 8, 2026 -> 23 remaining days
+      asOfDate: new Date(2026, 4, 8), // May 8, 2026 -> 24 days inclusive through month-end
     });
     expect(summary.basisLabel).toBe("Down payment");
     expect(summary.basisAmount).toBe(20_000);
     expect(summary.loanFees).toBe(1_350);
     expect(summary.titleInsuranceEstimate).toBe(1_200);
     expect(summary.perDiem).toBe(20);
-    expect(summary.remainingDaysInMonth).toBe(23);
+    expect(summary.remainingDaysInMonth).toBe(24);
     expect(summary.firstFullMonthInterest).toBe(600);
-    expect(summary.interestCosts).toBe(1060);
-    expect(summary.estimatedLoanCostsExcludingTitleInsurance).toBe(22_410);
+    expect(summary.interestCosts).toBe(1080);
+    expect(summary.estimatedLoanCostsExcludingTitleInsurance).toBe(22_430);
   });
 });
 
-describe("estimateMonthlyPayments", () => {
-  it("returns interest-only and amortizing when inputs are present", () => {
+describe("estimateInterestOnlyMonthlyPayment", () => {
+  it("returns interest-only payment when inputs are present", () => {
     const loan: Pick<DealAnalyzeLoanOutV1, "amount" | "termMonths"> = {
       amount: 120_000,
       termMonths: 12,
@@ -104,23 +104,19 @@ describe("estimateMonthlyPayments", () => {
     const pricing: Pick<DealAnalyzePricingOutV1, "noteRatePercent"> = {
       noteRatePercent: 12,
     };
-    const r = estimateMonthlyPayments(
+    const r = estimateInterestOnlyMonthlyPayment(
       loan as DealAnalyzeLoanOutV1,
       pricing as DealAnalyzePricingOutV1,
     );
-    expect(r.interestOnlyPerMonth).toBe(1200);
-    expect(r.amortizingPerMonth).toBeGreaterThan(0);
-    expect(r.amortizingPerMonth).toBeGreaterThan(r.interestOnlyPerMonth!);
-    expect(r.amortizingPerMonth).toBeCloseTo(10_661.85, 1);
+    expect(r).toBe(1200);
   });
 
-  it("returns nulls when note rate missing", () => {
-    const r = estimateMonthlyPayments(
+  it("returns null when note rate missing", () => {
+    const r = estimateInterestOnlyMonthlyPayment(
       { amount: 100_000, termMonths: 12 } as DealAnalyzeLoanOutV1,
       { noteRatePercent: null } as DealAnalyzePricingOutV1,
     );
-    expect(r.interestOnlyPerMonth).toBeNull();
-    expect(r.amortizingPerMonth).toBeNull();
+    expect(r).toBeNull();
   });
 });
 
@@ -164,6 +160,6 @@ describe("buildCashToCloseClientSummaryText", () => {
     expect(text).toContain("Down payment:");
     expect(text).toContain("Loan fees (points + lender fees)");
     expect(text).toMatch(/Title\/insurance: not included/i);
-    expect(text).toMatch(/per diem/i);
+    expect(text).toMatch(/Assumed closing date for interest/i);
   });
 });

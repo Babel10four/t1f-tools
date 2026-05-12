@@ -137,6 +137,15 @@ const WORKFLOW_STEPS: WorkflowStep[] = [
   { href: CREDIT_COPILOT_TOOL.href, label: "4. Policy Q&A" },
 ];
 
+/** Strip leading "N. " from workflow labels so we can renumber after role filtering. */
+export function workflowStepTitleWithoutIndex(label: string): string {
+  return label.replace(/^\d+\.\s*/, "");
+}
+
 export function workflowStepsForRole(role: AuthRole): WorkflowStep[] {
-  return WORKFLOW_STEPS.filter((step) => hrefVisibleToRole(step.href, role));
+  const filtered = WORKFLOW_STEPS.filter((step) => hrefVisibleToRole(step.href, role));
+  return filtered.map((step, i) => ({
+    ...step,
+    label: `${i + 1}. ${workflowStepTitleWithoutIndex(step.label)}`,
+  }));
 }

@@ -4,7 +4,7 @@ import { TermSheetGeneratorClient } from "./term-sheet-generator-client";
 export const metadata: Metadata = {
   title: "Deal Sheet Builder",
   description:
-    "Internal HTML term-sheet preview from POST /api/deal/analyze — docs/specs/TICKET-007.md",
+    "Build an indicative, non-binding term sheet from your deal inputs — aligned with published bridge policy.",
 };
 
 /**

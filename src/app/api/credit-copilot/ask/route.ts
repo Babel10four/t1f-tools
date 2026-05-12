@@ -1,4 +1,5 @@
 import { enqueuePlatformEvent } from "@/lib/analytics/log-event";
+import { clientSafeDatabaseErrorMessage } from "@/lib/db/client-safe-error-message";
 import { CREDIT_COPILOT_DISCLAIMER } from "@/lib/credit-copilot/disclaimer";
 import {
   MAX_QUESTION_LEN,
@@ -104,7 +105,7 @@ export async function POST(req: Request) {
         answer: null,
         citations: [] as const,
         sourceDocument: null,
-        warnings: [message.slice(0, 500)],
+        warnings: [clientSafeDatabaseErrorMessage(message).slice(0, 500)],
         disclaimer: CREDIT_COPILOT_DISCLAIMER,
       },
       { status: 500 },

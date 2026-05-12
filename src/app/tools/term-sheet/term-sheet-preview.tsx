@@ -14,10 +14,12 @@ import {
   formatNoteRatePercentDisplay,
   formatPricingScalar,
 } from "../pricing-calculator/pricing-display";
+import { computeInitialLtcPercent } from "@/lib/engines/deal/policy/initial-ltc-display";
 import { TermSheetExportBar } from "./term-sheet-export-bar";
 import {
   buildTermSheetCtcEstimateRows,
   buildTermSheetCtcInputRows,
+  TERM_SHEET_CTC_PER_DIEM_CLOSING_NOTE,
   TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
 } from "./term-sheet-cash-to-close-fields";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
@@ -80,6 +82,10 @@ export function TermSheetPreview({
   const riskGroups = groupRisksBySeverity(response.risks);
   const pricing = response.pricing;
   const loan = response.loan;
+  const initialLtcPercent =
+    request !== undefined
+      ? computeInitialLtcPercent(request, loan)
+      : undefined;
 
   const totalPctArv =
     loan.amount !== undefined &&
@@ -300,9 +306,15 @@ export function TermSheetPreview({
             </dd>
           </div>
           <div className="flex justify-between gap-4 py-3">
-            <dt className="text-zinc-500">LTC</dt>
-            <dd className="text-right tabular-nums">
-              {loan.ltcPercent !== undefined ? `${loan.ltcPercent}%` : "—"}
+            <dt className="text-zinc-500">Initial LTC</dt>
+            <dd className="max-w-[60%] text-right tabular-nums">
+              <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                {initialLtcPercent !== undefined ? `${initialLtcPercent}%` : "—"}
+              </span>
+              <span className="mt-1 block text-xs font-normal text-zinc-500 dark:text-zinc-400">
+                Acquisition loan as % of project cost basis (purchase + rehab, or payoff +
+                rehab).
+              </span>
             </dd>
           </div>
         </dl>
@@ -420,6 +432,9 @@ export function TermSheetPreview({
         </h4>
         <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
           {TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS}
+        </p>
+        <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+          {TERM_SHEET_CTC_PER_DIEM_CLOSING_NOTE}
         </p>
         {cashEstimateRows.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">

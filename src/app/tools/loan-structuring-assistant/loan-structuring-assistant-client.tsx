@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { DisclosureBanner } from "@/components/tools/disclosure-banner";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
@@ -12,11 +12,17 @@ import {
   type LoanAssistantFlow,
 } from "./build-deal-analyze-request";
 import {
+  TIER12_INITIAL_ADVANCE_PCT,
+  TIER12_REHAB_ADVANCE_PCT,
+} from "@/lib/engines/deal/policy/constants";
+import { computeInitialLtcPercent } from "@/lib/engines/deal/policy/initial-ltc-display";
+import { buildLoanAssistantEmailSummary } from "./build-email-summary";
+import { purchaseRequestedLoanSuggestedString } from "./requested-loan-suggest";
+import {
   formatMoney,
   groupRisksBySeverity,
   sortAnalysisFlagsForDisplay,
 } from "./display-helpers";
-import { buildLoanAssistantEmailSummary } from "./build-email-summary";
 
 const EMPTY_FIELDS: LoanAssistantFields = {
   purchasePrice: "",
@@ -64,10 +70,47 @@ export function LoanStructuringAssistantClient() {
 
   const disabled = phase === "submitting";
 
+  /** Last illustrative suggested total whenever driving inputs ran; excludes manual requested edits. */
+  const lastSuggestedPurchaseRequestedRef = useRef<string | null>(null);
+
+  const applyPurchaseRequestedLoanSuggestion = (
+    nextFields: LoanAssistantFields,
+    nextFlow: LoanAssistantFlow,
+  ): LoanAssistantFields => {
+    if (nextFlow !== "purchase") {
+      lastSuggestedPurchaseRequestedRef.current = null;
+      return nextFields;
+    }
+
+    const next = purchaseRequestedLoanSuggestedString(nextFields);
+    if (next === null) {
+      lastSuggestedPurchaseRequestedRef.current = null;
+      return nextFields;
+    }
+
+    const cur = nextFields.requestedLoanAmount.trim();
+    const prevSuggestion = lastSuggestedPurchaseRequestedRef.current;
+    const stillTrackingSuggestion =
+      cur === "" || (prevSuggestion !== null && cur === prevSuggestion);
+
+    lastSuggestedPurchaseRequestedRef.current = next;
+
+    if (stillTrackingSuggestion && cur !== next) {
+      return { ...nextFields, requestedLoanAmount: next };
+    }
+    return nextFields;
+  };
+
   const onField =
     (key: keyof LoanAssistantFields) =>
     (e: ChangeEvent<HTMLInputElement>) => {
-      setFields((f) => ({ ...f, [key]: e.target.value }));
+      const value = e.target.value;
+      setFields((f) => {
+        const nextFields = { ...f, [key]: value };
+        return key === "requestedLoanAmount"
+          ? nextFields
+          : applyPurchaseRequestedLoanSuggestion(nextFields, flow);
+      });
       setClientHint(null);
       if (phase === "success" || phase === "error_4xx" || phase === "error_5xx") {
         setPhase("editing");
@@ -78,6 +121,7 @@ export function LoanStructuringAssistantClient() {
 
   const onFlowChange = (next: LoanAssistantFlow) => {
     setFlow(next);
+    setFields((f) => applyPurchaseRequestedLoanSuggestion(f, next));
     setClientHint(null);
     if (phase === "success" || phase === "error_4xx" || phase === "error_5xx") {
       setPhase("editing");
@@ -87,7 +131,9 @@ export function LoanStructuringAssistantClient() {
   };
 
   const onBorrowingRehabChange = (next: "yes" | "no") => {
-    setFields((f) => ({ ...f, borrowingRehabFunds: next }));
+    setFields((f) =>
+      applyPurchaseRequestedLoanSuggestion({ ...f, borrowingRehabFunds: next }, flow),
+    );
     setClientHint(null);
     if (phase === "success" || phase === "error_4xx" || phase === "error_5xx") {
       setPhase("editing");
@@ -208,6 +254,14 @@ export function LoanStructuringAssistantClient() {
     return `Ask ${formatMoney(ask)} vs recommended ${formatMoney(amt)} (delta ${deltaLabel})`;
   }, [successPayload]);
 
+  const summaryInitialLtcPercent = useMemo(() => {
+    if (!successPayload) return undefined;
+    return computeInitialLtcPercent(
+      successPayload.request,
+      successPayload.response.loan,
+    );
+  }, [successPayload]);
+
   /** Keep last success visible while editing until the next submit (submitting clears payload). */
   const showResults = Boolean(successPayload && phase !== "submitting");
 
@@ -218,18 +272,8 @@ export function LoanStructuringAssistantClient() {
           Deal Structuring Copilot
         </h1>
         <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Structured inputs for{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
-            POST /api/deal/analyze
-          </code>
-          . Raw JSON harness:{" "}
-          <a
-            href="/tools/deal-analyzer"
-            className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-100"
-          >
-            /tools/deal-analyzer
-          </a>
-          .
+          Guided purchase and refinance inputs with full deal analysis — indicative and
+          non-binding. Use for internal structuring and policy-aligned scenario checks.
         </p>
         <DisclosureBanner
           summary={DEAL_ANALYZE_DISCLAIMER_SUMMARY}
@@ -263,7 +307,7 @@ export function LoanStructuringAssistantClient() {
                 checked={flow === "purchase"}
                 onChange={() => onFlowChange("purchase")}
               />
-              Purchase (bridge_purchase)
+              Purchase
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               <input
@@ -273,7 +317,7 @@ export function LoanStructuringAssistantClient() {
                 checked={flow === "refinance"}
                 onChange={() => onFlowChange("refinance")}
               />
-              Refinance (bridge_refinance)
+              Refinance
             </label>
           </div>
         </fieldset>
@@ -386,6 +430,14 @@ export function LoanStructuringAssistantClient() {
                 inputMode="decimal"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Suggested automatically as {Math.round(TIER12_INITIAL_ADVANCE_PCT * 100)}%
+                of purchase price
+                {fields.borrowingRehabFunds === "yes"
+                  ? ` plus ${Math.round(TIER12_REHAB_ADVANCE_PCT * 100)}% of rehab budget when Borrowing rehab funds? is Yes`
+                  : ` when Borrowing rehab funds? is No (rehab is excluded)`}{" "}
+                — edit anytime.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -411,6 +463,9 @@ export function LoanStructuringAssistantClient() {
                 inputMode="numeric"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Optional — not required for an indicative term sheet.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -423,6 +478,9 @@ export function LoanStructuringAssistantClient() {
                 onChange={onField("experienceTier")}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Optional — not required for an indicative term sheet.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -589,6 +647,9 @@ export function LoanStructuringAssistantClient() {
                 inputMode="numeric"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Optional — not required for an indicative term sheet.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -601,6 +662,9 @@ export function LoanStructuringAssistantClient() {
                 onChange={onField("experienceTier")}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Optional — not required for an indicative term sheet.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -729,10 +793,10 @@ export function LoanStructuringAssistantClient() {
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-zinc-500">LTC</dt>
+                <dt className="text-xs text-zinc-500">Initial LTC</dt>
                 <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {successPayload.response.loan.ltcPercent !== undefined
-                    ? `${successPayload.response.loan.ltcPercent}%`
+                  {summaryInitialLtcPercent !== undefined
+                    ? `${summaryInitialLtcPercent}%`
                     : "—"}
                 </dd>
               </div>

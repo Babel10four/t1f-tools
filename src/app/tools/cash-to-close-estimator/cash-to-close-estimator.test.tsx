@@ -431,7 +431,7 @@ describe("CashToCloseEstimatorClient", () => {
     expect(body.assumptions?.noteRatePercent).toBe(9.375);
   });
 
-  it("shows note rate and monthly payment section after estimate", async () => {
+  it("shows note rate and interest-only payment section after estimate", async () => {
     const user = userEvent.setup();
     render(<CashToCloseEstimatorClient />);
     const form = screen.getByTestId("ctc-form");

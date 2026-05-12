@@ -32,7 +32,10 @@ export type CashToCloseLoanCostSummary = {
   basisAmount: number;
   loanFees: number;
   titleInsuranceEstimate: number;
-  /** (Daily Interest per diem * remaining days in month) + first full month in advance */
+  /**
+   * (Per diem × days from assumed closing through month-end, inclusive) + first full month in advance.
+   * {@link buildCashToCloseLoanCostSummary} uses `asOfDate` as the closing date (defaults to today).
+   */
   interestCosts: number | null;
   perDiem: number | null;
   remainingDaysInMonth: number | null;
@@ -115,18 +118,14 @@ function monthlyRateFromAnnualPercent(annualPct: number): number {
 }
 
 /**
- * Display-only payment estimates for confirmed / indicative terms (not additional engine policy).
+ * Display-only interest-only monthly payment (not additional engine policy).
  */
-export function estimateMonthlyPayments(
+export function estimateInterestOnlyMonthlyPayment(
   loan: DealAnalyzeLoanOutV1,
   pricing: DealAnalyzePricingOutV1,
-): {
-  interestOnlyPerMonth: number | null;
-  amortizingPerMonth: number | null;
-} {
+): number | null {
   const principal = loan.amount;
   const annual = pricing.noteRatePercent;
-  const months = loan.termMonths;
 
   if (
     principal === undefined ||
@@ -137,30 +136,11 @@ export function estimateMonthlyPayments(
     !Number.isFinite(annual) ||
     annual < 0
   ) {
-    return { interestOnlyPerMonth: null, amortizingPerMonth: null };
+    return null;
   }
 
   const r = monthlyRateFromAnnualPercent(annual);
-  const interestOnlyPerMonth = roundMoney(principal * r);
-
-  if (
-    months === null ||
-    months === undefined ||
-    !Number.isFinite(months) ||
-    months <= 0
-  ) {
-    return { interestOnlyPerMonth, amortizingPerMonth: null };
-  }
-
-  const n = Math.floor(months);
-  if (r === 0) {
-    return { interestOnlyPerMonth, amortizingPerMonth: roundMoney(principal / n) };
-  }
-  const factor = Math.pow(1 + r, n);
-  const amortizingPerMonth = roundMoney(
-    (principal * r * factor) / (factor - 1),
-  );
-  return { interestOnlyPerMonth, amortizingPerMonth };
+  return roundMoney(principal * r);
 }
 
 function daysInMonth(year: number, monthZeroIndexed: number): number {
@@ -187,6 +167,7 @@ function sumByLabel(items: DealAnalyzeCashLineV1[], label: string): number {
 export function buildCashToCloseLoanCostSummary(input: {
   flow: "purchase" | "refinance";
   response: DealAnalyzeResponseV1;
+  /** Assumed closing date for partial-month per diem (defaults to now). */
   asOfDate?: Date;
 }): CashToCloseLoanCostSummary {
   const { flow, response } = input;
@@ -228,10 +209,9 @@ export function buildCashToCloseLoanCostSummary(input: {
     };
   }
 
-  const remainingDays = Math.max(
-    0,
-    daysInMonth(asOf.getFullYear(), asOf.getMonth()) - asOf.getDate(),
-  );
+  /** Closing = `asOf` (typically today): count that calendar day through month-end, inclusive. */
+  const dim = daysInMonth(asOf.getFullYear(), asOf.getMonth());
+  const remainingDays = Math.max(0, dim - asOf.getDate() + 1);
   const perDiem = roundMoney((principal * (annualRatePct / 100)) / 360);
   const firstFullMonthInterest = roundMoney((principal * (annualRatePct / 100)) / 12);
   const interestCosts = roundMoney(perDiem * remainingDays + firstFullMonthInterest);
@@ -265,7 +245,10 @@ export function buildCashToCloseClientSummaryText(input: {
   );
   const summary = buildCashToCloseLoanCostSummary({ flow, response });
 
-  const payments = estimateMonthlyPayments(response.loan, response.pricing);
+  const interestOnlyMonthly = estimateInterestOnlyMonthlyPayment(
+    response.loan,
+    response.pricing,
+  );
   const lines: string[] = [];
   lines.push(`Cash to close summary — ${flow === "purchase" ? "Purchase (bridge)" : "Refinance (bridge)"}`);
   lines.push("");
@@ -283,19 +266,10 @@ export function buildCashToCloseClientSummaryText(input: {
   lines.push(
     `Term (months): ${term === null || term === undefined ? "—" : String(term)}`,
   );
-  if (payments.interestOnlyPerMonth !== null) {
-    lines.push(
-      `Est. monthly payment (interest-only): ${formatMoney(payments.interestOnlyPerMonth)}`,
-    );
+  if (interestOnlyMonthly !== null) {
+    lines.push(`Est. monthly payment (interest-only): ${formatMoney(interestOnlyMonthly)}`);
   } else {
     lines.push("Est. monthly payment (interest-only): —");
-  }
-  if (payments.amortizingPerMonth !== null) {
-    lines.push(
-      `Est. monthly payment (fully amortizing): ${formatMoney(payments.amortizingPerMonth)}`,
-    );
-  } else {
-    lines.push("Est. monthly payment (fully amortizing): —");
   }
   lines.push("");
   lines.push("Cash to close (display)");
@@ -315,8 +289,11 @@ export function buildCashToCloseClientSummaryText(input: {
     `Interest costs: ${formatMoney(summary.interestCosts)}${
       summary.interestCosts === null
         ? " (note rate required)"
-        : ` (per diem ${formatMoney(summary.perDiem)} * ${summary.remainingDaysInMonth} days + first full month ${formatMoney(summary.firstFullMonthInterest)})`
+        : ` (per diem ${formatMoney(summary.perDiem)} × ${summary.remainingDaysInMonth} calendar days from assumed closing through month-end, inclusive, + first full month ${formatMoney(summary.firstFullMonthInterest)})`
     }`,
+  );
+  lines.push(
+    "Assumed closing date for interest: today (when this summary is generated).",
   );
   lines.push(
     `Estimated loan costs (excludes title/insurance): ${formatMoney(summary.estimatedLoanCostsExcludingTitleInsurance)}`,

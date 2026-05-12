@@ -1,6 +1,7 @@
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import { formatMoney } from "./display-helpers";
+import { computeInitialLtcPercent } from "@/lib/engines/deal/policy/initial-ltc-display";
 
 /**
  * Short plain-text block for pasting into an email from Deal Structuring Copilot results.
@@ -23,7 +24,8 @@ export function buildLoanAssistantEmailSummary(
     lines.push(`Rehab loan: ${formatMoney(loan.rehabLoanAmount)}`);
   }
   lines.push(`LTV: ${loan.ltv !== undefined ? `${loan.ltv}%` : "—"}`);
-  lines.push(`LTC: ${loan.ltcPercent !== undefined ? `${loan.ltcPercent}%` : "—"}`);
+  const initialLtc = computeInitialLtcPercent(request, loan);
+  lines.push(`Initial LTC: ${initialLtc !== undefined ? `${initialLtc}%` : "—"}`);
   lines.push(`Note rate: ${pr.noteRatePercent !== null && pr.noteRatePercent !== undefined ? `${pr.noteRatePercent}%` : "—"}`);
   lines.push(`Pricing status: ${pr.status}`);
   lines.push(`Cash to close (est.): ${formatMoney(response.cashToClose.estimatedTotal)}`);

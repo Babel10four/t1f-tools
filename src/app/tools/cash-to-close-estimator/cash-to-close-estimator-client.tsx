@@ -19,7 +19,7 @@ import {
 import {
   buildCashToCloseLoanCostSummary,
   buildCashToCloseClientSummaryText,
-  estimateMonthlyPayments,
+  estimateInterestOnlyMonthlyPayment,
   transformCashToCloseDisplayLines,
 } from "./cash-to-close-estimator-display";
 
@@ -158,11 +158,11 @@ export function CashToCloseEstimatorClient() {
     );
   }, [successPayload]);
 
-  const monthlyPayments = useMemo(() => {
+  const interestOnlyMonthlyPayment = useMemo(() => {
     if (!successPayload) {
-      return { interestOnlyPerMonth: null, amortizingPerMonth: null };
+      return null;
     }
-    return estimateMonthlyPayments(
+    return estimateInterestOnlyMonthlyPayment(
       successPayload.response.loan,
       successPayload.response.pricing,
     );
@@ -289,7 +289,7 @@ export function CashToCloseEstimatorClient() {
                 checked={flow === "purchase"}
                 onChange={() => onFlowChange("purchase")}
               />
-              Purchase (bridge_purchase)
+              Purchase
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               <input
@@ -299,7 +299,7 @@ export function CashToCloseEstimatorClient() {
                 checked={flow === "refinance"}
                 onChange={() => onFlowChange("refinance")}
               />
-              Refinance (bridge_refinance)
+              Refinance
             </label>
           </div>
         </fieldset>
@@ -673,19 +673,20 @@ export function CashToCloseEstimatorClient() {
             </p>
             {loanCostSummary?.interestCosts !== null ? (
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Interest formula: (Daily Interest per diem × remaining days in month) +
-                first full month payment in advance.
+                Interest costs use today&apos;s date as the assumed closing date: per diem
+                applies to each calendar day from closing through the end of this month
+                (inclusive), plus one full month of interest in advance.
               </p>
             ) : null}
           </section>
 
           <section data-testid="ctc-client-handoff">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              Note rate &amp; monthly payments (for client / email)
+              Note rate &amp; interest-only payment (for client / email)
             </h2>
             <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              Display-only payment math from loan amount, note rate, and term — use for
-              indicative or confirmed terms; not a binding payment schedule.
+              Display-only payment math from loan amount and note rate — use for indicative
+              or confirmed terms; not a binding payment schedule.
             </p>
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between gap-4">
@@ -703,13 +704,7 @@ export function CashToCloseEstimatorClient() {
               <div className="flex justify-between gap-4">
                 <dt className="text-zinc-500">Est. monthly (interest-only)</dt>
                 <dd className="tabular-nums text-zinc-900 dark:text-zinc-100">
-                  {formatMoney(monthlyPayments.interestOnlyPerMonth)}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-zinc-500">Est. monthly (fully amortizing)</dt>
-                <dd className="tabular-nums text-zinc-900 dark:text-zinc-100">
-                  {formatMoney(monthlyPayments.amortizingPerMonth)}
+                  {formatMoney(interestOnlyMonthlyPayment)}
                 </dd>
               </div>
             </dl>

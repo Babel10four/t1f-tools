@@ -9,6 +9,8 @@ import {
   primaryCtaHrefForRole,
   TOOL_HREF_AUDIENCES,
   toolAudiencesForHref,
+  workflowStepTitleWithoutIndex,
+  workflowStepsForRole,
 } from "./tool-visibility";
 
 /** User nav (hub + sections): includes Credit Copilot + Rural Checker — not duplicated on rail. */
@@ -93,5 +95,28 @@ describe("tool-visibility (launch restriction)", () => {
     expect(toolAudiencesForHref("/tools/unknown-tool")).toEqual(["admin"]);
     expect(hrefVisibleToRole("/tools/unknown-tool", "user")).toBe(false);
     expect(hrefVisibleToRole("/tools/unknown-tool", "admin")).toBe(true);
+  });
+
+  it("workflowStepTitleWithoutIndex strips leading index prefix", () => {
+    expect(workflowStepTitleWithoutIndex("2. Deal Sheet")).toBe("Deal Sheet");
+    expect(workflowStepTitleWithoutIndex("Deal Sheet")).toBe("Deal Sheet");
+  });
+
+  it("workflowStepsForRole renumbers labels sequentially after filtering by role", () => {
+    const userSteps = workflowStepsForRole("user");
+    expect(userSteps.map((s) => s.href)).toEqual([
+      "/tools/term-sheet",
+      "/tools/credit-copilot",
+    ]);
+    expect(userSteps.map((s) => s.label)).toEqual(["1. Deal Sheet", "2. Policy Q&A"]);
+
+    const adminSteps = workflowStepsForRole("admin");
+    expect(adminSteps).toHaveLength(4);
+    expect(adminSteps.map((s) => s.label)).toEqual([
+      "1. Structure",
+      "2. Deal Sheet",
+      "3. Cash to Close",
+      "4. Policy Q&A",
+    ]);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { DisclosureBanner } from "@/components/tools/disclosure-banner";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
@@ -14,6 +14,7 @@ import {
   type LoanAssistantFields,
   type LoanAssistantFlow,
 } from "../loan-structuring-assistant/build-deal-analyze-request";
+import { purchaseRequestedLoanSuggestedString } from "../loan-structuring-assistant/requested-loan-suggest";
 import { useDealFormSession } from "../shared/use-deal-form-session";
 import {
   TIER12_INITIAL_ADVANCE_PCT,
@@ -52,33 +53,6 @@ type UiPhase =
   | "error_4xx"
   | "error_5xx";
 
-function parsePurchasePricePositive(s: string): number | null {
-  const t = s.trim();
-  if (t === "") return null;
-  const n = Number(t);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return n;
-}
-
-function parseNonNegativeMoney(s: string): number {
-  const t = s.trim();
-  if (t === "") return 0;
-  const n = Number(t);
-  if (!Number.isFinite(n) || n < 0) return 0;
-  return n;
-}
-
-/** Rounded indicative total: 90% LTC-style acquisition slice + rehab when borrower takes rehab proceeds. */
-function purchaseRequestedLoanSuggestedString(fields: LoanAssistantFields): string | null {
-  const purchasePrice = parsePurchasePricePositive(fields.purchasePrice);
-  if (purchasePrice === null) return null;
-  const rehab = parseNonNegativeMoney(fields.rehabBudget);
-  const rehabPart =
-    fields.borrowingRehabFunds === "yes" ? TIER12_REHAB_ADVANCE_PCT * rehab : 0;
-  const acquisitionPart = TIER12_INITIAL_ADVANCE_PCT * purchasePrice;
-  return String(Math.round(acquisitionPart + rehabPart));
-}
-
 export function TermSheetGeneratorClient() {
   const { flow, setFlow, fields, setFields, clearSession } = useDealFormSession();
   const [metadata, setMetadata] = useState<TermSheetLocalMetadata>(() => ({
@@ -99,19 +73,22 @@ export function TermSheetGeneratorClient() {
   /** Last illustrative suggested total whenever driving inputs ran; excludes manual requested edits. */
   const lastSuggestedPurchaseRequestedRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (flow !== "purchase") {
+  const applyPurchaseRequestedLoanSuggestion = (
+    nextFields: LoanAssistantFields,
+    nextFlow: LoanAssistantFlow,
+  ): LoanAssistantFields => {
+    if (nextFlow !== "purchase") {
       lastSuggestedPurchaseRequestedRef.current = null;
-      return;
+      return nextFields;
     }
 
-    const next = purchaseRequestedLoanSuggestedString(fields);
+    const next = purchaseRequestedLoanSuggestedString(nextFields);
     if (next === null) {
       lastSuggestedPurchaseRequestedRef.current = null;
-      return;
+      return nextFields;
     }
 
-    const cur = fields.requestedLoanAmount.trim();
+    const cur = nextFields.requestedLoanAmount.trim();
     const prevSuggestion = lastSuggestedPurchaseRequestedRef.current;
     const stillTrackingSuggestion =
       cur === "" ||
@@ -120,15 +97,10 @@ export function TermSheetGeneratorClient() {
     lastSuggestedPurchaseRequestedRef.current = next;
 
     if (stillTrackingSuggestion && cur !== next) {
-      setFields((f) => ({ ...f, requestedLoanAmount: next }));
+      return { ...nextFields, requestedLoanAmount: next };
     }
-  }, [
-    flow,
-    fields.purchasePrice,
-    fields.rehabBudget,
-    fields.borrowingRehabFunds,
-    setFields,
-  ]);
+    return nextFields;
+  };
 
   const bumpToEditing = () => {
     if (phase === "success" || phase === "error_4xx" || phase === "error_5xx") {
@@ -141,7 +113,13 @@ export function TermSheetGeneratorClient() {
   const onField =
     (key: keyof LoanAssistantFields) =>
     (e: ChangeEvent<HTMLInputElement>) => {
-      setFields((f) => ({ ...f, [key]: e.target.value }));
+      const value = e.target.value;
+      setFields((f) => {
+        const nextFields = { ...f, [key]: value };
+        return key === "requestedLoanAmount"
+          ? nextFields
+          : applyPurchaseRequestedLoanSuggestion(nextFields, flow);
+      });
       setClientHint(null);
       bumpToEditing();
     };
@@ -155,12 +133,15 @@ export function TermSheetGeneratorClient() {
 
   const onFlowChange = (next: LoanAssistantFlow) => {
     setFlow(next);
+    setFields((f) => applyPurchaseRequestedLoanSuggestion(f, next));
     setClientHint(null);
     bumpToEditing();
   };
 
   const onBorrowingRehabChange = (next: "yes" | "no") => {
-    setFields((f) => ({ ...f, borrowingRehabFunds: next }));
+    setFields((f) =>
+      applyPurchaseRequestedLoanSuggestion({ ...f, borrowingRehabFunds: next }, flow),
+    );
     setClientHint(null);
     bumpToEditing();
   };
@@ -252,18 +233,8 @@ export function TermSheetGeneratorClient() {
           </button>
         </div>
         <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Internal HTML preview from{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
-            POST /api/deal/analyze
-          </code>
-          — indicative and non-binding. Raw JSON harness:{" "}
-          <a
-            href="/tools/deal-analyzer"
-            className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-100"
-          >
-            /tools/deal-analyzer
-          </a>
-          .
+          Indicative term-sheet preview from the deal engine — non-binding. Run the analysis
+          below whenever inputs change to refresh numbers.
         </p>
         <DisclosureBanner
           summary={TERM_SHEET_DISCLAIMER_SUMMARY}
@@ -298,7 +269,7 @@ export function TermSheetGeneratorClient() {
                 checked={flow === "purchase"}
                 onChange={() => onFlowChange("purchase")}
               />
-              Purchase (bridge_purchase)
+              Purchase
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               <input
@@ -308,7 +279,7 @@ export function TermSheetGeneratorClient() {
                 checked={flow === "refinance"}
                 onChange={() => onFlowChange("refinance")}
               />
-              Refinance (bridge_refinance)
+              Refinance
             </label>
           </div>
         </fieldset>
@@ -324,12 +295,11 @@ export function TermSheetGeneratorClient() {
             value={fields.collateralPropertyAddress}
             onChange={onField("collateralPropertyAddress")}
             autoComplete="street-address"
-            placeholder="e.g. 100 Main St, City, ST 00000 — stored in admin analytics when you run"
+            placeholder="e.g. 100 Main St, City, ST 00000"
             className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
           />
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            Not used by the deal engine. Helps the admin dashboard list which collateral
-            addresses were submitted with successful runs.
+            Optional — appears on the printed deal sheet when provided.
           </span>
         </label>
 
@@ -448,6 +418,9 @@ export function TermSheetGeneratorClient() {
                 inputMode="numeric"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Optional — not required for an indicative term sheet.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -460,6 +433,9 @@ export function TermSheetGeneratorClient() {
                 onChange={onField("experienceTier")}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Optional — not required for an indicative term sheet.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -617,6 +593,9 @@ export function TermSheetGeneratorClient() {
                 inputMode="numeric"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Optional — not required for an indicative term sheet.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -629,6 +608,9 @@ export function TermSheetGeneratorClient() {
                 onChange={onField("experienceTier")}
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Optional — not required for an indicative term sheet.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -636,6 +618,7 @@ export function TermSheetGeneratorClient() {
               </span>
               <input
                 name="noteRatePercent"
+                data-testid="ts-refi-note-rate"
                 value={fields.noteRatePercent}
                 onChange={onField("noteRatePercent")}
                 placeholder="e.g. 9.125"
@@ -685,8 +668,8 @@ export function TermSheetGeneratorClient() {
             Preview labels (not sent to analyze)
           </legend>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            These fields appear only in the HTML preview header. They are never
-            included in the POST body.
+            These fields appear only in the HTML preview header. They are not sent with the
+            deal analysis request.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">

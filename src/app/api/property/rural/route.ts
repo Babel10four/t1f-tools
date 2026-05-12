@@ -1,4 +1,5 @@
 import { enqueuePlatformEvent } from "@/lib/analytics/log-event";
+import { clientSafeDatabaseErrorMessage } from "@/lib/db/client-safe-error-message";
 import { readJson, jsonError } from "@/lib/engines/http";
 import { runPropertyRural } from "@/lib/engines/property/rural";
 import type { UnknownRecord } from "@/lib/engines/types";
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     const code = dbMissing ? "DATABASE_UNAVAILABLE" : "INTERNAL";
     const clientMessage = dbMissing
       ? "Database is not configured on this deployment. Add DATABASE_URL (Postgres) and apply migrations so Rural Checker can load published rural_rules. See the project README."
-      : message;
+      : clientSafeDatabaseErrorMessage(message);
     enqueuePlatformEvent({
       req,
       eventType: "rural_check_run",
