@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminDocumentsPage() {
-  let initial: Awaited<ReturnType<typeof listDocuments>> | null = null;
+  let initial: Awaited<ReturnType<typeof listDocuments>> = [];
   let errorMessage: string | null = null;
 
   try {
