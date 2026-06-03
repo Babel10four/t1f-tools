@@ -1,6 +1,7 @@
 import { and, desc, eq, lt } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { intelCompetitorSnapshots } from "@/db/schema";
+import { sendCompetitorAlert } from "@/lib/intel/alerts";
 import { extractStructured, isOpenAIConfigured } from "@/lib/intel/extract";
 import { scrapeUrl } from "@/lib/intel/firecrawl";
 import type { CompetitorParsed } from "@/lib/intel/types";
@@ -39,6 +40,8 @@ export type CompetitorSweepResult = {
   scanned: number;
   stored: number;
   changes: CompetitorChange[];
+  /** Email alert outcome (only attempted when changes are detected). */
+  alert: { attempted: boolean; sent: boolean; reason: string | null };
   degraded: { firecrawl: boolean; openai: boolean; db: boolean };
   notes: string[];
 };
@@ -170,6 +173,29 @@ export async function runCompetitorSweep(): Promise<CompetitorSweepResult> {
     }
   }
 
+  // Alert delivery — email, only when changes were detected vs the previous snapshot.
+  const alert = { attempted: false, sent: false, reason: null as string | null };
+  if (changes.length > 0) {
+    alert.attempted = true;
+    const detectedOn = new Date(capturedAt).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+    const sent = await sendCompetitorAlert(changes, detectedOn);
+    if (sent.ok) {
+      alert.sent = true;
+      notes.push(`Alert email sent to ${sent.to}.`);
+    } else {
+      alert.reason = sent.reason;
+      if (sent.reason === "not_configured") {
+        notes.push("RESEND_API_KEY not configured — alert email skipped.");
+      } else {
+        notes.push(`Alert email failed (${sent.reason}): ${sent.message}`);
+      }
+    }
+  }
+
   return {
     ok: true,
     engine: "intel.competitor",
@@ -177,6 +203,7 @@ export async function runCompetitorSweep(): Promise<CompetitorSweepResult> {
     scanned,
     stored,
     changes,
+    alert,
     degraded: { firecrawl: firecrawlDegraded, openai: !openaiConfigured, db: dbDegraded },
     notes,
   };

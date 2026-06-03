@@ -98,7 +98,19 @@ export const BORROWER_INTEL_TOOL: LiveToolDef = {
   ctaLabel: "Open",
 };
 
-export const LIVE_INTEL_TOOLS: LiveToolDef[] = [BORROWER_INTEL_TOOL];
+/** Intel Layer — live (INTEL-001). Firecrawl + GPT property dossier. */
+export const PROPERTY_INTEL_TOOL: LiveToolDef = {
+  href: "/tools/property-intel",
+  label: "Property Intel",
+  description:
+    "Assemble a Property Dossier (listing & price history, prior sales, tax history, market notes) for an address via Firecrawl + GPT.",
+  ctaLabel: "Open",
+};
+
+export const LIVE_INTEL_TOOLS: LiveToolDef[] = [
+  BORROWER_INTEL_TOOL,
+  PROPERTY_INTEL_TOOL,
+];
 
 /** Decision layer — live (TICKET-009). */
 export const CREDIT_COPILOT_TOOL: LiveToolDef = {

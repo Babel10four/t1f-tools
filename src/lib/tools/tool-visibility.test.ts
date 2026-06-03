@@ -20,6 +20,7 @@ const USER_NAV_HREFS = new Set([
   "/tools/rural-checker",
   "/tools/credit-copilot",
   "/tools/borrower-intel",
+  "/tools/property-intel",
 ]);
 
 /** User rail: same core user-visible tools on the left rail. */
@@ -29,6 +30,7 @@ const USER_RAIL_HREFS = new Set([
   "/tools/rural-checker",
   "/tools/credit-copilot",
   "/tools/borrower-intel",
+  "/tools/property-intel",
 ]);
 
 const USER_HIDDEN_HREFS = new Set([
@@ -64,7 +66,10 @@ describe("tool-visibility (launch restriction)", () => {
   it("user hub model shows live Borrower Intel but no intel placeholders or advanced; execution shows sheet + rural", () => {
     const hub = filterHubPageModel("user");
     expect(hub.showIntelSection).toBe(true);
-    expect(hub.liveIntelTools.map((t) => t.href)).toEqual(["/tools/borrower-intel"]);
+    expect(hub.liveIntelTools.map((t) => t.href)).toEqual([
+      "/tools/borrower-intel",
+      "/tools/property-intel",
+    ]);
     expect(hub.intelPlaceholders).toHaveLength(0);
     expect(hub.showAdvancedSection).toBe(false);
     expect(hub.advancedTools).toHaveLength(0);

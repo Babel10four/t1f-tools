@@ -31,6 +31,7 @@ export async function GET(req: Request) {
         scanned: result.scanned,
         stored: result.stored,
         changeCount: result.changes.length,
+        alert: result.alert,
         degraded: result.degraded,
       },
     });

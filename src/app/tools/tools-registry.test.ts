@@ -75,11 +75,15 @@ describe("tools-registry (BRAND-001)", () => {
     const intel = TOOLS_NAV_SECTIONS.find((s) => s.id === "intel")!;
     expect(intel.links.map((l) => l.href)).toEqual([
       "/tools/borrower-intel",
+      "/tools/property-intel",
       "/tools/market-analyzer",
       "/tools/prospect-researcher",
       "/tools/voice-agent",
     ]);
     expect(intel.links.find((l) => l.href === "/tools/borrower-intel")?.isPlaceholder).toBe(
+      false,
+    );
+    expect(intel.links.find((l) => l.href === "/tools/property-intel")?.isPlaceholder).toBe(
       false,
     );
     const decision = TOOLS_NAV_SECTIONS.find((s) => s.id === "decision")!;

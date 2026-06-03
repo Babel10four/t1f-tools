@@ -37,6 +37,7 @@ export const TOOL_HREF_AUDIENCES: Record<string, readonly ("user" | "admin")[]> 
   "/tools/market-analyzer": ["admin"],
   "/tools/prospect-researcher": ["admin"],
   "/tools/borrower-intel": ["user", "admin"],
+  "/tools/property-intel": ["user", "admin"],
   "/tools/voice-agent": ["admin"],
 };
 

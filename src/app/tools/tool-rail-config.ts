@@ -78,6 +78,12 @@ export const TOOL_RAIL_ITEMS: ToolRailItem[] = [
     icon: "search",
   },
   {
+    href: "/tools/property-intel",
+    shortLabel: "Property",
+    title: "Property Intel — Firecrawl + GPT",
+    icon: "home",
+  },
+  {
     href: "/tools/deal-analyzer",
     shortLabel: "JSON",
     title: "Deal Analyzer JSON harness",
