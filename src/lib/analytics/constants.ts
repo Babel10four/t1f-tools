@@ -14,9 +14,11 @@ export const ANALYTICS_EVENT_TYPES = [
   "voice_session_run",
   "property_analyze_run",
   "property_valuation_run",
+  "property_dossier_run",
   "intel_market_run",
   "intel_borrower_run",
   "intel_prospect_run",
+  "intel_competitor_sweep",
   "document_uploaded",
   "document_published",
   "rule_set_updated",
@@ -40,12 +42,16 @@ export const ANALYTICS_TOOL_KEYS = [
   "property_analyzer",
   /** POST /api/property/valuation */
   "property_valuation",
+  /** POST /api/property/dossier */
+  "property_dossier",
   /** POST /api/intel/market */
   "market_intel",
   /** POST /api/intel/borrower */
   "borrower_intel",
   /** POST /api/intel/prospect */
   "prospect_intel",
+  /** GET /api/intel/competitor/cron — nightly sweep */
+  "competitor_intel",
 ] as const;
 
 export type AnalyticsToolKey = (typeof ANALYTICS_TOOL_KEYS)[number];

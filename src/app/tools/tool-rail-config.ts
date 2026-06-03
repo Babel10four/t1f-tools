@@ -72,6 +72,12 @@ export const TOOL_RAIL_ITEMS: ToolRailItem[] = [
     icon: "sparkles",
   },
   {
+    href: "/tools/borrower-intel",
+    shortLabel: "Intel",
+    title: "Borrower Intel — Firecrawl + GPT",
+    icon: "search",
+  },
+  {
     href: "/tools/deal-analyzer",
     shortLabel: "JSON",
     title: "Deal Analyzer JSON harness",

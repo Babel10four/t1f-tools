@@ -107,8 +107,16 @@ export default async function ToolsHubPage() {
             Intel Layer
           </h2>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Research and voice — placeholders until shipped.
+            Automated research via Firecrawl + GPT. Voice and remaining tools are placeholders
+            until shipped.
           </p>
+          {hub.liveIntelTools.length > 0 ? (
+            <div className="mt-6 flex max-w-3xl flex-col gap-4">
+              {hub.liveIntelTools.map((tool) => (
+                <LiveToolCard key={tool.href} tool={tool} />
+              ))}
+            </div>
+          ) : null}
           <div className="mt-4 flex flex-col gap-3">
             {hub.intelPlaceholders.map((tool) => (
               <ComingSoonRow key={tool.href} tool={tool} />

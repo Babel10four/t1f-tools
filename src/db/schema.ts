@@ -8,6 +8,12 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import type {
+  BorrowerSnapshot,
+  CompetitorParsed,
+  IntelSource,
+  PropertyDossier,
+} from "@/lib/intel/types";
 
 /** PDF library metadata — bytes live in object storage (`storage_key`). */
 export const documents = pgTable("documents", {
@@ -118,3 +124,44 @@ export const toolContextBindings = pgTable(
 
 export type ToolContextBindingRow = typeof toolContextBindings.$inferSelect;
 export type ToolContextBindingInsert = typeof toolContextBindings.$inferInsert;
+
+/**
+ * INTEL-001 — Intelligence Layer (Firecrawl + GPT). Permanent store for borrower snapshots,
+ * property dossiers, and competitor snapshots. `*_payload` JSONB holds the typed shapes from
+ * `@/lib/intel/types`; `sources` records provenance (which URLs the facts came from).
+ */
+export const intelBorrowerSnapshots = pgTable("intel_borrower_snapshots", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  borrowerName: text("borrower_name").notNull(),
+  entityName: text("entity_name"),
+  website: text("website"),
+  snapshot: jsonb("snapshot").notNull().$type<BorrowerSnapshot>(),
+  sources: jsonb("sources").notNull().$type<IntelSource[]>().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type IntelBorrowerSnapshotRow = typeof intelBorrowerSnapshots.$inferSelect;
+export type IntelBorrowerSnapshotInsert = typeof intelBorrowerSnapshots.$inferInsert;
+
+export const intelPropertyDossiers = pgTable("intel_property_dossiers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  address: text("address").notNull(),
+  dossier: jsonb("dossier").notNull().$type<PropertyDossier>(),
+  sources: jsonb("sources").notNull().$type<IntelSource[]>().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type IntelPropertyDossierRow = typeof intelPropertyDossiers.$inferSelect;
+export type IntelPropertyDossierInsert = typeof intelPropertyDossiers.$inferInsert;
+
+export const intelCompetitorSnapshots = pgTable("intel_competitor_snapshots", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  competitor: text("competitor").notNull(),
+  capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
+  rawMarkdown: text("raw_markdown"),
+  parsed: jsonb("parsed").$type<CompetitorParsed>(),
+  sourceUrl: text("source_url"),
+});
+
+export type IntelCompetitorSnapshotRow = typeof intelCompetitorSnapshots.$inferSelect;
+export type IntelCompetitorSnapshotInsert = typeof intelCompetitorSnapshots.$inferInsert;

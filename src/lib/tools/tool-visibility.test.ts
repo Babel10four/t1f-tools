@@ -13,12 +13,13 @@ import {
   workflowStepsForRole,
 } from "./tool-visibility";
 
-/** User nav (hub + sections): includes Credit Copilot + Rural Checker — not duplicated on rail. */
+/** User nav (hub + sections): includes Credit Copilot + Rural Checker + Borrower Intel. */
 const USER_NAV_HREFS = new Set([
   "/tools",
   "/tools/term-sheet",
   "/tools/rural-checker",
   "/tools/credit-copilot",
+  "/tools/borrower-intel",
 ]);
 
 /** User rail: same core user-visible tools on the left rail. */
@@ -27,6 +28,7 @@ const USER_RAIL_HREFS = new Set([
   "/tools/term-sheet",
   "/tools/rural-checker",
   "/tools/credit-copilot",
+  "/tools/borrower-intel",
 ]);
 
 const USER_HIDDEN_HREFS = new Set([
@@ -59,11 +61,12 @@ describe("tool-visibility (launch restriction)", () => {
     }
   });
 
-  it("user hub model hides intel and advanced; execution shows sheet + rural", () => {
+  it("user hub model shows live Borrower Intel but no intel placeholders or advanced; execution shows sheet + rural", () => {
     const hub = filterHubPageModel("user");
-    expect(hub.showIntelSection).toBe(false);
-    expect(hub.showAdvancedSection).toBe(false);
+    expect(hub.showIntelSection).toBe(true);
+    expect(hub.liveIntelTools.map((t) => t.href)).toEqual(["/tools/borrower-intel"]);
     expect(hub.intelPlaceholders).toHaveLength(0);
+    expect(hub.showAdvancedSection).toBe(false);
     expect(hub.advancedTools).toHaveLength(0);
     expect(hub.executionSequence).toHaveLength(2);
     expect(hub.executionSequence.map((x) => x.tool.href)).toEqual([

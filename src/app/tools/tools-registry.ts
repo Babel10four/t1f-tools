@@ -89,6 +89,17 @@ export const INTEL_PLACEHOLDER_TOOLS: ComingSoonToolDef[] = [
   { href: "/tools/voice-agent", label: "Voice Operator" },
 ];
 
+/** Intel Layer — live (INTEL-001). Firecrawl + GPT borrower intelligence. */
+export const BORROWER_INTEL_TOOL: LiveToolDef = {
+  href: "/tools/borrower-intel",
+  label: "Borrower Intel",
+  description:
+    "Generate a structured Borrower Snapshot (experience, markets, buy box, risk flags) from public web sources via Firecrawl + GPT.",
+  ctaLabel: "Open",
+};
+
+export const LIVE_INTEL_TOOLS: LiveToolDef[] = [BORROWER_INTEL_TOOL];
+
 /** Decision layer — live (TICKET-009). */
 export const CREDIT_COPILOT_TOOL: LiveToolDef = {
   href: "/tools/credit-copilot",
@@ -164,11 +175,18 @@ export const TOOLS_NAV_SECTIONS: NavSection[] = [
   {
     id: "intel",
     title: "Intel Layer",
-    links: INTEL_PLACEHOLDER_TOOLS.map((t) => ({
-      href: t.href,
-      label: t.label,
-      isPlaceholder: true,
-    })),
+    links: [
+      ...LIVE_INTEL_TOOLS.map((t) => ({
+        href: t.href,
+        label: t.label,
+        isPlaceholder: false,
+      })),
+      ...INTEL_PLACEHOLDER_TOOLS.map((t) => ({
+        href: t.href,
+        label: t.label,
+        isPlaceholder: true,
+      })),
+    ],
   },
   {
     id: "decision",

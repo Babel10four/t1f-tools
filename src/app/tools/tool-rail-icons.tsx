@@ -125,6 +125,20 @@ export function IconSparkles(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconSearch(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={iconClass} aria-hidden {...props}>
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="m20 20-3.5-3.5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function IconWrench(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={iconClass} aria-hidden {...props}>
@@ -148,6 +162,7 @@ export type RailIconId =
   | "scale"
   | "clipboard"
   | "sparkles"
+  | "search"
   | "wrench";
 
 export function ToolRailIcon({ id }: { id: RailIconId }) {
@@ -170,6 +185,8 @@ export function ToolRailIcon({ id }: { id: RailIconId }) {
       return <IconClipboard />;
     case "sparkles":
       return <IconSparkles />;
+    case "search":
+      return <IconSearch />;
     case "wrench":
       return <IconWrench />;
     default: {
