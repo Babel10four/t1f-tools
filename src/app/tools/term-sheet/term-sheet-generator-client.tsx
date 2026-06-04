@@ -20,6 +20,7 @@ import {
   TIER12_INITIAL_ADVANCE_PCT,
   TIER12_REHAB_ADVANCE_PCT,
 } from "@/lib/engines/deal/policy/constants";
+import { PricingComparisonPanel } from "./pricing-comparison-panel";
 import { TermSheetPreview } from "./term-sheet-preview";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 
@@ -806,6 +807,8 @@ export function TermSheetGeneratorClient() {
           response={successPayload.response}
         />
       ) : null}
+
+      <PricingComparisonPanel />
     </div>
   );
 }
