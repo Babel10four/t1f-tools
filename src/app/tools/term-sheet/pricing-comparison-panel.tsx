@@ -16,8 +16,17 @@ function parseNum(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Like `parseNum` but returns `null` for blank/invalid, so leverage stays optional. */
+function parseOptionalNum(raw: string): number | null {
+  const cleaned = raw.replace(/[$,%\s]/g, "");
+  if (cleaned === "") return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
 type SideFields = {
   structure: LoanStructure;
+  leveragePercentOfPurchase: string;
   ratePercent: string;
   originationPointsPercent: string;
   adminFees: string;
@@ -25,6 +34,7 @@ type SideFields = {
 
 const T1F_DEFAULT: SideFields = {
   structure: "non_dutch",
+  leveragePercentOfPurchase: "",
   ratePercent: "",
   originationPointsPercent: "",
   adminFees: "",
@@ -32,6 +42,7 @@ const T1F_DEFAULT: SideFields = {
 
 const COMPETITOR_DEFAULT: SideFields = {
   structure: "dutch",
+  leveragePercentOfPurchase: "",
   ratePercent: "",
   originationPointsPercent: "",
   adminFees: "",
@@ -48,6 +59,7 @@ const labelSpanClass = "font-medium text-zinc-800 dark:text-zinc-200";
  * `@/lib/tools/pricing-comparison` for the math.
  */
 export function PricingComparisonPanel() {
+  const [purchasePrice, setPurchasePrice] = useState("");
   const [initialLoanAmount, setInitialLoanAmount] = useState("");
   const [holdbackAmount, setHoldbackAmount] = useState("");
   const [avgHoldbackDisbursedPct, setAvgHoldbackDisbursedPct] = useState("50");
@@ -58,24 +70,30 @@ export function PricingComparisonPanel() {
   const result = useMemo(
     () =>
       computePricingComparison({
+        purchasePrice: parseNum(purchasePrice),
         initialLoanAmount: parseNum(initialLoanAmount),
         holdbackAmount: parseNum(holdbackAmount),
         avgHoldbackDisbursedFraction: parseNum(avgHoldbackDisbursedPct) / 100,
         loanDurationMonths: parseNum(loanDurationMonths),
         t1f: {
           structure: t1f.structure,
+          leveragePercentOfPurchase: parseOptionalNum(t1f.leveragePercentOfPurchase),
           ratePercent: parseNum(t1f.ratePercent),
           originationPointsPercent: parseNum(t1f.originationPointsPercent),
           adminFees: parseNum(t1f.adminFees),
         },
         competitor: {
           structure: competitor.structure,
+          leveragePercentOfPurchase: parseOptionalNum(
+            competitor.leveragePercentOfPurchase,
+          ),
           ratePercent: parseNum(competitor.ratePercent),
           originationPointsPercent: parseNum(competitor.originationPointsPercent),
           adminFees: parseNum(competitor.adminFees),
         },
       }),
     [
+      purchasePrice,
       initialLoanAmount,
       holdbackAmount,
       avgHoldbackDisbursedPct,
@@ -113,8 +131,9 @@ export function PricingComparisonPanel() {
         </h2>
         <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
           Enter the competitor&apos;s pricing and terms alongside T1F&apos;s to estimate the
-          borrower&apos;s savings. Illustrative and non-binding — interest is a simple estimate,
-          not an amortization schedule.
+          borrower&apos;s savings. Set a purchase price to compare leverage — e.g. a competitor
+          offering 90%, 95%, or 100% of the purchase price. Illustrative and non-binding — interest
+          is a simple estimate, not an amortization schedule.
         </p>
       </header>
 
@@ -125,7 +144,21 @@ export function PricingComparisonPanel() {
         </legend>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={labelClass}>
-            <span className={labelSpanClass}>Initial loan amount</span>
+            <span className={labelSpanClass}>Purchase price</span>
+            <input
+              data-testid="pc-purchase-price"
+              value={purchasePrice}
+              onChange={(e) => setPurchasePrice(e.target.value)}
+              inputMode="decimal"
+              placeholder="e.g. 300000"
+              className={inputClass}
+            />
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              Drives each side&apos;s acquisition loan when a leverage % is set below.
+            </span>
+          </label>
+          <label className={labelClass}>
+            <span className={labelSpanClass}>Acquisition loan amount</span>
             <input
               data-testid="pc-initial-loan"
               value={initialLoanAmount}
@@ -134,6 +167,9 @@ export function PricingComparisonPanel() {
               placeholder="e.g. 250000"
               className={inputClass}
             />
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              Used for a side only when it has no leverage % set.
+            </span>
           </label>
           <label className={labelClass}>
             <span className={labelSpanClass}>Holdback amount</span>
@@ -146,15 +182,6 @@ export function PricingComparisonPanel() {
               className={inputClass}
             />
           </label>
-          <div className={labelClass}>
-            <span className={labelSpanClass}>Total loan amount</span>
-            <output
-              data-testid="pc-total-loan"
-              className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 font-medium tabular-nums text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
-            >
-              {formatMoneyWholeDollars(result.totalLoanAmount)}
-            </output>
-          </div>
           <label className={labelClass}>
             <span className={labelSpanClass}>Avg % holdback disbursed in term</span>
             <input
@@ -202,6 +229,20 @@ export function PricingComparisonPanel() {
               (non-dutch) charges only on funds drawn.
             </span>
           </label>
+          <label className={labelClass}>
+            <span className={labelSpanClass}>Leverage (% of purchase price)</span>
+            <input
+              data-testid="pc-t1f-leverage"
+              value={t1f.leveragePercentOfPurchase}
+              onChange={setSide(setT1f, "leveragePercentOfPurchase")}
+              inputMode="decimal"
+              placeholder="e.g. 90"
+              className={inputClass}
+            />
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              Optional — leave blank to use the acquisition loan amount above.
+            </span>
+          </label>
           <div className="grid gap-4 sm:grid-cols-3">
             <label className={labelClass}>
               <span className={labelSpanClass}>Rate (%)</span>
@@ -238,6 +279,21 @@ export function PricingComparisonPanel() {
             </label>
           </div>
           <dl className="mt-1 space-y-0 text-sm">
+            <ResultRow
+              label="Acquisition loan"
+              value={formatMoneyWholeDollars(result.t1f.acquisitionLoanAmount)}
+            />
+            <ResultRow
+              label="Total loan amount"
+              value={formatMoneyWholeDollars(result.t1f.totalLoanAmount)}
+              testId="pc-t1f-total-loan"
+            />
+            {result.t1f.borrowerDownPayment !== null ? (
+              <ResultRow
+                label="Borrower down payment"
+                value={formatMoneyWholeDollars(result.t1f.borrowerDownPayment)}
+              />
+            ) : null}
             <ResultRow label="Interest" value={formatMoneyWholeDollars(result.t1f.interest)} />
             <ResultRow
               label="Origination points"
@@ -279,6 +335,20 @@ export function PricingComparisonPanel() {
               <option value="dutch">Dutch (Term)</option>
             </select>
           </label>
+          <label className={labelClass}>
+            <span className={labelSpanClass}>Leverage (% of purchase price)</span>
+            <input
+              data-testid="pc-comp-leverage"
+              value={competitor.leveragePercentOfPurchase}
+              onChange={setSide(setCompetitor, "leveragePercentOfPurchase")}
+              inputMode="decimal"
+              placeholder="e.g. 100"
+              className={inputClass}
+            />
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              Optional — leave blank to use the acquisition loan amount above.
+            </span>
+          </label>
           <div className="grid gap-4 sm:grid-cols-3">
             <label className={labelClass}>
               <span className={labelSpanClass}>Rate (%)</span>
@@ -315,6 +385,21 @@ export function PricingComparisonPanel() {
             </label>
           </div>
           <dl className="mt-1 space-y-0 text-sm">
+            <ResultRow
+              label="Acquisition loan"
+              value={formatMoneyWholeDollars(result.competitor.acquisitionLoanAmount)}
+            />
+            <ResultRow
+              label="Total loan amount"
+              value={formatMoneyWholeDollars(result.competitor.totalLoanAmount)}
+              testId="pc-comp-total-loan"
+            />
+            {result.competitor.borrowerDownPayment !== null ? (
+              <ResultRow
+                label="Borrower down payment"
+                value={formatMoneyWholeDollars(result.competitor.borrowerDownPayment)}
+              />
+            ) : null}
             <ResultRow
               label="Interest"
               value={formatMoneyWholeDollars(result.competitor.interest)}
