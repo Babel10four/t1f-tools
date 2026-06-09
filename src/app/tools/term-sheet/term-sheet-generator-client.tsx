@@ -3,6 +3,8 @@
 import { useCallback, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { DisclosureBanner } from "@/components/tools/disclosure-banner";
+import { ToolPageHeader } from "@/components/tools/tool-page-header";
+import { Button } from "@/components/ui/button";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import {
@@ -212,35 +214,33 @@ export function TermSheetGeneratorClient() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Deal Sheet Builder
-          </h1>
-          <button
-            type="button"
+      <ToolPageHeader
+        href="/tools/term-sheet"
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
             data-testid="ts-clear-deal-session"
             onClick={handleClearSavedDealInputs}
-            className="shrink-0 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             Clear saved deal inputs
-          </button>
-        </div>
-        <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Indicative term-sheet preview from the deal engine — non-binding. Run the analysis
-          below whenever inputs change to refresh numbers.
-        </p>
-        <DisclosureBanner
-          summary={TERM_SHEET_DISCLAIMER_SUMMARY}
-          details={TERM_SHEET_DISCLAIMER_DETAILS.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
-        />
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Deal numbers (purchase/refi fields below) are saved in this browser tab for the Cash
-          to Close Calculator and other tools until you clear them or close the tab.
-        </p>
-      </header>
+          </Button>
+        }
+        disclosure={
+          <div className="flex flex-col gap-2">
+            <DisclosureBanner
+              summary={TERM_SHEET_DISCLAIMER_SUMMARY}
+              details={TERM_SHEET_DISCLAIMER_DETAILS.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            />
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Deal numbers (purchase/refi fields below) are saved in this browser tab for the Cash
+              to Close Calculator and other tools until you clear them or close the tab.
+            </p>
+          </div>
+        }
+      />
 
       <form
         className="flex flex-col gap-6 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
@@ -750,14 +750,9 @@ export function TermSheetGeneratorClient() {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            data-testid="ts-generate-button"
-            disabled={disabled}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
+          <Button type="submit" data-testid="ts-generate-button" disabled={disabled}>
             {phase === "submitting" ? "Generating preview…" : "Generate preview"}
-          </button>
+          </Button>
           {phase === "editing" ? (
             <span className="text-xs text-zinc-500">Editing</span>
           ) : null}

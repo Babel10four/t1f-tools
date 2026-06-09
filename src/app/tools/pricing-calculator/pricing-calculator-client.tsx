@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import { ToolPageHeader } from "@/components/tools/tool-page-header";
+import { Button } from "@/components/ui/button";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import {
@@ -183,33 +185,25 @@ export function PricingCalculatorClient() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Loan Pricing Engine
-        </h1>
-        <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Bridge pricing (12 / 18 / 20 month terms) for acquisition and rehab on
-          purchases and refinances — pricing-first view of{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
-            POST /api/deal/analyze
-          </code>
-          . Raw JSON:{" "}
-          <a
-            href="/tools/deal-analyzer"
-            className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-100"
-          >
-            /tools/deal-analyzer
-          </a>
-          . Loan structuring:{" "}
-          <a
-            href="/tools/loan-structuring-assistant"
-            className="font-medium text-zinc-900 underline underline-offset-2 dark:text-zinc-100"
-          >
-            /tools/loan-structuring-assistant
-          </a>
-          .
-        </p>
-      </header>
+      <ToolPageHeader
+        href="/tools/pricing-calculator"
+        disclosure={
+          <p className="max-w-2xl text-xs text-[var(--text-muted)]">
+            Bridge pricing (12 / 18 / 20 month terms) — pricing-first view of{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
+              POST /api/deal/analyze
+            </code>
+            . Need raw JSON?{" "}
+            <a
+              href="/tools/deal-analyzer"
+              className="font-medium text-[var(--brand)] underline underline-offset-2"
+            >
+              /tools/deal-analyzer
+            </a>
+            .
+          </p>
+        }
+      />
 
       <form
         className="flex flex-col gap-6"
@@ -440,14 +434,9 @@ export function PricingCalculatorClient() {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            data-testid="pc-analyze-button"
-            disabled={disabled}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
+          <Button type="submit" data-testid="pc-analyze-button" disabled={disabled}>
             {phase === "submitting" ? "Analyzing…" : "Analyze"}
-          </button>
+          </Button>
           {phase === "editing" ? (
             <span className="text-xs text-zinc-500">Editing</span>
           ) : null}

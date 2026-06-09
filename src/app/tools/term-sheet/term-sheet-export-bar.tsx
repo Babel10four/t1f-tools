@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
@@ -41,22 +42,16 @@ export function TermSheetExportBar({
       className="flex flex-wrap items-center gap-3 border-b border-zinc-200 py-4 dark:border-zinc-800"
       data-testid="ts-export-bar"
     >
-      <button
-        type="button"
+      <Button
+        variant="secondary"
         data-testid="ts-copy-summary"
         onClick={() => void copy()}
-        className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
       >
         {copied ? "Copied" : "Copy terms summary"}
-      </button>
-      <button
-        type="button"
-        data-testid="ts-download-pdf"
-        onClick={pdf}
-        className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-      >
+      </Button>
+      <Button type="button" data-testid="ts-download-pdf" onClick={pdf}>
         Download PDF
-      </button>
+      </Button>
     </div>
   );
 }

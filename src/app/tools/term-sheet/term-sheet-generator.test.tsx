@@ -268,7 +268,9 @@ describe("TermSheetGeneratorClient", () => {
     await waitFor(() => {
       expect(screen.getByTestId("ts-error-5xx")).toBeInTheDocument();
     });
-    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("ts-error-5xx")).queryByRole("list"),
+    ).not.toBeInTheDocument();
   });
 
   it("network error uses generic 5xx panel", async () => {

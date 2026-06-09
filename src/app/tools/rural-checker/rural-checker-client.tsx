@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { ToolPageHeader } from "@/components/tools/tool-page-header";
 import { ruralScreeningHeading } from "@/lib/engines/property/rural-evidence-report";
 import type {
   PropertyRuralResponseV1,
@@ -176,22 +177,20 @@ export function RuralCheckerClient() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-          Rural Eligibility Checker
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-[var(--text-muted)]">
-          Enter a U.S. address for a criterion-by-criterion rural evidence report (Census
-          geocoder + ACS tract/block-group density, OSM service and highway distances)
-          alongside the published{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
-            rural_rules
-          </code>{" "}
-          score. Outcomes use Tier One–style headings (Likely Rural / Out of Policy,
-          Likely Not Rural, Manual UW Review Required). MLS comps and DOM are not
-          automated — see the evidence matrix.
-        </p>
-      </div>
+      <ToolPageHeader
+        href="/tools/rural-checker"
+        disclosure={
+          <p className="max-w-2xl text-xs text-[var(--text-muted)]">
+            Census geocoder + ACS tract/block-group density and OSM service/highway
+            distances are scored against the published{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
+              rural_rules
+            </code>{" "}
+            policy. Outcomes use Tier One–style headings; MLS comps and DOM are not
+            automated — see the evidence matrix. Not a final determination.
+          </p>
+        }
+      />
 
       <form
         onSubmit={onSubmit}

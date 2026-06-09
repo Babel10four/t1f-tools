@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import type { FormEvent } from "react";
 import { DisclosureBanner } from "@/components/tools/disclosure-banner";
+import { ToolPageHeader } from "@/components/tools/tool-page-header";
 import type { CreditCopilotAskResponse } from "@/lib/credit-copilot/types";
 import {
   CREDIT_COPILOT_DISCLAIMER_SUMMARY,
@@ -79,28 +80,20 @@ export function CreditCopilotClient() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Credit Copilot
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-[var(--text-muted)]">
-          Internal policy Q&A for Vanguard by TheFoundry — answers are grounded only in
-          the published credit policy (stored extracted text). Not an underwriting
-          decision and not for borrowers. The Credit Copilot chat stays open between
-          the tool rail and this canvas for quick questions; use this page for the full
-          answer layout and citations.
-        </p>
-      </header>
-
-      <DisclosureBanner
-        summary={
-          <>
-            <strong className="font-medium">Privacy:</strong>{" "}
-            {CREDIT_COPILOT_PRIVACY_WARNING}
-          </>
+      <ToolPageHeader
+        href="/tools/credit-copilot"
+        disclosure={
+          <DisclosureBanner
+            summary={
+              <>
+                <strong className="font-medium">Privacy:</strong>{" "}
+                {CREDIT_COPILOT_PRIVACY_WARNING}
+              </>
+            }
+            details={<p>{CREDIT_COPILOT_DISCLAIMER_SUMMARY}</p>}
+            tone="warning"
+          />
         }
-        details={<p>{CREDIT_COPILOT_DISCLAIMER_SUMMARY}</p>}
-        tone="warning"
       />
 
       <form

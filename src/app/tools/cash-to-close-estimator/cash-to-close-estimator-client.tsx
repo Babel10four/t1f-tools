@@ -3,6 +3,8 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 import { DisclosureBanner } from "@/components/tools/disclosure-banner";
+import { ToolPageHeader } from "@/components/tools/tool-page-header";
+import { Button } from "@/components/ui/button";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import { CASH_TO_CLOSE_DISCLAIMER_SUMMARY } from "@/lib/tools/disclaimer-copy";
@@ -238,38 +240,36 @@ export function CashToCloseEstimatorClient() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Cash to Close Calculator
-          </h1>
-          <button
-            type="button"
+      <ToolPageHeader
+        href="/tools/cash-to-close-estimator"
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
             data-testid="ctc-clear-deal-session"
             onClick={handleClearSavedDealInputs}
-            className="shrink-0 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
           >
             Clear saved deal inputs
-          </button>
-        </div>
-        <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Estimate cash needed at closing from your deal inputs. For discussion only —
-          not a final settlement statement, HUD-1, or Closing Disclosure.
-        </p>
-        <DisclosureBanner
-          summary={CASH_TO_CLOSE_DISCLAIMER_SUMMARY}
-          details={
-            <p>
-              Keep this as an internal planning estimate. Confirm final figures with
-              title/closing documents before commitment.
+          </Button>
+        }
+        disclosure={
+          <div className="flex flex-col gap-2">
+            <DisclosureBanner
+              summary={CASH_TO_CLOSE_DISCLAIMER_SUMMARY}
+              details={
+                <p>
+                  Keep this as an internal planning estimate. Confirm final figures with
+                  title/closing documents before commitment.
+                </p>
+              }
+            />
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Deal numbers match the Term Sheet / Deal Sheet builder for this tab — they stay
+              filled when you switch tools until you clear them or close the tab.
             </p>
-          }
-        />
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Deal numbers match the Term Sheet / Deal Sheet builder for this tab — they stay
-          filled when you switch tools until you clear them or close the tab.
-        </p>
-      </header>
+          </div>
+        }
+      />
 
       <form
         className="flex flex-col gap-6 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
@@ -576,14 +576,9 @@ export function CashToCloseEstimatorClient() {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            data-testid="ctc-estimate-button"
-            disabled={disabled}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
+          <Button type="submit" data-testid="ctc-estimate-button" disabled={disabled}>
             {phase === "submitting" ? "Estimating…" : "Estimate Cash"}
-          </button>
+          </Button>
           {phase === "editing" ? (
             <span className="text-xs text-zinc-500">Editing</span>
           ) : null}

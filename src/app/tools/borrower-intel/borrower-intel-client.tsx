@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { FormEvent } from "react";
+import { ToolPageHeader } from "@/components/tools/tool-page-header";
 import type { IntelBorrowerOutput } from "@/lib/engines/intel/borrower";
 
 type UiPhase = "idle" | "loading" | "success" | "http_error" | "network_error";
@@ -95,17 +96,16 @@ export function BorrowerIntelClient() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Borrower Intel
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-[var(--text-muted)]">
-          Generate a structured Borrower Snapshot — experience, primary markets, likely buy
-          box, and risk flags — assembled from public web sources via Firecrawl and summarized
-          by GPT. Internal research only; not a credit decision and not for borrowers. Verify
-          before relying on any figure.
-        </p>
-      </header>
+      <ToolPageHeader
+        href="/tools/borrower-intel"
+        disclosure={
+          <p className="max-w-2xl text-xs text-[var(--text-muted)]">
+            Assembled from public web sources via Firecrawl and summarized by GPT.
+            Internal research only — not a credit decision and not for borrowers. Verify
+            before relying on any figure.
+          </p>
+        }
+      />
 
       <form
         onSubmit={submit}

@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { FormEvent } from "react";
+import { ToolPageHeader } from "@/components/tools/tool-page-header";
 import type { PropertyDossierOutput } from "@/lib/engines/property/dossier";
 
 type UiPhase = "idle" | "loading" | "success" | "http_error" | "network_error";
@@ -71,16 +72,15 @@ export function PropertyIntelClient() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Property Intel
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-[var(--text-muted)]">
-          Assemble a Property Dossier — listing &amp; price history, prior sales, tax history,
-          and market/neighborhood notes — from public listing and records sources via Firecrawl
-          and GPT. Internal research only; verify before relying on any figure.
-        </p>
-      </header>
+      <ToolPageHeader
+        href="/tools/property-intel"
+        disclosure={
+          <p className="max-w-2xl text-xs text-[var(--text-muted)]">
+            Assembled from public listing and records sources via Firecrawl and GPT.
+            Internal research only; verify before relying on any figure.
+          </p>
+        }
+      />
 
       <form
         onSubmit={submit}

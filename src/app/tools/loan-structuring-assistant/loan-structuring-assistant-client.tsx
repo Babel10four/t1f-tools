@@ -3,6 +3,8 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { DisclosureBanner } from "@/components/tools/disclosure-banner";
+import { ToolPageHeader } from "@/components/tools/tool-page-header";
+import { Button } from "@/components/ui/button";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import { DEAL_ANALYZE_DISCLAIMER_SUMMARY } from "@/lib/tools/disclaimer-copy";
@@ -268,24 +270,20 @@ export function LoanStructuringAssistantClient() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Deal Structuring Copilot
-        </h1>
-        <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Guided purchase and refinance inputs with full deal analysis — indicative and
-          non-binding. Use for internal structuring and policy-aligned scenario checks.
-        </p>
-        <DisclosureBanner
-          summary={DEAL_ANALYZE_DISCLAIMER_SUMMARY}
-          details={
-            <p>
-              Keep borrower-facing commitments out of this screen. Use this tool for
-              internal structuring and policy-aligned scenario checks.
-            </p>
-          }
-        />
-      </header>
+      <ToolPageHeader
+        href="/tools/loan-structuring-assistant"
+        disclosure={
+          <DisclosureBanner
+            summary={DEAL_ANALYZE_DISCLAIMER_SUMMARY}
+            details={
+              <p>
+                Keep borrower-facing commitments out of this screen. Use this tool for
+                internal structuring and policy-aligned scenario checks.
+              </p>
+            }
+          />
+        }
+      />
 
       <form
         className="flex flex-col gap-6 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm"
@@ -690,14 +688,9 @@ export function LoanStructuringAssistantClient() {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            data-testid="analyze-button"
-            disabled={disabled}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
+          <Button type="submit" data-testid="analyze-button" disabled={disabled}>
             {phase === "submitting" ? "Analyzing…" : "Analyze"}
-          </button>
+          </Button>
           {phase === "editing" ? (
             <span className="text-xs text-zinc-500">Editing</span>
           ) : null}

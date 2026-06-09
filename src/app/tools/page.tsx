@@ -4,6 +4,8 @@ import { AdvancedToolRow } from "@/components/tools/advanced-tool-row";
 import { ComingSoonRow } from "@/components/tools/coming-soon-row";
 import { LiveToolCard } from "@/components/tools/live-tool-card";
 import { RuralHubQuickCheck } from "@/components/tools/rural-hub-quick-check";
+import { WorkflowsBlock } from "@/components/tools/workflows-block";
+import { buttonClassName } from "@/components/ui/button";
 import { getSessionPayload } from "@/lib/auth/session-server";
 import { PRODUCT_TAGLINE } from "@/lib/branding";
 import {
@@ -13,6 +15,7 @@ import {
   primaryCtaHrefForRole,
   primaryCtaLabelForRole,
 } from "@/lib/tools/tool-visibility";
+import { workflowsForRole } from "@/lib/tools/workflows";
 import { CREDIT_COPILOT_TOOL } from "./tools-registry";
 
 export const metadata: Metadata = {
@@ -26,31 +29,27 @@ export default async function ToolsHubPage() {
   const hub = filterHubPageModel(role);
   const primaryHref = primaryCtaHrefForRole(role);
   const primaryLabel = primaryCtaLabelForRole(role);
-  const workflowSteps = [
-    { href: "/tools/loan-structuring-assistant", label: "Deal Structuring Copilot" },
-    { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
-    { href: "/tools/cash-to-close-estimator", label: "Cash to Close Calculator" },
-    { href: "/tools/rural-checker", label: "Rural screening" },
-    { href: CREDIT_COPILOT_TOOL.href, label: CREDIT_COPILOT_TOOL.label },
-  ].filter((s) => hrefVisibleToRole(s.href, role));
+  const workflows = workflowsForRole(role);
 
   return (
     <div className="flex flex-col gap-12">
       <section className="flex flex-col gap-4">
-        <p className="max-w-2xl text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
-          {hubHeroDescriptionForRole(role)}
-        </p>
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+            Tool Hub
+          </h1>
+          <p className="max-w-2xl text-base leading-relaxed text-[var(--text-muted)]">
+            {hubHeroDescriptionForRole(role)}
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href={primaryHref}
-            className="inline-flex rounded-lg bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--brand-hover)]"
-          >
+          <Link href={primaryHref} className={buttonClassName("primary", "md")}>
             Start with {primaryLabel}
           </Link>
           {hrefVisibleToRole("/tools/deal-analyzer", role) ? (
             <Link
               href="/tools/deal-analyzer"
-              className="text-sm font-medium text-zinc-600 underline underline-offset-2 hover:text-zinc-900"
+              className="text-sm font-medium text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text-primary)]"
             >
               View JSON harness
             </Link>
@@ -60,24 +59,7 @@ export default async function ToolsHubPage() {
 
       {hrefVisibleToRole("/tools/rural-checker", role) ? <RuralHubQuickCheck /> : null}
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <h2 className="text-base font-semibold text-zinc-900">Suggested path</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Follow this sequence for the fastest handoff-ready workflow.
-        </p>
-        <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {workflowSteps.map((step, index) => (
-            <li key={step.href} className="rounded-lg border border-zinc-200 bg-zinc-50/70 px-3 py-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                Step {index + 1}
-              </p>
-              <Link href={step.href} className="mt-1 block text-sm font-medium text-zinc-900 hover:underline">
-                {step.label}
-              </Link>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <WorkflowsBlock workflows={workflows} />
 
       <section>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">

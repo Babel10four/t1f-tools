@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ToolPageHeader } from "@/components/tools/tool-page-header";
 import {
   EMAIL_TEMPLATES,
   EMAIL_TEMPLATE_CATEGORY_ORDER,
@@ -94,19 +95,18 @@ export function EmailTemplatesClient() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Email Templates
-        </h1>
-        <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
-          Ready-to-send Tier One Funding email drafts for every stage of a deal. Pick a template,
-          copy the subject and body, then replace the{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
-            {"{{merge fields}}"}
-          </code>{" "}
-          before sending.
-        </p>
-      </header>
+      <ToolPageHeader
+        href="/tools/email-templates"
+        disclosure={
+          <p className="max-w-2xl text-xs text-[var(--text-muted)]">
+            Pick a template, copy the subject and body, then replace the{" "}
+            <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
+              {"{{merge fields}}"}
+            </code>{" "}
+            before sending.
+          </p>
+        }
+      />
 
       <input
         type="search"
