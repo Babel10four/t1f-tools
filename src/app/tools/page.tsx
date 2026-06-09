@@ -137,6 +137,22 @@ export default async function ToolsHubPage() {
         </div>
       </section>
 
+      {hub.showResourcesSection ? (
+        <section>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Resources
+          </h2>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Reusable rep content — copy, personalize, and send.
+          </p>
+          <div className="mt-4 flex max-w-3xl flex-col gap-4">
+            {hub.resourcesTools.map((tool) => (
+              <LiveToolCard key={tool.href} tool={tool} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {hub.showAdvancedSection ? (
         <section>
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">

@@ -13,7 +13,7 @@ import {
   workflowStepsForRole,
 } from "./tool-visibility";
 
-/** User nav (hub + sections): includes Credit Copilot + Rural Checker + Borrower Intel. */
+/** User nav (hub + sections): includes Credit Copilot + Rural Checker + Borrower Intel + Email Templates. */
 const USER_NAV_HREFS = new Set([
   "/tools",
   "/tools/term-sheet",
@@ -21,6 +21,7 @@ const USER_NAV_HREFS = new Set([
   "/tools/credit-copilot",
   "/tools/borrower-intel",
   "/tools/property-intel",
+  "/tools/email-templates",
 ]);
 
 /** User rail: same core user-visible tools on the left rail. */
@@ -31,6 +32,7 @@ const USER_RAIL_HREFS = new Set([
   "/tools/credit-copilot",
   "/tools/borrower-intel",
   "/tools/property-intel",
+  "/tools/email-templates",
 ]);
 
 const USER_HIDDEN_HREFS = new Set([
@@ -71,6 +73,10 @@ describe("tool-visibility (launch restriction)", () => {
       "/tools/property-intel",
     ]);
     expect(hub.intelPlaceholders).toHaveLength(0);
+    expect(hub.showResourcesSection).toBe(true);
+    expect(hub.resourcesTools.map((t) => t.href)).toEqual([
+      "/tools/email-templates",
+    ]);
     expect(hub.showAdvancedSection).toBe(false);
     expect(hub.advancedTools).toHaveLength(0);
     expect(hub.executionSequence).toHaveLength(2);

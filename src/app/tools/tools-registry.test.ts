@@ -13,6 +13,7 @@ describe("tools-registry (BRAND-001)", () => {
       "execution",
       "intel",
       "decision",
+      "resources",
       "advanced",
     ]);
     expect(TOOLS_NAV_SECTIONS.map((s) => s.title)).toEqual([
@@ -20,6 +21,7 @@ describe("tools-registry (BRAND-001)", () => {
       "Execution Layer",
       "Intel Layer",
       "Decision Layer",
+      "Resources",
       "Advanced / Internal",
     ]);
   });

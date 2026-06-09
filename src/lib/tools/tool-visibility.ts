@@ -6,6 +6,7 @@ import {
   INTEL_PLACEHOLDER_TOOLS,
   LIVE_INTEL_TOOLS,
   LIVE_TOOLS,
+  RESOURCES_TOOLS,
   TOOL_HUB,
   TOOLS_NAV_SECTIONS,
   type NavSection,
@@ -33,6 +34,7 @@ export const TOOL_HREF_AUDIENCES: Record<string, readonly ("user" | "admin")[]> 
   "/tools/rural-checker": ["user", "admin"],
   "/tools/disclosure-builder": ["admin"],
   "/tools/credit-copilot": ["user", "admin"],
+  "/tools/email-templates": ["user", "admin"],
   "/tools/deal-analyzer": ["admin"],
   "/tools/market-analyzer": ["admin"],
   "/tools/prospect-researcher": ["admin"],
@@ -69,6 +71,8 @@ export type HubPageModel = {
   showIntelSection: boolean;
   liveIntelTools: typeof LIVE_INTEL_TOOLS;
   intelPlaceholders: typeof INTEL_PLACEHOLDER_TOOLS;
+  showResourcesSection: boolean;
+  resourcesTools: typeof RESOURCES_TOOLS;
   showAdvancedSection: boolean;
   advancedTools: typeof ADVANCED_TOOLS;
 };
@@ -80,6 +84,8 @@ export function filterHubPageModel(role: AuthRole): HubPageModel {
       showIntelSection: true,
       liveIntelTools: LIVE_INTEL_TOOLS,
       intelPlaceholders: INTEL_PLACEHOLDER_TOOLS,
+      showResourcesSection: true,
+      resourcesTools: RESOURCES_TOOLS,
       showAdvancedSection: true,
       advancedTools: ADVANCED_TOOLS,
     };
@@ -97,6 +103,10 @@ export function filterHubPageModel(role: AuthRole): HubPageModel {
     hrefVisibleToRole(t.href, role),
   );
 
+  const resourcesTools = RESOURCES_TOOLS.filter((t) =>
+    hrefVisibleToRole(t.href, role),
+  );
+
   const advancedTools = ADVANCED_TOOLS.filter((t) => hrefVisibleToRole(t.href, role));
 
   return {
@@ -104,6 +114,8 @@ export function filterHubPageModel(role: AuthRole): HubPageModel {
     showIntelSection: liveIntelTools.length > 0 || intelPlaceholders.length > 0,
     liveIntelTools,
     intelPlaceholders,
+    showResourcesSection: resourcesTools.length > 0,
+    resourcesTools,
     showAdvancedSection: advancedTools.length > 0,
     advancedTools,
   };

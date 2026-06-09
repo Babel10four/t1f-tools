@@ -84,6 +84,12 @@ export const TOOL_RAIL_ITEMS: ToolRailItem[] = [
     icon: "home",
   },
   {
+    href: "/tools/email-templates",
+    shortLabel: "Email",
+    title: "Email Templates",
+    icon: "mail",
+  },
+  {
     href: "/tools/deal-analyzer",
     shortLabel: "JSON",
     title: "Deal Analyzer JSON harness",

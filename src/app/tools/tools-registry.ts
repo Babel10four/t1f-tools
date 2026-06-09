@@ -121,6 +121,17 @@ export const CREDIT_COPILOT_TOOL: LiveToolDef = {
   ctaLabel: "Open",
 };
 
+/** Resources layer — static rep content (email templates). */
+export const EMAIL_TEMPLATES_TOOL: LiveToolDef = {
+  href: "/tools/email-templates",
+  label: "Email Templates",
+  description:
+    "Ready-to-send email drafts for prospecting, intake, status updates, conditions, closing, and servicing — copy, personalize the merge fields, and send.",
+  ctaLabel: "Open",
+};
+
+export const RESOURCES_TOOLS: LiveToolDef[] = [EMAIL_TEMPLATES_TOOL];
+
 /**
  * Execution layer order on the hub: four live tools, comparator (stub), rural (live), disclosure (stub).
  */
@@ -154,7 +165,7 @@ export type NavLink = {
 };
 
 export type NavSection = {
-  id: "hub" | "execution" | "intel" | "decision" | "advanced";
+  id: "hub" | "execution" | "intel" | "decision" | "resources" | "advanced";
   title: string;
   links: NavLink[];
 };
@@ -210,6 +221,15 @@ export const TOOLS_NAV_SECTIONS: NavSection[] = [
         isPlaceholder: false,
       },
     ],
+  },
+  {
+    id: "resources",
+    title: "Resources",
+    links: RESOURCES_TOOLS.map((t) => ({
+      href: t.href,
+      label: t.label,
+      isPlaceholder: false,
+    })),
   },
   {
     id: "advanced",
