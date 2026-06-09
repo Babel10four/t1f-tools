@@ -12,6 +12,7 @@ import {
   type LoanAssistantFlow,
 } from "../loan-structuring-assistant/build-deal-analyze-request";
 import { useDealFormSession } from "../shared/use-deal-form-session";
+import { formatLocalYmdLong, parseLocalYmd } from "../shared/closing-date";
 import {
   formatMoney,
   groupRisksBySeverity,
@@ -175,8 +176,9 @@ export function CashToCloseEstimatorClient() {
     return buildCashToCloseLoanCostSummary({
       flow,
       response: successPayload.response,
+      asOfDate: parseLocalYmd(fields.closingDate),
     });
-  }, [flow, successPayload]);
+  }, [flow, successPayload, fields.closingDate]);
 
   const showResults = Boolean(successPayload && phase !== "submitting");
 
@@ -198,6 +200,7 @@ export function CashToCloseEstimatorClient() {
       flow,
       response: successPayload.response,
       request: successPayload.request,
+      asOfDate: parseLocalYmd(fields.closingDate),
     });
     try {
       if (navigator.clipboard?.writeText) {
@@ -231,7 +234,7 @@ export function CashToCloseEstimatorClient() {
         setTimeout(() => setCopyHint(null), 5000);
       }
     }
-  }, [flow, successPayload]);
+  }, [flow, successPayload, fields.closingDate]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -321,6 +324,24 @@ export function CashToCloseEstimatorClient() {
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
             Not used by the deal engine. Logged with successful cash-to-close runs for the
             admin dashboard.
+          </span>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-zinc-800 dark:text-zinc-200">
+            Closing date
+          </span>
+          <input
+            name="closingDate"
+            data-testid="ctc-closing-date"
+            type="date"
+            value={fields.closingDate}
+            onChange={onField("closingDate")}
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+          />
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            Drives the per-diem and partial-month interest in the cash-to-close estimate.
+            Defaults to today; shared with the Term Sheet builder for this tab.
           </span>
         </label>
 
@@ -673,9 +694,12 @@ export function CashToCloseEstimatorClient() {
             </p>
             {loanCostSummary?.interestCosts !== null ? (
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Interest costs use today&apos;s date as the assumed closing date: per diem
-                applies to each calendar day from closing through the end of this month
-                (inclusive), plus one full month of interest in advance.
+                Interest costs use{" "}
+                {parseLocalYmd(fields.closingDate)
+                  ? `${formatLocalYmdLong(fields.closingDate)} as the closing date`
+                  : "today as the assumed closing date"}
+                : per diem applies to each calendar day from closing through the end of that
+                month (inclusive), plus one full month of interest in advance.
               </p>
             ) : null}
           </section>

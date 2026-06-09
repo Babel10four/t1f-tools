@@ -2,6 +2,7 @@ import type {
   LoanAssistantFields,
   LoanAssistantFlow,
 } from "../loan-structuring-assistant/build-deal-analyze-request";
+import { todayLocalYmd } from "./closing-date";
 
 /** Tab session only — cleared when the tab closes or the user clears the session. */
 export const DEAL_FORM_SESSION_STORAGE_KEY = "t1f_deal_form_session_v1";
@@ -23,6 +24,7 @@ export const DEFAULT_DEAL_FORM_FIELDS: LoanAssistantFields = {
   originationFlatFee: "",
   noteRatePercent: "",
   collateralPropertyAddress: "",
+  closingDate: todayLocalYmd(),
 };
 
 export type DealFormSessionPayload = {
@@ -67,6 +69,9 @@ function parseFields(raw: unknown): LoanAssistantFields | null {
   }
   const collateralPropertyAddress =
     typeof o.collateralPropertyAddress === "string" ? o.collateralPropertyAddress : "";
+  // Older sessions predate the closing date; default to today so the field stays populated.
+  const closingDate =
+    typeof o.closingDate === "string" ? o.closingDate : todayLocalYmd();
   return {
     purchasePrice: o.purchasePrice as string,
     rehabBudget: o.rehabBudget as string,
@@ -82,6 +87,7 @@ function parseFields(raw: unknown): LoanAssistantFields | null {
     originationFlatFee: o.originationFlatFee as string,
     noteRatePercent: o.noteRatePercent as string,
     collateralPropertyAddress,
+    closingDate,
   };
 }
 

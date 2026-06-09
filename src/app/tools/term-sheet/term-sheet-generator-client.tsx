@@ -16,6 +16,7 @@ import {
 } from "../loan-structuring-assistant/build-deal-analyze-request";
 import { purchaseRequestedLoanSuggestedString } from "../loan-structuring-assistant/requested-loan-suggest";
 import { useDealFormSession } from "../shared/use-deal-form-session";
+import { todayLocalYmd } from "../shared/closing-date";
 import {
   TIER12_INITIAL_ADVANCE_PCT,
   TIER12_REHAB_ADVANCE_PCT,
@@ -31,14 +32,6 @@ const EMPTY_METADATA: TermSheetLocalMetadata = {
   preparedBy: "",
   preparedDate: "",
 };
-
-function todayLocalYmd(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 type DealAnalyzeErrorBody = {
   error?: string;
@@ -660,6 +653,24 @@ export function TermSheetGeneratorClient() {
           </div>
         )}
 
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-zinc-800 dark:text-zinc-200">
+            Closing date
+          </span>
+          <input
+            name="closingDate"
+            data-testid="ts-closing-date"
+            type="date"
+            value={fields.closingDate}
+            onChange={onField("closingDate")}
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+          />
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            Drives the per-diem and partial-month interest in the cash-to-close estimate.
+            Defaults to today; shared with the Cash to Close calculator for this tab.
+          </span>
+        </label>
+
         <fieldset
           disabled={disabled}
           className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
@@ -805,6 +816,7 @@ export function TermSheetGeneratorClient() {
           metadata={metadata}
           request={successPayload.request}
           response={successPayload.response}
+          closingDate={fields.closingDate}
         />
       ) : null}
 

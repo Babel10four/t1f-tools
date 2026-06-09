@@ -27,6 +27,11 @@ export type LoanAssistantFields = {
    * (`assumptions.collateralPropertyAddress`); not used by the deal engine.
    */
   collateralPropertyAddress: string;
+  /**
+   * User-selected closing date (`YYYY-MM-DD`) used for cash-to-close / term-sheet per-diem
+   * interest. Display-only — not sent to the deal engine. Blank falls back to today.
+   */
+  closingDate: string;
 };
 
 const MAX_COLLATERAL_ADDRESS_CHARS = 500;

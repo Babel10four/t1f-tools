@@ -2,6 +2,7 @@ import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import { buildCashToCloseLoanCostSummary } from "../cash-to-close-estimator/cash-to-close-estimator-display";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
+import { formatDateLong } from "../shared/closing-date";
 
 export function purposeLabelForCtc(p: string): string {
   switch (p) {
@@ -18,9 +19,14 @@ export function purposeLabelForCtc(p: string): string {
 export const TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS =
   "Title, escrow settlement, hazard insurance, and similar third-party costs are not included in this cash-to-close estimate; your providers will set final amounts at closing.";
 
-/** Shown with term sheet cash-to-close interest breakdown (matches calculator assumption). */
-export const TERM_SHEET_CTC_PER_DIEM_CLOSING_NOTE =
-  "Per diem and partial-month interest assume today as the closing date: each calendar day from closing through the end of this month counts toward the partial month (inclusive), plus one full month of interest in advance.";
+/**
+ * Shown with the term sheet cash-to-close interest breakdown (matches the calculator assumption).
+ * When a closing date is supplied it is named explicitly; otherwise it falls back to "today".
+ */
+export function termSheetCtcPerDiemClosingNote(asOfDate?: Date): string {
+  const closing = asOfDate ? formatDateLong(asOfDate) : "today";
+  return `Per diem and partial-month interest assume a closing date of ${closing}: each calendar day from closing through the end of that month counts toward the partial month (inclusive), plus one full month of interest in advance.`;
+}
 
 /** Same leg the deal engine uses for borrower equity on purchase CTC. */
 export function acquisitionFundsForCtce(
@@ -75,9 +81,10 @@ export function buildTermSheetCtcInputRows(
 
 export function buildTermSheetCtcEstimateRows(
   response: DealAnalyzeResponseV1,
+  asOfDate?: Date,
 ): { label: string; value: string }[] {
   const flow = response.loan.purpose === "refinance" ? "refinance" : "purchase";
-  const summary = buildCashToCloseLoanCostSummary({ flow, response });
+  const summary = buildCashToCloseLoanCostSummary({ flow, response, asOfDate });
   const rows: { label: string; value: string }[] = [
     { label: summary.basisLabel, value: formatMoneyWholeDollars(summary.basisAmount) },
     { label: "Loan fees", value: formatMoneyWholeDollars(summary.loanFees) },

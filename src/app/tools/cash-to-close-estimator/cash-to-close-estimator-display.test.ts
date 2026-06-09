@@ -162,4 +162,31 @@ describe("buildCashToCloseClientSummaryText", () => {
     expect(text).toMatch(/Title\/insurance: not included/i);
     expect(text).toMatch(/Assumed closing date for interest/i);
   });
+
+  it("names a user-selected closing date and excludes the 'today' fallback wording", () => {
+    const request = {
+      deal: { purchasePrice: 100_000 },
+    } as DealAnalyzeRequestV1;
+    const response = {
+      pricing: { status: "complete", noteRatePercent: 10, marginBps: null },
+      loan: { amount: 80_000, termMonths: 12 },
+      cashToClose: {
+        status: "complete",
+        estimatedTotal: 25_000,
+        items: [
+          { label: "Borrower equity", amount: 20_000 },
+          { label: "Estimated points", amount: 500 },
+          { label: "Total estimated cash to close", amount: 20_500 },
+        ],
+      },
+    } as DealAnalyzeResponseV1;
+    const text = buildCashToCloseClientSummaryText({
+      flow: "purchase",
+      response,
+      request,
+      asOfDate: new Date(2026, 5, 15), // Jun 15, 2026
+    });
+    expect(text).toContain("Assumed closing date for interest: Jun 15, 2026.");
+    expect(text).not.toContain("when this summary is generated");
+  });
 });

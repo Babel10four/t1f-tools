@@ -16,6 +16,7 @@ const base: Parameters<typeof buildDealAnalyzeRequest>[1] = {
   originationFlatFee: "",
   noteRatePercent: "",
   collateralPropertyAddress: "",
+  closingDate: "",
 };
 
 describe("buildDealAnalyzeRequest", () => {

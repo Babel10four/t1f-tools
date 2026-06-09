@@ -11,15 +11,18 @@ export function TermSheetExportBar({
   metadata,
   request,
   response,
+  closingDate,
 }: {
   metadata: TermSheetLocalMetadata;
   request: DealAnalyzeRequestV1 | undefined;
   response: DealAnalyzeResponseV1;
+  /** User-selected closing date (`YYYY-MM-DD`) for cash-to-close per-diem interest. */
+  closingDate?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
   const copy = useCallback(async () => {
-    const text = buildTermSheetPlainText(metadata, request, response);
+    const text = buildTermSheetPlainText(metadata, request, response, closingDate);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -27,11 +30,11 @@ export function TermSheetExportBar({
     } catch {
       window.alert("Could not copy to clipboard. Select text manually or try HTTPS.");
     }
-  }, [metadata, request, response]);
+  }, [metadata, request, response, closingDate]);
 
   const pdf = useCallback(() => {
-    void downloadTermSheetPdf(metadata, request, response);
-  }, [metadata, request, response]);
+    void downloadTermSheetPdf(metadata, request, response, closingDate);
+  }, [metadata, request, response, closingDate]);
 
   return (
     <div

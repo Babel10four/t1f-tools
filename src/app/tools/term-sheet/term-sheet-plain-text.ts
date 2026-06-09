@@ -8,9 +8,10 @@ import { computeInitialLtcPercent } from "@/lib/engines/deal/policy/initial-ltc-
 import {
   buildTermSheetCtcEstimateRows,
   buildTermSheetCtcInputRows,
-  TERM_SHEET_CTC_PER_DIEM_CLOSING_NOTE,
+  termSheetCtcPerDiemClosingNote,
   TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
 } from "./term-sheet-cash-to-close-fields";
+import { parseLocalYmd } from "../shared/closing-date";
 
 function purposeLabel(p: string): string {
   switch (p) {
@@ -30,7 +31,9 @@ export function buildTermSheetPlainText(
   metadata: TermSheetLocalMetadata,
   request: DealAnalyzeRequestV1 | undefined,
   response: DealAnalyzeResponseV1,
+  closingDate?: string,
 ): string {
+  const asOfDate = parseLocalYmd(closingDate);
   const loan = response.loan;
   const lines: string[] = [];
   lines.push("Tier One Funding Inc");
@@ -100,9 +103,9 @@ export function buildTermSheetPlainText(
   lines.push("");
   lines.push("Estimate");
   lines.push(TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS);
-  lines.push(TERM_SHEET_CTC_PER_DIEM_CLOSING_NOTE);
+  lines.push(termSheetCtcPerDiemClosingNote(asOfDate));
   lines.push("");
-  const cashEstimateRows = buildTermSheetCtcEstimateRows(response);
+  const cashEstimateRows = buildTermSheetCtcEstimateRows(response, asOfDate);
   if (cashEstimateRows.length === 0) {
     lines.push(
       "No cash-to-close estimate rows are shown — complete deal inputs and regenerate if needed.",

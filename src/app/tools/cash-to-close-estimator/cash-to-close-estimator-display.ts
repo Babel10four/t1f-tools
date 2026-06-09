@@ -6,6 +6,7 @@ import type {
   DealAnalyzeResponseV1,
 } from "@/lib/engines/deal/schemas/canonical-response";
 import { formatMoney } from "../loan-structuring-assistant/display-helpers";
+import { formatDateLong } from "../shared/closing-date";
 
 const FEE_LINE_LABELS = new Set([
   "Estimated points",
@@ -235,15 +236,17 @@ export function buildCashToCloseClientSummaryText(input: {
   flow: "purchase" | "refinance";
   response: DealAnalyzeResponseV1;
   request: DealAnalyzeRequestV1;
+  /** Assumed closing date for partial-month per diem (defaults to today). */
+  asOfDate?: Date;
 }): string {
-  const { flow, response, request } = input;
+  const { flow, response, request, asOfDate } = input;
   const purpose = flow === "purchase" ? "purchase" : "refinance";
   const purchasePrice = request.deal.purchasePrice;
   const displayLines = transformCashToCloseDisplayLines(
     response.cashToClose.items,
     { purpose, purchasePrice },
   );
-  const summary = buildCashToCloseLoanCostSummary({ flow, response });
+  const summary = buildCashToCloseLoanCostSummary({ flow, response, asOfDate });
 
   const interestOnlyMonthly = estimateInterestOnlyMonthlyPayment(
     response.loan,
@@ -293,7 +296,9 @@ export function buildCashToCloseClientSummaryText(input: {
     }`,
   );
   lines.push(
-    "Assumed closing date for interest: today (when this summary is generated).",
+    asOfDate
+      ? `Assumed closing date for interest: ${formatDateLong(asOfDate)}.`
+      : "Assumed closing date for interest: today (when this summary is generated).",
   );
   lines.push(
     `Estimated loan costs (excludes title/insurance): ${formatMoney(summary.estimatedLoanCostsExcludingTitleInsurance)}`,

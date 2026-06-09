@@ -7,8 +7,10 @@ import type { TermSheetLocalMetadata } from "./term-sheet-types";
 import {
   buildTermSheetCtcEstimateRows,
   buildTermSheetCtcInputRows,
+  termSheetCtcPerDiemClosingNote,
   TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
 } from "./term-sheet-cash-to-close-fields";
+import { parseLocalYmd } from "../shared/closing-date";
 import { jsPDF } from "jspdf";
 
 const PDF_PAGE_W = 612;
@@ -212,9 +214,10 @@ function drawCashToCloseSectionPdf(
   yCursor: number,
   request: DealAnalyzeRequestV1 | undefined,
   response: DealAnalyzeResponseV1,
+  asOfDate: Date | undefined,
 ): number {
   let y = yCursor;
-  const estimateRows = buildTermSheetCtcEstimateRows(response);
+  const estimateRows = buildTermSheetCtcEstimateRows(response, asOfDate);
 
   doc.setDrawColor(LINE_GREY.r, LINE_GREY.g, LINE_GREY.b);
   doc.setLineWidth(0.75);
@@ -268,7 +271,13 @@ function drawCashToCloseSectionPdf(
     fullColW,
   );
   doc.text(thirdPartyNote, MARGIN, y);
-  y += thirdPartyNote.length * 11 + 10;
+  y += thirdPartyNote.length * 11 + 6;
+  const perDiemNote = doc.splitTextToSize(
+    termSheetCtcPerDiemClosingNote(asOfDate),
+    fullColW,
+  );
+  doc.text(perDiemNote, MARGIN, y);
+  y += perDiemNote.length * 11 + 10;
   doc.setTextColor(0, 0, 0);
 
   if (estimateRows.length === 0) {
@@ -331,7 +340,9 @@ export async function downloadTermSheetPdf(
   metadata: TermSheetLocalMetadata,
   request: DealAnalyzeRequestV1 | undefined,
   response: DealAnalyzeResponseV1,
+  closingDate?: string,
 ): Promise<void> {
+  const asOfDate = parseLocalYmd(closingDate);
   const logoData = await termSheetLogoDataUrl();
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const loan = response.loan;
@@ -562,7 +573,7 @@ export async function downloadTermSheetPdf(
 
   doc.addPage();
   yCursor = MARGIN;
-  yCursor = drawCashToCloseSectionPdf(doc, yCursor, request, response);
+  yCursor = drawCashToCloseSectionPdf(doc, yCursor, request, response, asOfDate);
   yCursor += 20;
 
   if (yCursor > PAGE_H - 260) {

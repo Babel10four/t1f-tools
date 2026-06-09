@@ -19,9 +19,10 @@ import { TermSheetExportBar } from "./term-sheet-export-bar";
 import {
   buildTermSheetCtcEstimateRows,
   buildTermSheetCtcInputRows,
-  TERM_SHEET_CTC_PER_DIEM_CLOSING_NOTE,
+  termSheetCtcPerDiemClosingNote,
   TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
 } from "./term-sheet-cash-to-close-fields";
+import { parseLocalYmd } from "../shared/closing-date";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 import { T1fTermSheetLogo } from "@/components/branding/t1f-term-sheet-logo";
 
@@ -73,11 +74,15 @@ export function TermSheetPreview({
   metadata,
   request,
   response,
+  closingDate,
 }: {
   metadata: TermSheetLocalMetadata;
   response: DealAnalyzeResponseV1;
   request?: DealAnalyzeRequestV1;
+  /** User-selected closing date (`YYYY-MM-DD`) for cash-to-close per-diem interest. */
+  closingDate?: string;
 }) {
+  const asOfDate = parseLocalYmd(closingDate);
   const sortedFlags = sortAnalysisFlagsForDisplay(response.analysis.flags);
   const riskGroups = groupRisksBySeverity(response.risks);
   const pricing = response.pricing;
@@ -95,7 +100,7 @@ export function TermSheetPreview({
       : undefined;
 
   const cashModelInputRows = buildTermSheetCtcInputRows(request, response);
-  const cashEstimateRows = buildTermSheetCtcEstimateRows(response);
+  const cashEstimateRows = buildTermSheetCtcEstimateRows(response, asOfDate);
 
   return (
     <article
@@ -120,6 +125,7 @@ export function TermSheetPreview({
         metadata={metadata}
         request={request}
         response={response}
+        closingDate={closingDate}
       />
 
       <header className="border-b border-zinc-200 py-6 text-center dark:border-zinc-800">
@@ -434,7 +440,7 @@ export function TermSheetPreview({
           {TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS}
         </p>
         <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-          {TERM_SHEET_CTC_PER_DIEM_CLOSING_NOTE}
+          {termSheetCtcPerDiemClosingNote(asOfDate)}
         </p>
         {cashEstimateRows.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
