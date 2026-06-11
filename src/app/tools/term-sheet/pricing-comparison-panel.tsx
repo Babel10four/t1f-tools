@@ -1,12 +1,61 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import { Button } from "@/components/ui/button";
 import { formatMoneyWholeDollars } from "../loan-structuring-assistant/display-helpers";
 import {
   computePricingComparison,
   type LoanStructure,
 } from "@/lib/tools/pricing-comparison";
+import {
+  buildPricingComparisonEmailHtml,
+  buildPricingComparisonPlainText,
+  type PricingComparisonExportInput,
+} from "./pricing-comparison-export";
+import { downloadPricingComparisonPdf } from "./pricing-comparison-pdf";
+
+/** Rich-HTML clipboard write (so it pastes into email as a table) with plain-text fallbacks. */
+async function copyRichOrPlain(html: string, plain: string): Promise<boolean> {
+  try {
+    if (
+      typeof ClipboardItem !== "undefined" &&
+      navigator.clipboard?.write
+    ) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([plain], { type: "text/plain" }),
+        }),
+      ]);
+      return true;
+    }
+  } catch {
+    // fall through to plain-text paths
+  }
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(plain);
+      return true;
+    }
+  } catch {
+    // fall through to legacy path
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = plain;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 /** Tolerant parse: strips `$`, commas, spaces, `%`. Returns 0 for blank/invalid. */
 function parseNum(raw: string): number {
@@ -103,6 +152,38 @@ export function PricingComparisonPanel() {
     ],
   );
 
+  const [copied, setCopied] = useState(false);
+
+  const exportInput: PricingComparisonExportInput = useMemo(
+    () => ({
+      result,
+      loanDurationMonths: parseNum(loanDurationMonths),
+      t1fRatePercent: parseNum(t1f.ratePercent),
+      competitorRatePercent: parseNum(competitor.ratePercent),
+    }),
+    [result, loanDurationMonths, t1f.ratePercent, competitor.ratePercent],
+  );
+
+  const hasData =
+    result.t1f.totalLoanAmount > 0 || result.competitor.totalLoanAmount > 0;
+
+  const onCopyForEmail = useCallback(async () => {
+    const ok = await copyRichOrPlain(
+      buildPricingComparisonEmailHtml(exportInput),
+      buildPricingComparisonPlainText(exportInput),
+    );
+    if (ok) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } else {
+      window.alert("Could not copy. Select the on-screen values manually or try HTTPS.");
+    }
+  }, [exportInput]);
+
+  const onDownloadPdf = useCallback(() => {
+    void downloadPricingComparisonPdf(exportInput);
+  }, [exportInput]);
+
   const setSide =
     (
       setter: React.Dispatch<React.SetStateAction<SideFields>>,
@@ -125,15 +206,36 @@ export function PricingComparisonPanel() {
       data-testid="pricing-comparison"
       className="flex flex-col gap-6 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
     >
-      <header className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Pricing Comparison
-        </h2>
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Pricing Comparison
+          </h2>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              data-testid="pc-copy-email"
+              onClick={() => void onCopyForEmail()}
+              disabled={!hasData}
+            >
+              {copied ? "Copied" : "Copy for email"}
+            </Button>
+            <Button
+              size="sm"
+              data-testid="pc-download-pdf"
+              onClick={onDownloadPdf}
+              disabled={!hasData}
+            >
+              Download PDF
+            </Button>
+          </div>
+        </div>
         <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
           Enter the competitor&apos;s pricing and terms alongside T1F&apos;s to estimate the
           borrower&apos;s savings. Set a purchase price to compare leverage — e.g. a competitor
           offering 90%, 95%, or 100% of the purchase price. Illustrative and non-binding — interest
-          is a simple estimate, not an amortization schedule.
+          is a simple estimate, not an amortization schedule. Export hides internal-only figures.
         </p>
       </header>
 

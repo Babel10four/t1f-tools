@@ -19,3 +19,9 @@ export const CASH_TO_CLOSE_DISCLAIMER_SUMMARY =
 export const DEAL_ANALYZE_DISCLAIMER_SUMMARY =
   "Analysis output is indicative and non-binding. Final terms require underwriting and approvals.";
 
+export const PRICING_COMPARISON_DISCLAIMER = [
+  "Illustrative comparison for discussion purposes only — not a commitment to lend or a rate lock.",
+  "Interest is a simple estimate, not an amortization schedule, and competitor figures are entered manually.",
+  "All terms are subject to underwriting, appraisal/valuation, and final approval, and may change.",
+] as const;
+
