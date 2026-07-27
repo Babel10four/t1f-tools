@@ -5,14 +5,15 @@ export type ButtonVariant = "primary" | "secondary" | "ghost";
 export type ButtonSize = "sm" | "md";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-page)] disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-page)] disabled:cursor-not-allowed disabled:opacity-50";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-[var(--brand)] text-white hover:bg-[var(--brand-hover)]",
+  primary:
+    "bg-[var(--brand)] text-white shadow-sm hover:bg-[var(--brand-hover)]",
   secondary:
-    "border border-zinc-300 bg-[var(--surface-chrome)] text-[var(--text-primary)] shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:hover:bg-zinc-800",
+    "border border-[var(--border-subtle)] bg-[var(--surface-chrome)] text-[var(--text-primary)] shadow-sm hover:bg-[var(--surface-soft)]",
   ghost:
-    "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-zinc-100 dark:hover:bg-zinc-800",
+    "text-[var(--text-muted)] hover:bg-[var(--surface-soft)] hover:text-[var(--text-primary)]",
 };
 
 const SIZES: Record<ButtonSize, string> = {

@@ -1,38 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
-  --foreground: #18181b;
+  --background: #f3f5f1;
+  --foreground: #17211b;
   /* Workbench / brand (BRAND-001 + Credit Copilot shell) */
-  --brand: #285c2e;
-  --brand-hover: #214a26;
-  --brand-muted: rgba(40, 92, 46, 0.08);
+  --brand: #245c3a;
+  --brand-hover: #1c4b2f;
+  --brand-deep: #163f2c;
+  --brand-muted: #e8f0ea;
   --brand-foreground: #ffffff;
-  --bubble-user-bg: #f3f6f3;
-  --text-primary: #18181b;
-  --text-muted: #71717a;
-  --surface-page: #fafafa;
+  --bubble-user-bg: #edf3ee;
+  --text-primary: #17211b;
+  --text-muted: #68736c;
+  --surface-page: #f3f5f1;
   --surface-chrome: #ffffff;
-  --border-subtle: #e4e4e7;
+  --surface-soft: #edf1ec;
+  --border-subtle: #d9dfda;
+  --sidebar-text: #c7d7cd;
+  --sidebar-icon: #9db9a8;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --surface-page: #0a0a0a;
-    --surface-chrome: #18181b;
-    --border-subtle: #27272a;
-    --text-primary: #fafafa;
-    --text-muted: #a1a1aa;
-    --bubble-user-bg: rgba(40, 92, 46, 0.18);
+    --background: #101512;
+    --foreground: #f2f5f3;
+    --brand: #72a57e;
+    --brand-hover: #85b590;
+    --brand-deep: #102f22;
+    --brand-muted: rgba(114, 165, 126, 0.16);
+    --surface-page: #101512;
+    --surface-chrome: #171d19;
+    --surface-soft: #1d2520;
+    --border-subtle: #2b352f;
+    --text-primary: #f2f5f3;
+    --text-muted: #a6b1aa;
+    --bubble-user-bg: rgba(114, 165, 126, 0.14);
+    --sidebar-text: #d3dfd7;
+    --sidebar-icon: #a8c0b1;
   }
 }
 

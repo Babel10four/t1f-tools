@@ -3,6 +3,7 @@ import {
   CREDIT_COPILOT_TOOL,
   LIVE_INTEL_TOOLS,
   LIVE_TOOLS,
+  REP_PERFORMANCE_TOOLS,
   RESOURCES_TOOLS,
 } from "@/app/tools/tools-registry";
 import { TOOL_HREF_AUDIENCES } from "@/lib/tools/tool-visibility";
@@ -18,6 +19,7 @@ const KNOWN_HREFS = new Set(Object.keys(TOOL_HREF_AUDIENCES));
 
 const LIVE_TOOL_HREFS = [
   ...LIVE_TOOLS,
+  ...REP_PERFORMANCE_TOOLS,
   ...LIVE_INTEL_TOOLS,
   CREDIT_COPILOT_TOOL,
   ...RESOURCES_TOOLS,
@@ -65,6 +67,10 @@ describe("TOOL_STATUS", () => {
   it("maps the intel tools to prototype", () => {
     expect(getToolStatus("/tools/borrower-intel")).toBe("prototype");
     expect(getToolStatus("/tools/property-intel")).toBe("prototype");
+  });
+
+  it("maps rep reviews to ready", () => {
+    expect(getToolStatus("/tools/reviews")).toBe("ready");
   });
 
   it("maps coming-soon placeholders to placeholder", () => {

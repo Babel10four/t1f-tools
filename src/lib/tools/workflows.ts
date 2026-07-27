@@ -21,11 +21,10 @@ export type Workflow = {
 export const WORKFLOWS: Workflow[] = [
   {
     id: "prospecting",
-    title: "Prospecting",
-    description: "Reach out, learn the borrower, and frame a deal.",
+    title: "Follow up",
+    description: "Move from a ready-to-send message into a lender-ready quote.",
     steps: [
       { href: "/tools/email-templates", label: "Email Templates" },
-      { href: "/tools/borrower-intel", label: "Borrower Intel" },
       { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
     ],
   },
@@ -42,10 +41,9 @@ export const WORKFLOWS: Workflow[] = [
   {
     id: "research-deal",
     title: "Research a deal",
-    description: "Gather property and borrower context before quoting.",
+    description: "Gather property context before quoting.",
     steps: [
       { href: "/tools/property-intel", label: "Property Intel" },
-      { href: "/tools/borrower-intel", label: "Borrower Intel" },
       { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
     ],
   },

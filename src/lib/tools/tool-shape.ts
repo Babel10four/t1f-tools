@@ -33,6 +33,7 @@ export const TOOL_STATUS: Record<string, ToolStatus> = {
   "/tools/cash-to-close-estimator": "ready",
   "/tools/pricing-calculator": "ready",
   "/tools/credit-copilot": "ready",
+  "/tools/reviews": "ready",
   "/tools/email-templates": "ready",
   "/tools/deal-analyzer": "ready",
   "/tools/borrower-intel": "prototype",
@@ -118,6 +119,13 @@ export const TOOL_SHAPES: Record<string, ToolShape> = {
       { href: "/tools/property-intel", label: "Property Intel" },
     ],
   },
+  "/tools/reviews": {
+    goal: "Open the monthly coaching and performance review library.",
+    inputs: ["Choose a rep or reporting month in the review library"],
+    output:
+      "KPI context, coaching priorities, and a focused monthly performance review.",
+    next: [],
+  },
   "/tools/borrower-intel": {
     goal: "Assemble a structured Borrower Snapshot from public web sources.",
     inputs: [
@@ -137,7 +145,6 @@ export const TOOL_SHAPES: Record<string, ToolShape> = {
     output:
       "Dossier: listing and price history, prior sales, tax history, and market/neighborhood notes.",
     next: [
-      { href: "/tools/borrower-intel", label: "Borrower Intel" },
       { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
     ],
   },
@@ -146,7 +153,6 @@ export const TOOL_SHAPES: Record<string, ToolShape> = {
     inputs: ["Pick a template and personalize the {{merge fields}}"],
     output: "Copyable subject and body with detected merge fields to fill in.",
     next: [
-      { href: "/tools/borrower-intel", label: "Borrower Intel" },
       { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
     ],
   },

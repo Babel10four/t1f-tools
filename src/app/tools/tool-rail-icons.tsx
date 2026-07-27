@@ -57,6 +57,29 @@ export function IconCash(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconCalendar(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={iconClass} aria-hidden {...props}>
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="16"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.75"
+      />
+      <path
+        d="M8 3v4M16 3v4M3 10h18M8 15l2 2 5-5"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function IconPercent(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={iconClass} aria-hidden {...props}>
@@ -194,6 +217,7 @@ export type RailIconId =
   | "layers"
   | "file"
   | "cash"
+  | "calendar"
   | "percent"
   | "map"
   | "scale"
@@ -214,6 +238,8 @@ export function ToolRailIcon({ id }: { id: RailIconId }) {
       return <IconFile />;
     case "cash":
       return <IconCash />;
+    case "calendar":
+      return <IconCalendar />;
     case "percent":
       return <IconPercent />;
     case "map":

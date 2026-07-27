@@ -5,6 +5,7 @@ import {
   EXECUTION_LAYER_SEQUENCE,
   LIVE_INTEL_TOOLS,
   LIVE_TOOLS,
+  REP_PERFORMANCE_TOOLS,
   RESOURCES_TOOLS,
   TOOL_HUB,
   TOOLS_NAV_SECTIONS,
@@ -32,11 +33,12 @@ export const TOOL_HREF_AUDIENCES: Record<string, readonly ("user" | "admin")[]> 
   "/tools/pricing-comparator": ["admin"],
   "/tools/disclosure-builder": ["admin"],
   "/tools/credit-copilot": ["user", "admin"],
+  "/tools/reviews": ["user", "admin"],
   "/tools/email-templates": ["user", "admin"],
   "/tools/deal-analyzer": ["admin"],
   "/tools/market-analyzer": ["admin"],
   "/tools/prospect-researcher": ["admin"],
-  "/tools/borrower-intel": ["user", "admin"],
+  "/tools/borrower-intel": ["admin"],
   "/tools/property-intel": ["user", "admin"],
   "/tools/voice-agent": ["admin"],
 };
@@ -66,6 +68,7 @@ export function filterToolRailItems(role: AuthRole): ToolRailItem[] {
 
 export type HubPageModel = {
   executionSequence: typeof EXECUTION_LAYER_SEQUENCE;
+  performanceTools: typeof REP_PERFORMANCE_TOOLS;
   liveIntelTools: typeof LIVE_INTEL_TOOLS;
   resourcesTools: typeof RESOURCES_TOOLS;
   advancedTools: typeof ADVANCED_TOOLS;
@@ -75,6 +78,7 @@ export function filterHubPageModel(role: AuthRole): HubPageModel {
   if (role === "admin") {
     return {
       executionSequence: EXECUTION_LAYER_SEQUENCE,
+      performanceTools: REP_PERFORMANCE_TOOLS,
       liveIntelTools: LIVE_INTEL_TOOLS,
       resourcesTools: RESOURCES_TOOLS,
       advancedTools: ADVANCED_TOOLS,
@@ -89,6 +93,10 @@ export function filterHubPageModel(role: AuthRole): HubPageModel {
     hrefVisibleToRole(t.href, role),
   );
 
+  const performanceTools = REP_PERFORMANCE_TOOLS.filter((t) =>
+    hrefVisibleToRole(t.href, role),
+  );
+
   const resourcesTools = RESOURCES_TOOLS.filter((t) =>
     hrefVisibleToRole(t.href, role),
   );
@@ -97,6 +105,7 @@ export function filterHubPageModel(role: AuthRole): HubPageModel {
 
   return {
     executionSequence,
+    performanceTools,
     liveIntelTools,
     resourcesTools,
     advancedTools,
@@ -127,7 +136,7 @@ export function primaryCtaLabelForRole(_role: AuthRole): string {
 /** Hero paragraph under the hub title — user copy omits JSON harness and admin-only tools. */
 export function hubHeroDescriptionForRole(role: AuthRole): string {
   if (role === "user") {
-    return "Build lender-ready terms, research borrowers and properties, answer policy questions, and move deals forward from one focused workspace.";
+    return "Build lender-ready terms, review monthly performance, research properties, and answer policy questions from one focused workspace.";
   }
   return "Use the same rep workspace, with additional internal tools and reporting available when you need them.";
 }

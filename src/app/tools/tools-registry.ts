@@ -80,9 +80,19 @@ export const PROPERTY_INTEL_TOOL: LiveToolDef = {
 };
 
 export const LIVE_INTEL_TOOLS: LiveToolDef[] = [
-  BORROWER_INTEL_TOOL,
   PROPERTY_INTEL_TOOL,
 ];
+
+/** Rep performance — monthly coaching and review workspace. */
+export const REP_REVIEWS_TOOL: LiveToolDef = {
+  href: "/tools/reviews",
+  label: "Rep Reviews",
+  description:
+    "Open monthly coaching and performance reviews for every account executive.",
+  ctaLabel: "Open",
+};
+
+export const REP_PERFORMANCE_TOOLS: LiveToolDef[] = [REP_REVIEWS_TOOL];
 
 /** Decision layer — live (TICKET-009). */
 export const CREDIT_COPILOT_TOOL: LiveToolDef = {
@@ -132,7 +142,14 @@ export type NavLink = {
 };
 
 export type NavSection = {
-  id: "hub" | "execution" | "intel" | "decision" | "resources" | "advanced";
+  id:
+    | "hub"
+    | "execution"
+    | "performance"
+    | "intel"
+    | "decision"
+    | "resources"
+    | "advanced";
   title: string;
   links: NavLink[];
 };
@@ -155,8 +172,17 @@ export const TOOLS_NAV_SECTIONS: NavSection[] = [
     })),
   },
   {
+    id: "performance",
+    title: "Rep Performance",
+    links: REP_PERFORMANCE_TOOLS.map((t) => ({
+      href: t.href,
+      label: t.label,
+      isPlaceholder: false,
+    })),
+  },
+  {
     id: "intel",
-    title: "Research",
+    title: "Property Research",
     links: LIVE_INTEL_TOOLS.map((t) => ({
       href: t.href,
       label: t.label,

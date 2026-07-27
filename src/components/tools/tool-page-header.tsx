@@ -5,6 +5,7 @@ import {
   CREDIT_COPILOT_TOOL,
   LIVE_INTEL_TOOLS,
   LIVE_TOOLS,
+  REP_PERFORMANCE_TOOLS,
   RESOURCES_TOOLS,
 } from "@/app/tools/tools-registry";
 import { useToolRole } from "@/app/tools/tool-role-context";
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils/cn";
 const TOOL_TITLES: Record<string, string> = Object.fromEntries(
   [
     ...LIVE_TOOLS,
+    ...REP_PERFORMANCE_TOOLS,
     ...LIVE_INTEL_TOOLS,
     CREDIT_COPILOT_TOOL,
     ...RESOURCES_TOOLS,
@@ -87,7 +89,7 @@ export function ToolPageHeader({
       </div>
 
       {shape ? (
-        <dl className="grid gap-px overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--border-subtle)] text-sm sm:grid-cols-3">
+        <dl className="grid gap-px overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--border-subtle)] text-sm shadow-[0_1px_2px_rgba(17,34,24,0.03)] sm:grid-cols-3">
           <div className="bg-[var(--surface-chrome)] p-4">
             <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
               Inputs
