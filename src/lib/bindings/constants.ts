@@ -10,9 +10,23 @@ export const SUGGESTED_TOOL_KEYS = [
   "term_sheet",
   "deal_analyzer",
   "credit_copilot",
-  "rural_checker",
   "voice_agent",
 ] as const;
+
+/** Rural binding kinds remain in the database schema for historical compatibility only. */
+export const ACTIVE_BINDING_TYPES = [
+  "credit_policy_document",
+  "rates_rule_set",
+  "calculator_assumptions_rule_set",
+] as const satisfies readonly BindingTypeV1[];
+
+export type ActiveBindingType = (typeof ACTIVE_BINDING_TYPES)[number];
+
+export function isActiveBindingType(
+  type: BindingTypeV1,
+): type is ActiveBindingType {
+  return (ACTIVE_BINDING_TYPES as readonly BindingTypeV1[]).includes(type);
+}
 
 export function isBindingTypeV1(v: string): v is BindingTypeV1 {
   return (bindingTypesV1 as readonly string[]).includes(v);

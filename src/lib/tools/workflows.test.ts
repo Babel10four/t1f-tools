@@ -28,14 +28,15 @@ describe("workflowsForRole", () => {
   });
 
   it("drops admin-only steps for users", () => {
-    const eligibility = workflowsForRole("user").find(
-      (w) => w.id === "eligibility-terms",
+    const quoteAndClose = workflowsForRole("user").find(
+      (w) => w.id === "quote-and-close",
     );
-    expect(eligibility).toBeDefined();
-    const hrefs = eligibility!.steps.map((s) => s.href);
+    expect(quoteAndClose).toBeDefined();
+    const hrefs = quoteAndClose!.steps.map((s) => s.href);
     // Cash to Close is admin-only and should be filtered out for users.
     expect(hrefs).not.toContain("/tools/cash-to-close-estimator");
     expect(hrefs).toContain("/tools/term-sheet");
+    expect(hrefs).toContain("/tools/credit-copilot");
   });
 
   it("never surfaces a recipe with fewer than two steps", () => {

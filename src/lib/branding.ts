@@ -1,15 +1,12 @@
-/**
- * System branding — locked in docs/specs/BRANDING-001.md.
- * Hub chrome (BRAND-001): primary line **Vanguard**, secondary **Built by TheFoundry**.
- */
-export const PRODUCT_NAME = "Vanguard";
-export const PRODUCT_BUILT_BY = "TheFoundry";
-export const PRODUCT_DISPLAY_NAME = "Vanguard by TheFoundry";
+/** Product identity used throughout the rep workspace. */
+export const PRODUCT_NAME = "T1F Tools";
+export const PRODUCT_BUILT_BY = "Tier One Funding";
+export const PRODUCT_DISPLAY_NAME = "T1F Tools by Tier One Funding";
 
 export const PRODUCT_TAGLINE =
-  "Internal tool hub for AE bridge deal workflows.";
+  "The working toolbox for Tier One Funding reps.";
 
-export const HUB_BUILT_BY_LINE = "Built by TheFoundry";
+export const HUB_BUILT_BY_LINE = "Rep workspace";
 
 export const HUB_PRIMARY_CTA_HREF = "/tools/loan-structuring-assistant";
 export const HUB_PRIMARY_CTA_LABEL = "Start with Deal Structuring Copilot";

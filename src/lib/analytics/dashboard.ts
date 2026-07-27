@@ -22,8 +22,6 @@ export type DashboardAddressHit = {
   address: string;
   role: string;
   status: AnalyticsStatus;
-  /** Rural screening engine result when present */
-  ruralResult?: string;
 };
 
 export type DashboardKpis = {
@@ -38,7 +36,6 @@ export type DashboardKpis = {
     pricingCheckRuns: number;
     /** `cash_to_close_run` + tool_key = cash_to_close_estimator */
     cashToCloseRuns: number;
-    ruralCheckRuns: number;
     creditCopilotQuestions: number;
     /** `deal_analyze_run` + tool_key = term_sheet (Deal Sheet / Term Sheet builder preview). */
     termSheetPreviewRuns: number;
@@ -67,8 +64,6 @@ export type DashboardKpis = {
   termSheetCollateralAddresses: DashboardAddressHit[];
   /** Success `cash_to_close_run` with logged collateral address. */
   cashToCloseCollateralAddresses: DashboardAddressHit[];
-  /** Rural checks with a logged `addressLine` (success or error). */
-  ruralCheckAddresses: DashboardAddressHit[];
   /** Newest-first rows for the activity log (same window as KPIs). */
   recentEvents: DashboardRecentEvent[];
   /** Per-day counts by `event_type` for stacked chart (`_other` buckets long tail). */
@@ -98,7 +93,6 @@ const emptyTotals: DashboardKpis["totals"] = {
   dealAnalyzerRuns: 0,
   pricingCheckRuns: 0,
   cashToCloseRuns: 0,
-  ruralCheckRuns: 0,
   creditCopilotQuestions: 0,
   termSheetPreviewRuns: 0,
   termSheetTermsApiEvents: 0,
@@ -145,8 +139,6 @@ export type GetDashboardKpisOptions = {
 
 const nonEmptyCollateralSql = sql`trim(coalesce(${platformEvents.metadata}->>'collateralPropertyAddress','')) <> ''`;
 
-const nonEmptyRuralAddressSql = sql`trim(coalesce(${platformEvents.metadata}->>'addressLine','')) <> ''`;
-
 function formatMetadataPreview(meta: unknown): string {
   if (meta === null || meta === undefined) {
     return "";
@@ -171,7 +163,6 @@ export async function getDashboardKpis(
   const emptyLists = {
     termSheetCollateralAddresses: [] as DashboardAddressHit[],
     cashToCloseCollateralAddresses: [] as DashboardAddressHit[],
-    ruralCheckAddresses: [] as DashboardAddressHit[],
   };
 
   try {
@@ -371,24 +362,6 @@ export async function getDashboardKpis(
       .orderBy(desc(platformEvents.createdAt))
       .limit(addressListLimit);
 
-    const ruralRows = await db
-      .select({
-        createdAt: platformEvents.createdAt,
-        metadata: platformEvents.metadata,
-        role: platformEvents.role,
-        status: platformEvents.status,
-      })
-      .from(platformEvents)
-      .where(
-        and(
-          gte(platformEvents.createdAt, since),
-          eq(platformEvents.eventType, "rural_check_run"),
-          nonEmptyRuralAddressSql,
-        ),
-      )
-      .orderBy(desc(platformEvents.createdAt))
-      .limit(addressListLimit);
-
     const recentRows = await db
       .select({
         id: platformEvents.id,
@@ -434,22 +407,6 @@ export async function getDashboardKpis(
       });
     }
 
-    function mapRuralRows(rows: typeof ruralRows): DashboardAddressHit[] {
-      return rows.map((r) => {
-        const meta = r.metadata as Record<string, unknown>;
-        const addr =
-          typeof meta.addressLine === "string" ? meta.addressLine.trim() : "";
-        const res = meta.result;
-        return {
-          createdAtIso: new Date(r.createdAt).toISOString(),
-          address: addr,
-          role: r.role,
-          status: r.status,
-          ruralResult: typeof res === "string" ? res : undefined,
-        };
-      });
-    }
-
     async function tallyLoginSuccess(): Promise<number> {
       const [row] = await db
         .select({ c: count() })
@@ -486,7 +443,6 @@ export async function getDashboardKpis(
           ANALYZE_TOOL_KEYS.cashToCloseEstimator,
           "cash_to_close",
         ),
-        ruralCheckRuns: await tally("rural_check_run"),
         creditCopilotQuestions: await tally("credit_copilot_question"),
         termSheetPreviewRuns: await tallyTypedTool(
           "deal_analyze_run",
@@ -513,7 +469,6 @@ export async function getDashboardKpis(
       })),
       termSheetCollateralAddresses: mapCollateralRows(termSheetRows),
       cashToCloseCollateralAddresses: mapCollateralRows(ctcRows),
-      ruralCheckAddresses: mapRuralRows(ruralRows),
       recentEvents,
       stackedUsageByDay,
       chartStackKeys,

@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import {
+  ACTIVE_RULE_TYPES,
+  type ActiveRuleType,
+} from "@/lib/rule-sets/constants";
 import { listRuleSets } from "@/lib/rule-sets/service";
 import { RulesManager } from "./rules-manager";
 
@@ -14,7 +18,9 @@ export default async function AdminRulesPage() {
   let errorMessage: string | null = null;
 
   try {
-    initial = await listRuleSets();
+    initial = (await listRuleSets()).filter((row) =>
+      ACTIVE_RULE_TYPES.includes(row.ruleType as ActiveRuleType),
+    );
   } catch (e) {
     errorMessage =
       e instanceof Error

@@ -16,7 +16,6 @@ describe("getDashboardKpis", () => {
     expect(kpis.totals.loanStructuringAssistantRuns).toBe(0);
     expect(kpis.termSheetCollateralAddresses).toEqual([]);
     expect(kpis.cashToCloseCollateralAddresses).toEqual([]);
-    expect(kpis.ruralCheckAddresses).toEqual([]);
     expect(kpis.recentEvents).toEqual([]);
     expect(kpis.stackedUsageByDay).toEqual([]);
     expect(kpis.chartStackKeys).toEqual([]);

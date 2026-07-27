@@ -8,7 +8,6 @@ export const ANALYTICS_EVENT_TYPES = [
   "term_sheet_generated",
   "pricing_check_run",
   "cash_to_close_run",
-  "rural_check_run",
   "credit_copilot_question",
   /** Voice harness — not Credit Copilot (TICKET-009A). */
   "voice_session_run",
@@ -32,8 +31,6 @@ export const ANALYTICS_TOOL_KEYS = [
   "pricing_calculator",
   "cash_to_close_estimator",
   "term_sheet",
-  "rural",
-  "rural_checker",
   "credit_copilot",
   /** Voice session API — not Credit Copilot (TICKET-009A). */
   "voice_operator",

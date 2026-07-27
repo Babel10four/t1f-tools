@@ -32,7 +32,6 @@ export const TOOL_STATUS: Record<string, ToolStatus> = {
   "/tools/term-sheet": "ready",
   "/tools/cash-to-close-estimator": "ready",
   "/tools/pricing-calculator": "ready",
-  "/tools/rural-checker": "ready",
   "/tools/credit-copilot": "ready",
   "/tools/email-templates": "ready",
   "/tools/deal-analyzer": "ready",
@@ -109,16 +108,6 @@ export const TOOL_SHAPES: Record<string, ToolShape> = {
       { href: "/tools/loan-structuring-assistant", label: "Deal Structuring Copilot" },
     ],
   },
-  "/tools/rural-checker": {
-    goal: "Screen a U.S. address for rural eligibility with a criterion-by-criterion evidence report.",
-    inputs: ["Property street address (or city/state)"],
-    output:
-      "Rural outcome (Likely Rural / Not Rural / Manual UW) with an evidence matrix and policy score.",
-    next: [
-      { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
-      { href: "/tools/property-intel", label: "Property Intel" },
-    ],
-  },
   "/tools/credit-copilot": {
     goal: "Ask questions about the published credit policy and get grounded, cited answers.",
     inputs: ["A policy question in plain English"],
@@ -126,7 +115,7 @@ export const TOOL_SHAPES: Record<string, ToolShape> = {
       "An answer with citations to the published policy text — not an underwriting decision.",
     next: [
       { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
-      { href: "/tools/rural-checker", label: "Rural Eligibility Checker" },
+      { href: "/tools/property-intel", label: "Property Intel" },
     ],
   },
   "/tools/borrower-intel": {

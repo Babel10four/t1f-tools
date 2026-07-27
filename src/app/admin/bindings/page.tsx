@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isActiveBindingType } from "@/lib/bindings/constants";
 import { listToolBindings } from "@/lib/bindings/service";
 import { BindingsManager } from "./bindings-manager";
 
@@ -13,7 +14,9 @@ export default async function AdminBindingsPage() {
   let initial: Awaited<ReturnType<typeof listToolBindings>> = [];
   let dbError: string | null = null;
   try {
-    initial = await listToolBindings();
+    initial = (await listToolBindings()).filter((binding) =>
+      isActiveBindingType(binding.bindingType),
+    );
   } catch {
     dbError = "Database unavailable — set DATABASE_URL and run migrations (including tool_context_bindings).";
   }

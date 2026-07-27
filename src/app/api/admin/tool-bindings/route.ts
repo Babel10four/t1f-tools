@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSessionPayload } from "@/lib/auth/session-server";
-import { bindingTypesV1 } from "@/db/schema";
+import {
+  ACTIVE_BINDING_TYPES,
+  isActiveBindingType,
+} from "@/lib/bindings/constants";
 import {
   insertBindingDraft,
   listToolBindings,
@@ -24,7 +27,11 @@ export async function GET(request: Request) {
       ...(toolKey ? { toolKey } : {}),
       ...(status ? { status } : {}),
     });
-    return NextResponse.json({ bindings });
+    return NextResponse.json({
+      bindings: bindings.filter((binding) =>
+        isActiveBindingType(binding.bindingType),
+      ),
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: msg }, { status: 503 });
@@ -57,9 +64,9 @@ export async function POST(request: Request) {
   }
 
   const bt = parseBindingType(body.binding_type);
-  if (!bt) {
+  if (!bt || !isActiveBindingType(bt)) {
     return NextResponse.json(
-      { error: "binding_type invalid", allowed: bindingTypesV1 },
+      { error: "binding_type invalid", allowed: ACTIVE_BINDING_TYPES },
       { status: 400 },
     );
   }

@@ -83,13 +83,11 @@ function AddressTable({
   title,
   rows,
   emptyHint,
-  showRuralResult,
   testId,
 }: {
   title: string;
   rows: DashboardKpis["termSheetCollateralAddresses"];
   emptyHint: string;
-  showRuralResult?: boolean;
   testId: string;
 }) {
   return (
@@ -116,11 +114,6 @@ function AddressTable({
                 <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
                   Role
                 </th>
-                {showRuralResult ? (
-                  <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
-                    Result
-                  </th>
-                ) : null}
                 <th className="px-2 py-1.5 font-medium text-zinc-600 dark:text-zinc-300">
                   Status
                 </th>
@@ -139,11 +132,6 @@ function AddressTable({
                     {row.address}
                   </td>
                   <td className="px-2 py-1.5 text-zinc-600 dark:text-zinc-400">{row.role}</td>
-                  {showRuralResult ? (
-                    <td className="px-2 py-1.5 font-mono text-[11px] text-zinc-700 dark:text-zinc-300">
-                      {row.ruralResult ?? "—"}
-                    </td>
-                  ) : null}
                   <td className="px-2 py-1.5 text-zinc-600 dark:text-zinc-400">{row.status}</td>
                 </tr>
               ))}
@@ -194,8 +182,8 @@ export function AdminDashboardView({ kpis }: Props) {
           <p>
             Postgres is not connected — the <code className="rounded bg-amber-100 px-1 text-xs dark:bg-amber-950/60">DATABASE_URL</code>{" "}
             environment variable is missing or invalid on this deployment. The admin
-            dashboard, Rural Checker (published rules), and document library all need
-            the same database.
+            dashboard, rule configuration, and document library all need the same
+            database.
           </p>
           <p className="mt-2">
             On <strong>Vercel</strong>: Project → Settings → Environment Variables → add{" "}
@@ -331,15 +319,6 @@ export function AdminDashboardView({ kpis }: Props) {
             testId="admin-address-cash-to-close"
           />
         </div>
-        <div className="mt-6">
-          <AddressTable
-            title="Rural Checker (street address submitted)"
-            rows={kpis.ruralCheckAddresses}
-            emptyHint="No rural checks with addressLine in metadata in this window."
-            showRuralResult
-            testId="admin-address-rural"
-          />
-        </div>
       </section>
 
       <section>
@@ -373,7 +352,6 @@ export function AdminDashboardView({ kpis }: Props) {
             value={totals.pricingCheckRuns}
             hint="pricing_check_run + tool_key pricing_calculator"
           />
-          <KpiCard label="Rural checks" value={totals.ruralCheckRuns} />
           <KpiCard label="Credit copilot" value={totals.creditCopilotQuestions} />
           <KpiCard
             label="Term sheet terms API events (reserved)"

@@ -3,6 +3,9 @@ import { getLegacyShellRedirects } from "./src/lib/runtime/legacy-route-redirect
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  turbopack: {
+    root: process.cwd(),
+  },
   serverExternalPackages: ["pdf-parse", "postgres", "drizzle-orm"],
   /** Vercel serverless: include repo markdown + listing source for /docs routes. */
   outputFileTracingIncludes: {

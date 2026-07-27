@@ -3,7 +3,6 @@ import {
   CREDIT_COPILOT_TOOL,
   ADVANCED_TOOLS,
   EXECUTION_LAYER_SEQUENCE,
-  INTEL_PLACEHOLDER_TOOLS,
   LIVE_INTEL_TOOLS,
   LIVE_TOOLS,
   RESOURCES_TOOLS,
@@ -31,7 +30,6 @@ export const TOOL_HREF_AUDIENCES: Record<string, readonly ("user" | "admin")[]> 
   /** Launch: hide from user until re-enabled (see product / rail red-box scope). */
   "/tools/pricing-calculator": ["admin"],
   "/tools/pricing-comparator": ["admin"],
-  "/tools/rural-checker": ["user", "admin"],
   "/tools/disclosure-builder": ["admin"],
   "/tools/credit-copilot": ["user", "admin"],
   "/tools/email-templates": ["user", "admin"],
@@ -68,12 +66,8 @@ export function filterToolRailItems(role: AuthRole): ToolRailItem[] {
 
 export type HubPageModel = {
   executionSequence: typeof EXECUTION_LAYER_SEQUENCE;
-  showIntelSection: boolean;
   liveIntelTools: typeof LIVE_INTEL_TOOLS;
-  intelPlaceholders: typeof INTEL_PLACEHOLDER_TOOLS;
-  showResourcesSection: boolean;
   resourcesTools: typeof RESOURCES_TOOLS;
-  showAdvancedSection: boolean;
   advancedTools: typeof ADVANCED_TOOLS;
 };
 
@@ -81,12 +75,8 @@ export function filterHubPageModel(role: AuthRole): HubPageModel {
   if (role === "admin") {
     return {
       executionSequence: EXECUTION_LAYER_SEQUENCE,
-      showIntelSection: true,
       liveIntelTools: LIVE_INTEL_TOOLS,
-      intelPlaceholders: INTEL_PLACEHOLDER_TOOLS,
-      showResourcesSection: true,
       resourcesTools: RESOURCES_TOOLS,
-      showAdvancedSection: true,
       advancedTools: ADVANCED_TOOLS,
     };
   }
@@ -99,10 +89,6 @@ export function filterHubPageModel(role: AuthRole): HubPageModel {
     hrefVisibleToRole(t.href, role),
   );
 
-  const intelPlaceholders = INTEL_PLACEHOLDER_TOOLS.filter((t) =>
-    hrefVisibleToRole(t.href, role),
-  );
-
   const resourcesTools = RESOURCES_TOOLS.filter((t) =>
     hrefVisibleToRole(t.href, role),
   );
@@ -111,12 +97,8 @@ export function filterHubPageModel(role: AuthRole): HubPageModel {
 
   return {
     executionSequence,
-    showIntelSection: liveIntelTools.length > 0 || intelPlaceholders.length > 0,
     liveIntelTools,
-    intelPlaceholders,
-    showResourcesSection: resourcesTools.length > 0,
     resourcesTools,
-    showAdvancedSection: advancedTools.length > 0,
     advancedTools,
   };
 }
@@ -145,9 +127,9 @@ export function primaryCtaLabelForRole(_role: AuthRole): string {
 /** Hero paragraph under the hub title — user copy omits JSON harness and admin-only tools. */
 export function hubHeroDescriptionForRole(role: AuthRole): string {
   if (role === "user") {
-    return "Start with Deal Sheet Builder to shape lender-ready terms, screen rural eligibility from the hub or Rural Checker (Census-backed context — not a legal determination), then use Credit Copilot for policy questions. Advanced execution tools stay available in admin mode.";
+    return "Build lender-ready terms, research borrowers and properties, answer policy questions, and move deals forward from one focused workspace.";
   }
-  return "Pick a tool below or use the JSON harness under Advanced / Internal when you need raw requests — not a generic loan portal.";
+  return "Use the same rep workspace, with additional internal tools and reporting available when you need them.";
 }
 
 type WorkflowStep = { href: string; label: string };

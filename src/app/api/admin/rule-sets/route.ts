@@ -1,17 +1,23 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getSessionPayload } from "@/lib/auth/session-server";
-import { RULE_TYPES, type RuleType } from "@/lib/rule-sets/constants";
+import {
+  ACTIVE_RULE_TYPES,
+  type ActiveRuleType,
+  type RuleType,
+} from "@/lib/rule-sets/constants";
 import { insertRuleSet, listRuleSets } from "@/lib/rule-sets/service";
 import { validateRulePayload } from "@/lib/rule-sets/validate-payload";
 
 export const runtime = "nodejs";
 
-function parseRuleType(v: string | null): RuleType | null {
+function parseRuleType(v: string | null): ActiveRuleType | null {
   if (!v) {
     return null;
   }
-  return RULE_TYPES.includes(v as RuleType) ? (v as RuleType) : null;
+  return ACTIVE_RULE_TYPES.includes(v as ActiveRuleType)
+    ? (v as ActiveRuleType)
+    : null;
 }
 
 function isUuid(s: string): boolean {
@@ -35,7 +41,11 @@ export async function GET(request: Request) {
       ...(rt ? { ruleType: rt } : {}),
       ...(status ? { status } : {}),
     });
-    return NextResponse.json({ ruleSets: rows });
+    return NextResponse.json({
+      ruleSets: rows.filter((row) =>
+        ACTIVE_RULE_TYPES.includes(row.ruleType as ActiveRuleType),
+      ),
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Server error";
     return NextResponse.json({ error: msg }, { status: 503 });

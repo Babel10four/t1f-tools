@@ -3,9 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { RuleSetRow } from "@/db/schema";
-import { RULE_TYPES, type RuleType } from "@/lib/rule-sets/constants";
+import {
+  ACTIVE_RULE_TYPES,
+  type ActiveRuleType,
+} from "@/lib/rule-sets/constants";
 
-const EXAMPLE_PAYLOADS: Record<RuleType, string> = {
+const EXAMPLE_PAYLOADS: Record<ActiveRuleType, string> = {
   rates: `{
   "schemaVersion": 1,
   "rateTables": [
@@ -15,40 +18,6 @@ const EXAMPLE_PAYLOADS: Record<RuleType, string> = {
   calculator_assumptions: `{
   "schemaVersion": 1,
   "assumptions": { "maxLtv": 75, "minFico": 620 }
-}`,
-  rural_rules: `{
-  "schemaVersion": 1,
-  "evaluation": {
-    "version": 1,
-    "population": {
-      "likelyRuralIfLte": 50000,
-      "likelyNotRuralIfGte": 250000,
-      "scoreIfRuralLean": 2,
-      "scoreIfNotRuralLean": -2,
-      "scoreIfBetween": 0,
-      "scoreIfMissing": 0
-    },
-    "msa": {
-      "likelyNotRuralIfTrue": true,
-      "scoreIfInMsaPenalty": -2,
-      "scoreIfInMsaNoPenalty": 0,
-      "scoreIfNotInMsa": 1,
-      "scoreIfMissing": 0
-    },
-    "userRuralIndicator": {
-      "likelyRuralIfTrue": true,
-      "scoreIfTrue": 1,
-      "scoreIfFalse": -1,
-      "scoreIfMissing": 0
-    },
-    "scores": {
-      "likelyRuralMin": 2,
-      "likelyNotRuralMax": -1,
-      "needsReviewBandMin": -1,
-      "needsReviewBandMax": 1
-    }
-  },
-  "rules": []
 }`,
 };
 
@@ -61,7 +30,7 @@ export function RulesManager({ initial }: Props) {
   const [rows, setRows] = useState<RuleSetRow[]>(initial);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [filterKind, setFilterKind] = useState<RuleType | "">("");
+  const [filterKind, setFilterKind] = useState<ActiveRuleType | "">("");
   const [filterStatus, setFilterStatus] = useState<
     "draft" | "published" | "archived" | ""
   >("");
@@ -186,12 +155,12 @@ export function RulesManager({ initial }: Props) {
           <select
             value={filterKind}
             onChange={(e) =>
-              setFilterKind((e.target.value || "") as RuleType | "")
+              setFilterKind((e.target.value || "") as ActiveRuleType | "")
             }
             className="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-600 dark:bg-zinc-900"
           >
             <option value="">All</option>
-            {RULE_TYPES.map((t) => (
+            {ACTIVE_RULE_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
@@ -238,7 +207,7 @@ export function RulesManager({ initial }: Props) {
                 disabled={!!busy}
                 className="rounded border border-zinc-300 bg-white px-2 py-1.5 font-mono text-xs dark:border-zinc-600 dark:bg-zinc-900"
               >
-                {RULE_TYPES.map((t) => (
+                {ACTIVE_RULE_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {t}
                   </option>
