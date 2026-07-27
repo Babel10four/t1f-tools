@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AdvancedToolRow } from "@/components/tools/advanced-tool-row";
 import { LiveToolCard } from "@/components/tools/live-tool-card";
-import { WorkflowsBlock } from "@/components/tools/workflows-block";
-import { buttonClassName } from "@/components/ui/button";
 import { getSessionPayload } from "@/lib/auth/session-server";
 import { PRODUCT_TAGLINE } from "@/lib/branding";
 import {
@@ -13,8 +11,10 @@ import {
   primaryCtaHrefForRole,
   primaryCtaLabelForRole,
 } from "@/lib/tools/tool-visibility";
-import { workflowsForRole } from "@/lib/tools/workflows";
-import { CREDIT_COPILOT_TOOL } from "./tools-registry";
+import {
+  CREDIT_COPILOT_TOOL,
+  type LiveToolDef,
+} from "./tools-registry";
 
 export const metadata: Metadata = {
   title: "Tool Hub",
@@ -27,87 +27,111 @@ export default async function ToolsHubPage() {
   const hub = filterHubPageModel(role);
   const primaryHref = primaryCtaHrefForRole(role);
   const primaryLabel = primaryCtaLabelForRole(role);
-  const workflows = workflowsForRole(role);
+  const executionTools = hub.executionSequence.map((item) => item.tool);
+  const primaryExecutionTool =
+    executionTools.find((tool) => tool.href === primaryHref) ?? executionTools[0];
+  const primaryTools = [
+    primaryExecutionTool,
+    hub.performanceTools[0],
+    CREDIT_COPILOT_TOOL,
+  ].filter((tool): tool is LiveToolDef => Boolean(tool));
+  const primaryHrefs = new Set(primaryTools.map((tool) => tool.href));
+  const secondaryTools = [
+    ...executionTools,
+    ...hub.liveIntelTools,
+    ...hub.resourcesTools,
+  ].filter(
+    (tool, index, tools) =>
+      !primaryHrefs.has(tool.href) &&
+      tools.findIndex((candidate) => candidate.href === tool.href) === index,
+  );
 
   return (
-    <div className="flex flex-col gap-10">
-      <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-chrome)] p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">
-          {role === "admin" ? "Admin workspace" : "Rep workspace"}
-        </p>
-        <div className="flex flex-col gap-1.5">
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
-            Get the next deal step done
+    <div className="flex flex-col gap-8 lg:gap-10">
+      <section className="relative overflow-hidden rounded-3xl bg-[var(--brand-deep)] px-6 py-8 text-white shadow-[0_24px_55px_rgba(18,63,44,0.16)] sm:px-8 sm:py-10">
+        <div
+          aria-hidden
+          className="absolute -right-20 -top-24 size-72 rounded-full border border-white/10 bg-white/5"
+        />
+        <div
+          aria-hidden
+          className="absolute -bottom-24 right-32 size-56 rounded-full border border-white/8"
+        />
+        <div className="relative max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100/80">
+            {role === "admin" ? "Admin workspace" : "Rep workspace"}
+          </p>
+          <h1 className="mt-3 max-w-2xl text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
+            Deal work and rep performance, in one place.
           </h1>
-          <p className="max-w-2xl text-base leading-relaxed text-[var(--text-muted)]">
+          <p className="mt-3 max-w-2xl text-base leading-7 text-emerald-50/75">
             {hubHeroDescriptionForRole(role)}
           </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              href={primaryHref}
+              className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-[var(--brand-deep)] shadow-sm transition hover:bg-emerald-50"
+            >
+              Open {primaryLabel}
+            </Link>
+            <Link
+              href="/tools/reviews"
+              className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/8 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/14"
+            >
+              View monthly reviews
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href={primaryHref} className={buttonClassName("primary", "md")}>
-            Start with {primaryLabel}
-          </Link>
+      </section>
+
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">
+              Start here
+            </p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+              The three places you’ll use most
+            </h2>
+          </div>
           {hrefVisibleToRole("/tools/deal-analyzer", role) ? (
             <Link
               href="/tools/deal-analyzer"
-              className="text-sm font-medium text-[var(--text-muted)] underline underline-offset-2 hover:text-[var(--text-primary)]"
+              className="text-sm font-medium text-[var(--text-muted)] underline underline-offset-4 hover:text-[var(--text-primary)]"
             >
               View JSON harness
             </Link>
           ) : null}
         </div>
-      </section>
-
-      <WorkflowsBlock workflows={workflows} />
-
-      <section>
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Build and quote
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Shipped deal tools for structuring, terms, cash to close, and pricing.
-        </p>
-        <div className="mt-6 flex max-w-3xl flex-col gap-4">
-          {hub.executionSequence.map((item) => (
-            <LiveToolCard key={item.tool.href} tool={item.tool} />
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {primaryTools.map((tool) => (
+            <LiveToolCard key={tool.href} tool={tool} />
           ))}
         </div>
       </section>
 
-      {hub.liveIntelTools.length > 0 || hub.resourcesTools.length > 0 ? (
+      {secondaryTools.length > 0 ? (
         <section>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Research and follow up
+          <h2 className="text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+            More tools
           </h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Build context on the borrower or property, then move quickly with a usable draft.
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            Property context, communication, and additional quoting utilities.
           </p>
-          <div className="mt-6 flex max-w-3xl flex-col gap-4">
-            {[...hub.liveIntelTools, ...hub.resourcesTools].map((tool) => (
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {secondaryTools.map((tool) => (
               <LiveToolCard key={tool.href} tool={tool} />
             ))}
           </div>
         </section>
       ) : null}
 
-      <section>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Policy support
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Policy Q&A — grounded in published credit policy text (not a credit pull).
-        </p>
-        <div className="mt-4 flex max-w-3xl flex-col gap-4">
-          <LiveToolCard tool={CREDIT_COPILOT_TOOL} />
-        </div>
-      </section>
-
       {hub.advancedTools.length > 0 ? (
-        <section>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+        <section className="border-t border-[var(--border-subtle)] pt-7">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
             Advanced / Internal
           </h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
             Engineer-oriented and contract-check tools — not primary rep workflows.
           </p>
           <div className="mt-4 max-w-xl">

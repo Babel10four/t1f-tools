@@ -18,7 +18,9 @@ export function ToolsWorkbenchShell({ children, role }: Props) {
           <ToolRail role={role} />
           <div className="flex min-h-0 min-w-0 flex-1">
             <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-[var(--surface-page)]">
-              <div className="mx-auto w-full max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6">{children}</div>
+              <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+                {children}
+              </div>
             </main>
           </div>
         </div>

@@ -5,7 +5,6 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { HUB_SYSTEM_NAME } from "@/lib/branding";
 import { decideAccess } from "@/lib/auth/access";
 import { getSessionPayload } from "@/lib/auth/session-server";
-import { ToolTopNav } from "./tool-top-nav";
 import { ToolsWorkbenchShell } from "./tools-workbench-shell";
 
 export default async function ToolsLayout({
@@ -29,18 +28,27 @@ export default async function ToolsLayout({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--border-subtle)] bg-[var(--surface-chrome)] px-4 py-3">
-        <div className="min-w-0">
+      <header className="relative z-20 flex shrink-0 items-center justify-between gap-4 border-b border-[var(--border-subtle)] bg-[var(--surface-chrome)] px-4 py-2.5 shadow-[0_1px_0_rgba(19,46,33,0.03)] sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/tools"
-            className="text-base font-semibold tracking-tight text-[var(--text-primary)] hover:opacity-90"
+            className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--brand)] text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--brand-hover)]"
+            aria-label={`${HUB_SYSTEM_NAME} home`}
           >
-            {HUB_SYSTEM_NAME}
+            T
           </Link>
-          <p className="truncate text-xs font-medium text-[var(--text-muted)]">
-            {role === "admin" ? "Admin workspace" : "Rep workspace"} · build{" "}
-            <span className="font-mono">{build}</span>
-          </p>
+          <div className="min-w-0">
+            <Link
+              href="/tools"
+              className="text-base font-semibold tracking-tight text-[var(--text-primary)] hover:text-[var(--brand)]"
+            >
+              {HUB_SYSTEM_NAME}
+            </Link>
+            <p className="truncate text-[11px] font-medium text-[var(--text-muted)]">
+              {role === "admin" ? "Admin workspace" : "Rep workspace"} · build{" "}
+              <span className="font-mono">{build}</span>
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-3">
           {role === "admin" ? (
@@ -58,7 +66,6 @@ export default async function ToolsLayout({
           </LogoutButton>
         </div>
       </header>
-      <ToolTopNav role={role} />
       <ToolsWorkbenchShell role={role}>
         {children}
       </ToolsWorkbenchShell>

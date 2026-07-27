@@ -17,8 +17,8 @@ import {
 const USER_NAV_HREFS = new Set([
   "/tools",
   "/tools/term-sheet",
+  "/tools/reviews",
   "/tools/credit-copilot",
-  "/tools/borrower-intel",
   "/tools/property-intel",
   "/tools/email-templates",
 ]);
@@ -27,8 +27,8 @@ const USER_NAV_HREFS = new Set([
 const USER_RAIL_HREFS = new Set([
   "/tools",
   "/tools/term-sheet",
+  "/tools/reviews",
   "/tools/credit-copilot",
-  "/tools/borrower-intel",
   "/tools/property-intel",
   "/tools/email-templates",
 ]);
@@ -39,6 +39,7 @@ const USER_HIDDEN_HREFS = new Set([
   "/tools/pricing-comparator",
   "/tools/disclosure-builder",
   "/tools/deal-analyzer",
+  "/tools/borrower-intel",
 ]);
 
 describe("tool-visibility (launch restriction)", () => {
@@ -48,7 +49,7 @@ describe("tool-visibility (launch restriction)", () => {
     }
   });
 
-  it("user sees only hub + sheet + policy in rail/nav; admin tools stay hidden", () => {
+  it("user sees the focused rep workspace in rail/nav; admin tools stay hidden", () => {
     const railHrefs = filterToolRailItems("user").map((i) => i.href);
     expect(new Set(railHrefs)).toEqual(USER_RAIL_HREFS);
 
@@ -65,10 +66,8 @@ describe("tool-visibility (launch restriction)", () => {
 
   it("user hub model shows shipped rep tools and hides advanced tools", () => {
     const hub = filterHubPageModel("user");
-    expect(hub.liveIntelTools.map((t) => t.href)).toEqual([
-      "/tools/borrower-intel",
-      "/tools/property-intel",
-    ]);
+    expect(hub.performanceTools.map((t) => t.href)).toEqual(["/tools/reviews"]);
+    expect(hub.liveIntelTools.map((t) => t.href)).toEqual(["/tools/property-intel"]);
     expect(hub.resourcesTools.map((t) => t.href)).toEqual([
       "/tools/email-templates",
     ]);
@@ -92,6 +91,7 @@ describe("tool-visibility (launch restriction)", () => {
 
   it("admin hub model matches unfiltered execution, intel, and advanced", () => {
     const hub = filterHubPageModel("admin");
+    expect(hub.performanceTools.map((t) => t.href)).toEqual(["/tools/reviews"]);
     expect(hub.advancedTools.length).toBeGreaterThan(0);
     expect(hub.executionSequence).toHaveLength(4);
   });

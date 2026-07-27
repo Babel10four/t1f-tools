@@ -11,6 +11,7 @@ describe("tools-registry (BRAND-001)", () => {
     expect(TOOLS_NAV_SECTIONS.map((s) => s.id)).toEqual([
       "hub",
       "execution",
+      "performance",
       "intel",
       "decision",
       "resources",
@@ -19,7 +20,8 @@ describe("tools-registry (BRAND-001)", () => {
     expect(TOOLS_NAV_SECTIONS.map((s) => s.title)).toEqual([
       "Overview",
       "Build & Quote",
-      "Research",
+      "Rep Performance",
+      "Property Research",
       "Policy",
       "Rep Resources",
       "Advanced / Internal",
@@ -67,15 +69,17 @@ describe("tools-registry (BRAND-001)", () => {
     expect(all.includes("/tools/pricing")).toBe(false);
   });
 
-  it("includes shipped research tools and live Credit Copilot", () => {
-    const intel = TOOLS_NAV_SECTIONS.find((s) => s.id === "intel")!;
-    expect(intel.links.map((l) => l.href)).toEqual([
-      "/tools/borrower-intel",
-      "/tools/property-intel",
+  it("includes rep reviews, property research, and live Credit Copilot", () => {
+    const performance = TOOLS_NAV_SECTIONS.find((s) => s.id === "performance")!;
+    expect(performance.links).toEqual([
+      {
+        href: "/tools/reviews",
+        label: "Rep Reviews",
+        isPlaceholder: false,
+      },
     ]);
-    expect(intel.links.find((l) => l.href === "/tools/borrower-intel")?.isPlaceholder).toBe(
-      false,
-    );
+    const intel = TOOLS_NAV_SECTIONS.find((s) => s.id === "intel")!;
+    expect(intel.links.map((l) => l.href)).toEqual(["/tools/property-intel"]);
     expect(intel.links.find((l) => l.href === "/tools/property-intel")?.isPlaceholder).toBe(
       false,
     );
