@@ -46,26 +46,6 @@ export const TOOL_RAIL_ITEMS: ToolRailItem[] = [
     icon: "percent",
   },
   {
-    href: "/tools/pricing-comparator",
-    shortLabel: "Compare",
-    title: "Pricing Comparator (coming soon)",
-    icon: "scale",
-    placeholder: true,
-  },
-  {
-    href: "/tools/rural-checker",
-    shortLabel: "Rural",
-    title: "Rural Eligibility Checker",
-    icon: "map",
-  },
-  {
-    href: "/tools/disclosure-builder",
-    shortLabel: "Discl.",
-    title: "Disclosure Builder (coming soon)",
-    icon: "clipboard",
-    placeholder: true,
-  },
-  {
     href: "/tools/credit-copilot",
     shortLabel: "Policy",
     title: "Credit Copilot — focus canvas",

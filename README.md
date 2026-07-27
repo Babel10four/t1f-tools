@@ -26,16 +26,17 @@ openssl rand -base64 32
 
 - **`/login`** — single password field; failures return a **generic** error (no hint which hash failed). Successful logins return a server-chosen default path (`/tools` for user, `/admin/dashboard` for admin) unless a safe `next` query param is present.
 - **`/logout`** — clears the session cookie and sends you to `/login`.
-- **Middleware (ACCESS-001A)** enforces:
+- **Proxy (ACCESS-001A)** enforces:
   - **`/tools/**`** — requires `user` or `admin` (unauthenticated → redirect `/login`).
   - **`/admin/**`** — `admin` only (`user` → redirect `/tools`).
   - **`/api/deal/**`** — `user` or `admin` (unauthenticated → **401** JSON).
-  - **`/api/property/**`** — `user` or `admin` (unauthenticated → **401** JSON); Rural Checker API (`POST /api/property/rural`).
+  - **`/api/property/**`** — `user` or `admin` (unauthenticated → **401** JSON).
   - **`/api/credit-copilot/**`** — `user` or `admin` (unauthenticated → **401** JSON); Credit Copilot API (`POST /api/credit-copilot/ask` — see [`docs/specs/TICKET-009.md`](./docs/specs/TICKET-009.md)).
   - **`/api/admin/**`** — `admin` only (`user` → **403** JSON).
   - **`/login`** — authenticated users are redirected (`user` → `/tools`, `admin` → `/admin/dashboard`).
-  - Other routes (e.g. `/api/intel/**`) are **not** gated unless you extend `src/middleware.ts` `matcher`.
+  - Other routes (e.g. `/api/intel/**`) are **not** gated unless you extend `src/proxy.ts` `matcher`.
 - **`/api/auth/login`** and **`/api/auth/logout`** stay outside the gate for bootstrapping sessions.
+- Production `*.vercel.app` aliases redirect to **`https://t1f.tools`** so browsers do not accumulate host-specific sessions. The signed-in workspace and build SHA are visible in the tool header.
 
 ## Admin document library (CONTENT-001)
 
@@ -43,14 +44,14 @@ PDF metadata lives in **Postgres**; file bytes in **Vercel Blob** (private) when
 
 | Variable | Purpose |
 |----------|---------|
-| `DATABASE_URL` | Postgres connection string. **Required in production** for `/admin/documents`, published **`rural_rules`** (Rural Checker), **`rule_sets`**, and the **`events`** analytics table (admin dashboard KPIs). Without it, those features return configuration errors. |
+| `DATABASE_URL` | Postgres connection string. **Required in production** for `/admin/documents`, **`rule_sets`**, and the **`events`** analytics table (admin dashboard KPIs). Without it, those features return configuration errors. |
 
 ### Production (e.g. Vercel)
 
 1. Create a Postgres instance (Neon, Supabase, RDS, etc.) and copy its connection string.
 2. In the host’s environment settings, set **`DATABASE_URL`** for **Production** (and **Preview** if you want branch deploys to work the same).
 3. Apply schema: from your machine run `npm run db:push` with `DATABASE_URL` set to that URL, or run `drizzle/0001_documents.sql` → `0002_rule_sets.sql` → `0003_events.sql` in order against the database.
-4. Redeploy the app. Seed or publish **`rural_rules`** and bindings if Rural Checker should score beyond `insufficient_info` (see `npm run data:rural-001` / admin Rules UI).
+4. Redeploy the app.
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob read/write token for private PDF storage (production). |
 | `LOCAL_DOCUMENT_ROOT` | Optional; overrides the local dev directory for PDFs when Blob is not configured. |
 
@@ -73,7 +74,7 @@ npm run db:push
 
 ## Rule sets & runtime configuration (CONFIG-001 / CONFIG-001A)
 
-Structured **runtime** settings (rates tables, calculator assumptions, rural rules) live in Postgres as **`rule_sets`**, separate from PDF documents. Tools will read published rule sets in **CONTENT-002**; CONFIG-001 only adds admin CRUD and lifecycle.
+Structured **runtime** settings (rate tables and calculator assumptions) live in Postgres as **`rule_sets`**, separate from PDF documents. Tools read published rule sets through explicit bindings.
 
 | Variable | Purpose |
 |----------|---------|
@@ -97,7 +98,7 @@ Structured **runtime** settings (rates tables, calculator assumptions, rural rul
 |-------------|---------|
 | `rates` | Versioned rate tables / indices for pricing-related tools. |
 | `calculator_assumptions` | Numeric caps and inputs for deal/workflow calculators. |
-| `rural_rules` | Structured rural eligibility / scoring rules (separate from rural policy PDFs). |
+| `rural_rules` | Legacy storage type retained for migration compatibility; it is not offered in the active product. |
 
 **Publish / rollback (practical semantics)**
 
@@ -127,7 +128,7 @@ Append-only **`events`** rows in Postgres (`drizzle/0003_events.sql` or `npm run
 
 **`POST /api/auth/login`** — logs **`session_login`** on success (with JWT `role` + opaque `sid` on the row) and on invalid password (**`status: error`**, no password stored).
 
-**Other instrumented routes (server-side):** `POST /api/deal/terms`, `POST /api/deal/structure`, `POST /api/property/analyze`, `POST /api/property/valuation`, `POST /api/intel/market`, `POST /api/intel/borrower`, `POST /api/intel/prospect`, `POST /api/property/rural`, `POST /api/voice/session`, admin document upload/publish, rule-set publish/rollback.
+**Other instrumented routes (server-side):** `POST /api/deal/terms`, `POST /api/deal/structure`, `POST /api/property/analyze`, `POST /api/property/valuation`, `POST /api/intel/market`, `POST /api/intel/borrower`, `POST /api/intel/prospect`, `POST /api/voice/session`, admin document upload/publish, rule-set publish/rollback.
 
 **Semantics reference:** `docs/specs/ANALYTICS-001.md` (ANALYTICS-001A), `src/lib/analytics/kpi-semantics.ts`.
 

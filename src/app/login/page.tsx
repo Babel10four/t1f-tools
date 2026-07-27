@@ -26,7 +26,12 @@ export default function LoginPage() {
           {HUB_SYSTEM_NAME}
         </h1>
         <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-          Sign in with the shared password for your role.
+          Sign in with the rep or admin password. Your browser keeps that workspace
+          active for seven days.
+        </p>
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
+          Use <strong>t1f.tools</strong> directly; Vercel preview addresses keep
+          separate sessions.
         </p>
         <div className="mt-6">
           <Suspense fallback={<LoginFormFallback />}>

@@ -13,7 +13,6 @@
     "db:generate": "node --env-file-if-exists=.env --env-file-if-exists=.env.local ./node_modules/drizzle-kit/bin.cjs generate",
     "db:verify": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/verify-db-connection.ts",
     "data:001": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/data-001-initial-policy-load.ts",
-    "data:rural-001": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/rural-data-001-initial-rural-rules-load.ts",
     "data:credit-001": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/credit-data-001-bind-credit-policy.ts"
   },
   "dependencies": {

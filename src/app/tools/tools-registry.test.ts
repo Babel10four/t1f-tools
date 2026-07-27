@@ -7,7 +7,7 @@ import {
 } from "./tools-registry";
 
 describe("tools-registry (BRAND-001)", () => {
-  it("defines nav sections: Overview, Execution, Intel, Decision, Advanced / Internal", () => {
+  it("defines focused rep and admin navigation sections", () => {
     expect(TOOLS_NAV_SECTIONS.map((s) => s.id)).toEqual([
       "hub",
       "execution",
@@ -18,46 +18,40 @@ describe("tools-registry (BRAND-001)", () => {
     ]);
     expect(TOOLS_NAV_SECTIONS.map((s) => s.title)).toEqual([
       "Overview",
-      "Execution Layer",
-      "Intel Layer",
-      "Decision Layer",
-      "Resources",
+      "Build & Quote",
+      "Research",
+      "Policy",
+      "Rep Resources",
       "Advanced / Internal",
     ]);
   });
 
-  it("lists five live tools with BRAND-001 display names and stable routes", () => {
-    expect(LIVE_TOOLS).toHaveLength(5);
+  it("lists four shipped deal tools with stable routes", () => {
+    expect(LIVE_TOOLS).toHaveLength(4);
     expect(LIVE_TOOLS.map((t) => t.href)).toEqual([
       "/tools/loan-structuring-assistant",
       "/tools/term-sheet",
       "/tools/cash-to-close-estimator",
       "/tools/pricing-calculator",
-      "/tools/rural-checker",
     ]);
     expect(LIVE_TOOLS.map((t) => t.label)).toEqual([
       "Deal Structuring Copilot",
       "Deal Sheet Builder",
       "Cash to Close Calculator",
       "Loan Pricing Engine",
-      "Rural Eligibility Checker",
     ]);
   });
 
-  it("orders execution layer with comparator stub between pricing engine and rural checker", () => {
+  it("keeps unfinished tools out of the execution layer", () => {
     expect(LIVE_TOOLS[3]!.href).toBe("/tools/pricing-calculator");
-    expect(LIVE_TOOLS[4]!.href).toBe("/tools/rural-checker");
     const seq = EXECUTION_LAYER_SEQUENCE.map((x) =>
-      x.kind === "live" ? `live:${x.tool.href}` : `ph:${x.tool.href}`,
+      `live:${x.tool.href}`,
     );
     expect(seq).toEqual([
       "live:/tools/loan-structuring-assistant",
       "live:/tools/term-sheet",
       "live:/tools/cash-to-close-estimator",
       "live:/tools/pricing-calculator",
-      "ph:/tools/pricing-comparator",
-      "live:/tools/rural-checker",
-      "ph:/tools/disclosure-builder",
     ]);
   });
 
@@ -73,14 +67,11 @@ describe("tools-registry (BRAND-001)", () => {
     expect(all.includes("/tools/pricing")).toBe(false);
   });
 
-  it("includes live Borrower Intel ahead of intel placeholders, and live Credit Copilot in Decision layer", () => {
+  it("includes shipped research tools and live Credit Copilot", () => {
     const intel = TOOLS_NAV_SECTIONS.find((s) => s.id === "intel")!;
     expect(intel.links.map((l) => l.href)).toEqual([
       "/tools/borrower-intel",
       "/tools/property-intel",
-      "/tools/market-analyzer",
-      "/tools/prospect-researcher",
-      "/tools/voice-agent",
     ]);
     expect(intel.links.find((l) => l.href === "/tools/borrower-intel")?.isPlaceholder).toBe(
       false,

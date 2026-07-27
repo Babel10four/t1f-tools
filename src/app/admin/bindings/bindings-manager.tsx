@@ -3,8 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ToolContextBindingRow } from "@/db/schema";
-import { bindingTypesV1 } from "@/db/schema";
-import { SUGGESTED_TOOL_KEYS } from "@/lib/bindings/constants";
+import {
+  ACTIVE_BINDING_TYPES,
+  isActiveBindingType,
+  SUGGESTED_TOOL_KEYS,
+} from "@/lib/bindings/constants";
 
 type Props = {
   initial: ToolContextBindingRow[];
@@ -24,7 +27,9 @@ export function BindingsManager({ initial, dbError }: Props) {
       return;
     }
     const data = (await res.json()) as { bindings: ToolContextBindingRow[] };
-    setRows(data.bindings);
+    setRows(
+      data.bindings.filter((binding) => isActiveBindingType(binding.bindingType)),
+    );
     router.refresh();
   }
 
@@ -149,7 +154,7 @@ export function BindingsManager({ initial, dbError }: Props) {
               required
               className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-600 dark:bg-zinc-950"
             >
-              {bindingTypesV1.map((bt) => (
+              {ACTIVE_BINDING_TYPES.map((bt) => (
                 <option key={bt} value={bt}>
                   {bt}
                 </option>

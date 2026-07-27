@@ -61,6 +61,7 @@ export async function POST(request: Request) {
   });
   const defaultPath = role === "admin" ? DEFAULT_ADMIN_PATH : DEFAULT_USER_PATH;
   const res = NextResponse.json({ ok: true, defaultPath });
+  res.headers.set("Cache-Control", "private, no-store, max-age=0");
   res.cookies.set(authCookieName(), token, sessionCookieOptions());
   return res;
 }

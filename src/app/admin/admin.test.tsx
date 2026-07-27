@@ -85,7 +85,6 @@ const MOCK_KPIS: DashboardKpis = {
     dealAnalyzerRuns: 1,
     pricingCheckRuns: 2,
     cashToCloseRuns: 1,
-    ruralCheckRuns: 0,
     creditCopilotQuestions: 0,
     termSheetPreviewRuns: 2,
     termSheetTermsApiEvents: 0,
@@ -110,7 +109,6 @@ const MOCK_KPIS: DashboardKpis = {
   publishedRuleSets: [{ ruleType: "rates", versionLabel: "v1" }],
   termSheetCollateralAddresses: [],
   cashToCloseCollateralAddresses: [],
-  ruralCheckAddresses: [],
   recentEvents: [
     {
       id: "00000000-0000-4000-8000-000000000001",

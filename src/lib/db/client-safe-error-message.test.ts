@@ -9,7 +9,7 @@ describe("clientSafeDatabaseErrorMessage", () => {
   });
 
   it("replaces postgres-js Failed query leaks", () => {
-    const raw = `Failed query: select "id" from "tool_context_bindings" where ($1) params: rural_checker`;
+    const raw = `Failed query: select "id" from "tool_context_bindings" where ($1) params: credit_copilot`;
     expect(clientSafeDatabaseErrorMessage(raw)).toMatch(
       /could not load its published configuration/i,
     );
@@ -26,7 +26,7 @@ describe("clientSafeDatabaseErrorMessage", () => {
   });
 
   it("passes through application validation errors", () => {
-    const msg = "Published rural rules payload failed validation: missing field x";
+    const msg = "Published rate payload failed validation: missing field x";
     expect(clientSafeDatabaseErrorMessage(msg)).toBe(msg);
   });
 });

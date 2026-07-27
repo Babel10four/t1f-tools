@@ -13,11 +13,10 @@ import {
   workflowStepsForRole,
 } from "./tool-visibility";
 
-/** User nav (hub + sections): includes Credit Copilot + Rural Checker + Borrower Intel + Email Templates. */
+/** User nav: shipped rep tools only. */
 const USER_NAV_HREFS = new Set([
   "/tools",
   "/tools/term-sheet",
-  "/tools/rural-checker",
   "/tools/credit-copilot",
   "/tools/borrower-intel",
   "/tools/property-intel",
@@ -28,7 +27,6 @@ const USER_NAV_HREFS = new Set([
 const USER_RAIL_HREFS = new Set([
   "/tools",
   "/tools/term-sheet",
-  "/tools/rural-checker",
   "/tools/credit-copilot",
   "/tools/borrower-intel",
   "/tools/property-intel",
@@ -65,24 +63,19 @@ describe("tool-visibility (launch restriction)", () => {
     }
   });
 
-  it("user hub model shows live Borrower Intel but no intel placeholders or advanced; execution shows sheet + rural", () => {
+  it("user hub model shows shipped rep tools and hides advanced tools", () => {
     const hub = filterHubPageModel("user");
-    expect(hub.showIntelSection).toBe(true);
     expect(hub.liveIntelTools.map((t) => t.href)).toEqual([
       "/tools/borrower-intel",
       "/tools/property-intel",
     ]);
-    expect(hub.intelPlaceholders).toHaveLength(0);
-    expect(hub.showResourcesSection).toBe(true);
     expect(hub.resourcesTools.map((t) => t.href)).toEqual([
       "/tools/email-templates",
     ]);
-    expect(hub.showAdvancedSection).toBe(false);
     expect(hub.advancedTools).toHaveLength(0);
-    expect(hub.executionSequence).toHaveLength(2);
+    expect(hub.executionSequence).toHaveLength(1);
     expect(hub.executionSequence.map((x) => x.tool.href)).toEqual([
       "/tools/term-sheet",
-      "/tools/rural-checker",
     ]);
   });
 
@@ -99,10 +92,8 @@ describe("tool-visibility (launch restriction)", () => {
 
   it("admin hub model matches unfiltered execution, intel, and advanced", () => {
     const hub = filterHubPageModel("admin");
-    expect(hub.showIntelSection).toBe(true);
-    expect(hub.showAdvancedSection).toBe(true);
-    expect(hub.intelPlaceholders.length).toBeGreaterThan(0);
     expect(hub.advancedTools.length).toBeGreaterThan(0);
+    expect(hub.executionSequence).toHaveLength(4);
   });
 
   it("toolAudiencesForHref returns admin-only for unknown hrefs", () => {

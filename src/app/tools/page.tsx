@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdvancedToolRow } from "@/components/tools/advanced-tool-row";
-import { ComingSoonRow } from "@/components/tools/coming-soon-row";
 import { LiveToolCard } from "@/components/tools/live-tool-card";
-import { RuralHubQuickCheck } from "@/components/tools/rural-hub-quick-check";
 import { WorkflowsBlock } from "@/components/tools/workflows-block";
 import { buttonClassName } from "@/components/ui/button";
 import { getSessionPayload } from "@/lib/auth/session-server";
@@ -32,11 +30,14 @@ export default async function ToolsHubPage() {
   const workflows = workflowsForRole(role);
 
   return (
-    <div className="flex flex-col gap-12">
-      <section className="flex flex-col gap-4">
+    <div className="flex flex-col gap-10">
+      <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-chrome)] p-6 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">
+          {role === "admin" ? "Admin workspace" : "Rep workspace"}
+        </p>
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-            Tool Hub
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
+            Get the next deal step done
           </h1>
           <p className="max-w-2xl text-base leading-relaxed text-[var(--text-muted)]">
             {hubHeroDescriptionForRole(role)}
@@ -57,59 +58,41 @@ export default async function ToolsHubPage() {
         </div>
       </section>
 
-      {hrefVisibleToRole("/tools/rural-checker", role) ? <RuralHubQuickCheck /> : null}
-
       <WorkflowsBlock workflows={workflows} />
 
       <section>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Execution Layer
+          Build and quote
         </h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Deal workflow tools backed by{" "}
-          <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs dark:bg-zinc-900">
-            POST /api/deal/analyze
-          </code>{" "}
-          where noted. Placeholders are not production-ready.
+          Shipped deal tools for structuring, terms, cash to close, and pricing.
         </p>
         <div className="mt-6 flex max-w-3xl flex-col gap-4">
-          {hub.executionSequence.map((item, i) =>
-            item.kind === "live" ? (
-              <LiveToolCard key={item.tool.href} tool={item.tool} />
-            ) : (
-              <ComingSoonRow key={`${item.tool.href}-${i}`} tool={item.tool} />
-            ),
-          )}
+          {hub.executionSequence.map((item) => (
+            <LiveToolCard key={item.tool.href} tool={item.tool} />
+          ))}
         </div>
       </section>
 
-      {hub.showIntelSection ? (
+      {hub.liveIntelTools.length > 0 || hub.resourcesTools.length > 0 ? (
         <section>
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Intel Layer
+            Research and follow up
           </h2>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Automated research via Firecrawl + GPT. Voice and remaining tools are placeholders
-            until shipped.
+            Build context on the borrower or property, then move quickly with a usable draft.
           </p>
-          {hub.liveIntelTools.length > 0 ? (
-            <div className="mt-6 flex max-w-3xl flex-col gap-4">
-              {hub.liveIntelTools.map((tool) => (
-                <LiveToolCard key={tool.href} tool={tool} />
-              ))}
-            </div>
-          ) : null}
-          <div className="mt-4 flex flex-col gap-3">
-            {hub.intelPlaceholders.map((tool) => (
-              <ComingSoonRow key={tool.href} tool={tool} />
+          <div className="mt-6 flex max-w-3xl flex-col gap-4">
+            {[...hub.liveIntelTools, ...hub.resourcesTools].map((tool) => (
+              <LiveToolCard key={tool.href} tool={tool} />
             ))}
           </div>
         </section>
       ) : null}
 
       <section>
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-          Decision Layer
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+            Policy support
         </h2>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           Policy Q&A — grounded in published credit policy text (not a credit pull).
@@ -119,23 +102,7 @@ export default async function ToolsHubPage() {
         </div>
       </section>
 
-      {hub.showResourcesSection ? (
-        <section>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
-            Resources
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Reusable rep content — copy, personalize, and send.
-          </p>
-          <div className="mt-4 flex max-w-3xl flex-col gap-4">
-            {hub.resourcesTools.map((tool) => (
-              <LiveToolCard key={tool.href} tool={tool} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {hub.showAdvancedSection ? (
+      {hub.advancedTools.length > 0 ? (
         <section>
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
             Advanced / Internal

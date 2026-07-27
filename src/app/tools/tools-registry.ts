@@ -21,11 +21,6 @@ export type AdvancedToolDef = {
   ctaLabel: string;
 };
 
-export type ComingSoonToolDef = {
-  href: string;
-  label: string;
-};
-
 /** Primary CTA on the hub: first live execution tool (Deal Structuring Copilot). */
 export const HUB_PRIMARY_CTA_HREF = "/tools/loan-structuring-assistant" as const;
 
@@ -64,29 +59,6 @@ export const LIVE_TOOLS: LiveToolDef[] = [
       "Pricing-first layout for rate readiness and policy context from the same analyze API.",
     ctaLabel: "Open",
   },
-  {
-    href: "/tools/rural-checker",
-    label: "Rural Eligibility Checker",
-    description:
-      "Internal screening from published rural_rules — not a final determination; optional policy metadata only.",
-    ctaLabel: "Open",
-  },
-];
-
-export const PRICING_COMPARATOR_PLACEHOLDER: ComingSoonToolDef = {
-  href: "/tools/pricing-comparator",
-  label: "Pricing Comparator",
-};
-
-export const DISCLOSURE_BUILDER_PLACEHOLDER: ComingSoonToolDef = {
-  href: "/tools/disclosure-builder",
-  label: "Disclosure Builder",
-};
-
-export const INTEL_PLACEHOLDER_TOOLS: ComingSoonToolDef[] = [
-  { href: "/tools/market-analyzer", label: "Market Intel" },
-  { href: "/tools/prospect-researcher", label: "Prospect Intel" },
-  { href: "/tools/voice-agent", label: "Voice Operator" },
 ];
 
 /** Intel Layer — live (INTEL-001). Firecrawl + GPT borrower intelligence. */
@@ -132,20 +104,15 @@ export const EMAIL_TEMPLATES_TOOL: LiveToolDef = {
 
 export const RESOURCES_TOOLS: LiveToolDef[] = [EMAIL_TEMPLATES_TOOL];
 
-/**
- * Execution layer order on the hub: four live tools, comparator (stub), rural (live), disclosure (stub).
- */
-export const EXECUTION_LAYER_SEQUENCE: Array<
-  | { kind: "live"; tool: LiveToolDef }
-  | { kind: "placeholder"; tool: ComingSoonToolDef }
-> = [
+/** Shipped deal tools only. Unfinished placeholders stay out of the rep workspace. */
+export const EXECUTION_LAYER_SEQUENCE: Array<{
+  kind: "live";
+  tool: LiveToolDef;
+}> = [
   { kind: "live", tool: LIVE_TOOLS[0]! },
   { kind: "live", tool: LIVE_TOOLS[1]! },
   { kind: "live", tool: LIVE_TOOLS[2]! },
   { kind: "live", tool: LIVE_TOOLS[3]! },
-  { kind: "placeholder", tool: PRICING_COMPARATOR_PLACEHOLDER },
-  { kind: "live", tool: LIVE_TOOLS[4]! },
-  { kind: "placeholder", tool: DISCLOSURE_BUILDER_PLACEHOLDER },
 ];
 
 export const ADVANCED_TOOLS: AdvancedToolDef[] = [
@@ -180,40 +147,25 @@ export const TOOLS_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: "execution",
-    title: "Execution Layer",
-    links: EXECUTION_LAYER_SEQUENCE.map((item) =>
-      item.kind === "live"
-        ? {
-            href: item.tool.href,
-            label: item.tool.label,
-            isPlaceholder: false,
-          }
-        : {
-            href: item.tool.href,
-            label: item.tool.label,
-            isPlaceholder: true,
-          },
-    ),
+    title: "Build & Quote",
+    links: EXECUTION_LAYER_SEQUENCE.map((item) => ({
+      href: item.tool.href,
+      label: item.tool.label,
+      isPlaceholder: false,
+    })),
   },
   {
     id: "intel",
-    title: "Intel Layer",
-    links: [
-      ...LIVE_INTEL_TOOLS.map((t) => ({
-        href: t.href,
-        label: t.label,
-        isPlaceholder: false,
-      })),
-      ...INTEL_PLACEHOLDER_TOOLS.map((t) => ({
-        href: t.href,
-        label: t.label,
-        isPlaceholder: true,
-      })),
-    ],
+    title: "Research",
+    links: LIVE_INTEL_TOOLS.map((t) => ({
+      href: t.href,
+      label: t.label,
+      isPlaceholder: false,
+    })),
   },
   {
     id: "decision",
-    title: "Decision Layer",
+    title: "Policy",
     links: [
       {
         href: CREDIT_COPILOT_TOOL.href,
@@ -224,7 +176,7 @@ export const TOOLS_NAV_SECTIONS: NavSection[] = [
   },
   {
     id: "resources",
-    title: "Resources",
+    title: "Rep Resources",
     links: RESOURCES_TOOLS.map((t) => ({
       href: t.href,
       label: t.label,

@@ -30,13 +30,13 @@ export const WORKFLOWS: Workflow[] = [
     ],
   },
   {
-    id: "eligibility-terms",
-    title: "Eligibility + Terms",
-    description: "Screen the property, then shape and price terms.",
+    id: "quote-and-close",
+    title: "Quote and close",
+    description: "Shape terms, confirm cash to close, and answer policy questions.",
     steps: [
-      { href: "/tools/rural-checker", label: "Rural Eligibility Checker" },
       { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
       { href: "/tools/cash-to-close-estimator", label: "Cash to Close Calculator" },
+      { href: "/tools/credit-copilot", label: "Credit Copilot" },
     ],
   },
   {
