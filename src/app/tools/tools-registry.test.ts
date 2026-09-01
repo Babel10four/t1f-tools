@@ -28,15 +28,17 @@ describe("tools-registry (BRAND-001)", () => {
     ]);
   });
 
-  it("lists four shipped deal tools with stable routes", () => {
-    expect(LIVE_TOOLS).toHaveLength(4);
+  it("lists five shipped deal tools with stable routes", () => {
+    expect(LIVE_TOOLS).toHaveLength(5);
     expect(LIVE_TOOLS.map((t) => t.href)).toEqual([
+      "/tools/loan-calculator",
       "/tools/loan-structuring-assistant",
       "/tools/term-sheet",
       "/tools/cash-to-close-estimator",
       "/tools/pricing-calculator",
     ]);
     expect(LIVE_TOOLS.map((t) => t.label)).toEqual([
+      "Loan Calculator",
       "Deal Structuring Copilot",
       "Deal Sheet Builder",
       "Cash to Close Calculator",
@@ -45,11 +47,12 @@ describe("tools-registry (BRAND-001)", () => {
   });
 
   it("keeps unfinished tools out of the execution layer", () => {
-    expect(LIVE_TOOLS[3]!.href).toBe("/tools/pricing-calculator");
+    expect(LIVE_TOOLS[4]!.href).toBe("/tools/pricing-calculator");
     const seq = EXECUTION_LAYER_SEQUENCE.map((x) =>
       `live:${x.tool.href}`,
     );
     expect(seq).toEqual([
+      "live:/tools/loan-calculator",
       "live:/tools/loan-structuring-assistant",
       "live:/tools/term-sheet",
       "live:/tools/cash-to-close-estimator",

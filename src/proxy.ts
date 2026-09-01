@@ -98,6 +98,8 @@ export const config = {
     "/api/deal/:path*",
     "/api/property",
     "/api/property/:path*",
+    "/api/market",
+    "/api/market/:path*",
     "/api/credit-copilot",
     "/api/credit-copilot/:path*",
     "/api/admin",

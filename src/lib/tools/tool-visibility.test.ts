@@ -16,6 +16,7 @@ import {
 /** User nav: shipped rep tools only. */
 const USER_NAV_HREFS = new Set([
   "/tools",
+  "/tools/loan-calculator",
   "/tools/term-sheet",
   "/tools/reviews",
   "/tools/credit-copilot",
@@ -26,6 +27,7 @@ const USER_NAV_HREFS = new Set([
 /** User rail: same core user-visible tools on the left rail. */
 const USER_RAIL_HREFS = new Set([
   "/tools",
+  "/tools/loan-calculator",
   "/tools/term-sheet",
   "/tools/reviews",
   "/tools/credit-copilot",
@@ -72,14 +74,15 @@ describe("tool-visibility (launch restriction)", () => {
       "/tools/email-templates",
     ]);
     expect(hub.advancedTools).toHaveLength(0);
-    expect(hub.executionSequence).toHaveLength(1);
+    expect(hub.executionSequence).toHaveLength(2);
     expect(hub.executionSequence.map((x) => x.tool.href)).toEqual([
+      "/tools/loan-calculator",
       "/tools/term-sheet",
     ]);
   });
 
-  it("user primary CTA points to Deal Sheet Builder", () => {
-    expect(primaryCtaHrefForRole("user")).toBe("/tools/term-sheet");
+  it("user primary CTA points to Loan Calculator", () => {
+    expect(primaryCtaHrefForRole("user")).toBe("/tools/loan-calculator");
   });
 
   it("admin rail and nav keep full canonical list", () => {
@@ -93,7 +96,7 @@ describe("tool-visibility (launch restriction)", () => {
     const hub = filterHubPageModel("admin");
     expect(hub.performanceTools.map((t) => t.href)).toEqual(["/tools/reviews"]);
     expect(hub.advancedTools.length).toBeGreaterThan(0);
-    expect(hub.executionSequence).toHaveLength(4);
+    expect(hub.executionSequence).toHaveLength(5);
   });
 
   it("toolAudiencesForHref returns admin-only for unknown hrefs", () => {
@@ -110,18 +113,24 @@ describe("tool-visibility (launch restriction)", () => {
   it("workflowStepsForRole renumbers labels sequentially after filtering by role", () => {
     const userSteps = workflowStepsForRole("user");
     expect(userSteps.map((s) => s.href)).toEqual([
+      "/tools/loan-calculator",
       "/tools/term-sheet",
       "/tools/credit-copilot",
     ]);
-    expect(userSteps.map((s) => s.label)).toEqual(["1. Deal Sheet", "2. Policy Q&A"]);
+    expect(userSteps.map((s) => s.label)).toEqual([
+      "1. Calculate",
+      "2. Deal Sheet",
+      "3. Policy Q&A",
+    ]);
 
     const adminSteps = workflowStepsForRole("admin");
-    expect(adminSteps).toHaveLength(4);
+    expect(adminSteps).toHaveLength(5);
     expect(adminSteps.map((s) => s.label)).toEqual([
-      "1. Structure",
-      "2. Deal Sheet",
-      "3. Cash to Close",
-      "4. Policy Q&A",
+      "1. Calculate",
+      "2. Structure",
+      "3. Deal Sheet",
+      "4. Cash to Close",
+      "5. Policy Q&A",
     ]);
   });
 });
