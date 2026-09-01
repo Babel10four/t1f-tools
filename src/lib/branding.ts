@@ -8,8 +8,8 @@ export const PRODUCT_TAGLINE =
 
 export const HUB_BUILT_BY_LINE = "Rep workspace";
 
-export const HUB_PRIMARY_CTA_HREF = "/tools/loan-structuring-assistant";
-export const HUB_PRIMARY_CTA_LABEL = "Start with Deal Structuring Copilot";
+export const HUB_PRIMARY_CTA_HREF = "/tools/loan-calculator";
+export const HUB_PRIMARY_CTA_LABEL = "Start with Loan Calculator";
 
 /** Same as {@link PRODUCT_NAME} — legacy name in specs. */
 export const SYSTEM_NAME = PRODUCT_NAME;

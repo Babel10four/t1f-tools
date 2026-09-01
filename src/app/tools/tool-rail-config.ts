@@ -22,6 +22,12 @@ export const TOOL_RAIL_ITEMS: ToolRailItem[] = [
     icon: "hub",
   },
   {
+    href: "/tools/loan-calculator",
+    shortLabel: "Calculator",
+    title: "T1F Loan Calculator",
+    icon: "calculator",
+  },
+  {
     href: "/tools/loan-structuring-assistant",
     shortLabel: "Structure",
     title: "Deal Structuring Copilot",

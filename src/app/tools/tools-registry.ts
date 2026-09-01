@@ -21,8 +21,8 @@ export type AdvancedToolDef = {
   ctaLabel: string;
 };
 
-/** Primary CTA on the hub: first live execution tool (Deal Structuring Copilot). */
-export const HUB_PRIMARY_CTA_HREF = "/tools/loan-structuring-assistant" as const;
+/** Primary CTA on the hub: first live execution tool (Loan Calculator). */
+export const HUB_PRIMARY_CTA_HREF = "/tools/loan-calculator" as const;
 
 export const TOOL_HUB = {
   href: "/tools",
@@ -31,6 +31,13 @@ export const TOOL_HUB = {
 
 /** Shipped execution tools — routes unchanged; labels are BRAND-001 display names. */
 export const LIVE_TOOLS: LiveToolDef[] = [
+  {
+    href: "/tools/loan-calculator",
+    label: "Loan Calculator",
+    description:
+      "Size and price a T1F loan with tier, market, construction, and virtual-inspection eligibility checks.",
+    ctaLabel: "Open",
+  },
   {
     href: "/tools/loan-structuring-assistant",
     label: "Deal Structuring Copilot",
@@ -118,12 +125,7 @@ export const RESOURCES_TOOLS: LiveToolDef[] = [EMAIL_TEMPLATES_TOOL];
 export const EXECUTION_LAYER_SEQUENCE: Array<{
   kind: "live";
   tool: LiveToolDef;
-}> = [
-  { kind: "live", tool: LIVE_TOOLS[0]! },
-  { kind: "live", tool: LIVE_TOOLS[1]! },
-  { kind: "live", tool: LIVE_TOOLS[2]! },
-  { kind: "live", tool: LIVE_TOOLS[3]! },
-];
+}> = LIVE_TOOLS.map((tool) => ({ kind: "live", tool }));
 
 export const ADVANCED_TOOLS: AdvancedToolDef[] = [
   {

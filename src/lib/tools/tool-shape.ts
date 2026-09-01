@@ -28,6 +28,7 @@ export type ToolShape = {
  * `prototype` (they degrade gracefully when API keys are absent); coming-soon stubs are `placeholder`.
  */
 export const TOOL_STATUS: Record<string, ToolStatus> = {
+  "/tools/loan-calculator": "ready",
   "/tools/loan-structuring-assistant": "ready",
   "/tools/term-sheet": "ready",
   "/tools/cash-to-close-estimator": "ready",
@@ -57,6 +58,20 @@ export const TOOL_STATUS_LABEL: Record<ToolStatus, string> = {
 };
 
 export const TOOL_SHAPES: Record<string, ToolShape> = {
+  "/tools/loan-calculator": {
+    goal: "Size and price a T1F loan using the approved June 2026 policy rules.",
+    inputs: [
+      "Borrower tier, FICO, exposure, and T1F history",
+      "Property state, city, type, and market supply",
+      "Purchase/refinance amounts, rehab, values, and requested terms",
+    ],
+    output:
+      "Loan sizing, pricing, leverage, construction advance, and virtual-inspection eligibility.",
+    next: [
+      { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
+      { href: "/tools/credit-copilot", label: "Credit Copilot" },
+    ],
+  },
   "/tools/loan-structuring-assistant": {
     goal: "Structure a bridge purchase or refinance with full deal analysis.",
     inputs: [

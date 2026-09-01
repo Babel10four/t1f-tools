@@ -24,6 +24,7 @@ const RAIL_EXCLUDED_HREFS = new Set<string>();
  */
 export const TOOL_HREF_AUDIENCES: Record<string, readonly ("user" | "admin")[]> = {
   [TOOL_HUB.href]: ["user", "admin"],
+  "/tools/loan-calculator": ["user", "admin"],
   /** Internal tool — hidden for standard users. */
   "/tools/loan-structuring-assistant": ["admin"],
   "/tools/term-sheet": ["user", "admin"],
@@ -120,16 +121,12 @@ export function filterNavSections(role: AuthRole): NavSection[] {
 }
 
 export function primaryCtaHrefForRole(_role: AuthRole): string {
-  if (_role === "user") {
-    return "/tools/term-sheet";
-  }
+  void _role;
   return HUB_PRIMARY_CTA_HREF;
 }
 
 export function primaryCtaLabelForRole(_role: AuthRole): string {
-  if (_role === "user") {
-    return "Deal Sheet Builder";
-  }
+  void _role;
   return LIVE_TOOLS[0]!.label;
 }
 
@@ -144,10 +141,11 @@ export function hubHeroDescriptionForRole(role: AuthRole): string {
 type WorkflowStep = { href: string; label: string };
 
 const WORKFLOW_STEPS: WorkflowStep[] = [
-  { href: "/tools/loan-structuring-assistant", label: "1. Structure" },
-  { href: "/tools/term-sheet", label: "2. Deal Sheet" },
-  { href: "/tools/cash-to-close-estimator", label: "3. Cash to Close" },
-  { href: CREDIT_COPILOT_TOOL.href, label: "4. Policy Q&A" },
+  { href: "/tools/loan-calculator", label: "1. Calculate" },
+  { href: "/tools/loan-structuring-assistant", label: "2. Structure" },
+  { href: "/tools/term-sheet", label: "3. Deal Sheet" },
+  { href: "/tools/cash-to-close-estimator", label: "4. Cash to Close" },
+  { href: CREDIT_COPILOT_TOOL.href, label: "5. Policy Q&A" },
 ];
 
 /** Strip leading "N. " from workflow labels so we can renumber after role filtering. */
