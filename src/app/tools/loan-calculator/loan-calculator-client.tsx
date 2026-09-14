@@ -13,6 +13,7 @@ import {
 import {
   isPurchasePurpose,
   LOAN_CALCULATOR_POLICY_VERSION,
+  LOAN_CALCULATOR_WORKBOOK_VERSION,
   SUPPORTED_STATES,
 } from "@/lib/loan-calculator/rules";
 import type {
@@ -44,7 +45,8 @@ type CalculatorFields = {
   fico: string;
   purpose: LoanPurpose;
   propertyType: PropertyType;
-  totalBorrowerExposure: string;
+  constructionAdvanceExposure: string;
+  virtualInspectionExposure: string;
   city: string;
   purchasePrice: string;
   assignmentFees: string;
@@ -65,7 +67,8 @@ const EMPTY_FIELDS: CalculatorFields = {
   fico: "",
   purpose: "purchase_with_rehab",
   propertyType: "sfr",
-  totalBorrowerExposure: "0",
+  constructionAdvanceExposure: "0",
+  virtualInspectionExposure: "0",
   city: "",
   purchasePrice: "",
   assignmentFees: "0",
@@ -217,7 +220,8 @@ function buildInput(fields: CalculatorFields, city: MarketCity): LoanCalculatorI
     fico: parseNumber(fields.fico),
     purpose: fields.purpose,
     propertyType: fields.propertyType,
-    totalBorrowerExposure: parseNumber(fields.totalBorrowerExposure),
+    constructionAdvanceExposure: parseNumber(fields.constructionAdvanceExposure),
+    virtualInspectionExposure: parseNumber(fields.virtualInspectionExposure),
     city: city.city,
     monthsOfSupply: city.monthsOfSupply,
     purchasePrice: purchase ? parseNumber(fields.purchasePrice) : 0,
@@ -334,6 +338,8 @@ export function LoanCalculatorClient() {
               Policy effective {formatDate(LOAN_CALCULATOR_POLICY_VERSION)}
             </span>
             <span aria-hidden>•</span>
+            <span>Calculator updated {formatDate(LOAN_CALCULATOR_WORKBOOK_VERSION)}</span>
+            <span aria-hidden>•</span>
             <span>Internal scenario guidance only; final approval remains subject to underwriting.</span>
           </div>
         }
@@ -400,8 +406,11 @@ export function LoanCalculatorClient() {
               <Field id="calculator-flips" label="Flips completed with T1F" required>
                 <input id="calculator-flips" value={fields.flipsCompletedWithT1f} onChange={updateField("flipsCompletedWithT1f")} inputMode="numeric" placeholder="0" className={INPUT_CLASS} />
               </Field>
-              <Field id="calculator-exposure" label="Total borrower exposure" required hint="Include existing exposure plus this loan under consideration.">
-                <input id="calculator-exposure" value={fields.totalBorrowerExposure} onChange={updateField("totalBorrowerExposure")} inputMode="decimal" className={INPUT_CLASS} />
+              <Field id="calculator-construction-exposure" label="Borrower exposure — construction advances" required>
+                <input id="calculator-construction-exposure" value={fields.constructionAdvanceExposure} onChange={updateField("constructionAdvanceExposure")} inputMode="decimal" className={INPUT_CLASS} />
+              </Field>
+              <Field id="calculator-virtual-exposure" label="Borrower exposure — virtual inspections" required>
+                <input id="calculator-virtual-exposure" value={fields.virtualInspectionExposure} onChange={updateField("virtualInspectionExposure")} inputMode="decimal" className={INPUT_CLASS} />
               </Field>
               <Field id="calculator-property-type" label="Property type" required>
                 <select id="calculator-property-type" value={fields.propertyType} onChange={updateField("propertyType")} className={INPUT_CLASS}>

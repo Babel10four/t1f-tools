@@ -89,8 +89,17 @@ export function validateLoanCalculatorInput(
   if (!finiteNonNegative(input.flipsCompletedWithT1f)) {
     issues.push({ field: "flipsCompletedWithT1f", message: "Completed flips cannot be negative." });
   }
-  if (!finiteNonNegative(input.totalBorrowerExposure)) {
-    issues.push({ field: "totalBorrowerExposure", message: "Borrower exposure cannot be negative." });
+  if (!finiteNonNegative(input.constructionAdvanceExposure)) {
+    issues.push({
+      field: "constructionAdvanceExposure",
+      message: "Construction-advance exposure cannot be negative.",
+    });
+  }
+  if (!finiteNonNegative(input.virtualInspectionExposure)) {
+    issues.push({
+      field: "virtualInspectionExposure",
+      message: "Virtual-inspection exposure cannot be negative.",
+    });
   }
   if (!input.city || !Number.isFinite(input.monthsOfSupply)) {
     issues.push({ field: "city", message: "Select an eligible city from the market data list." });
@@ -296,13 +305,6 @@ export function calculateLoanCalculator(
       passed: input.assignmentFees <= assignmentLimit,
     },
     {
-      key: "borrower_exposure",
-      label: "Total borrower exposure",
-      actual: money(input.totalBorrowerExposure),
-      requirement: `${money(MAX_TOTAL_BORROWER_EXPOSURE)} or less`,
-      passed: input.totalBorrowerExposure <= MAX_TOTAL_BORROWER_EXPOSURE,
-    },
-    {
       key: "months_of_supply",
       label: "Months of supply",
       actual: input.monthsOfSupply.toFixed(1),
@@ -318,6 +320,13 @@ export function calculateLoanCalculator(
       actual: `Tier ${input.borrowerTier}`,
       requirement: "Tier 0, 1, or 2",
       passed: input.borrowerTier < 3,
+    },
+    {
+      key: "construction_advance_exposure",
+      label: "Borrower exposure — construction advances",
+      actual: money(input.constructionAdvanceExposure),
+      requirement: `${money(MAX_TOTAL_BORROWER_EXPOSURE)} or less`,
+      passed: input.constructionAdvanceExposure <= MAX_TOTAL_BORROWER_EXPOSURE,
     },
     ...commonChecks,
   ]);
@@ -336,6 +345,13 @@ export function calculateLoanCalculator(
       actual: String(input.flipsCompletedWithT1f),
       requirement: "3 or more",
       passed: input.flipsCompletedWithT1f >= 3,
+    },
+    {
+      key: "virtual_inspection_exposure",
+      label: "Borrower exposure — virtual inspections",
+      actual: money(input.virtualInspectionExposure),
+      requirement: `${money(MAX_TOTAL_BORROWER_EXPOSURE)} or less`,
+      passed: input.virtualInspectionExposure <= MAX_TOTAL_BORROWER_EXPOSURE,
     },
     ...commonChecks,
     {

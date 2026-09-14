@@ -117,26 +117,37 @@ for (let index = 1; index < rows.length; index += 1) {
 
   const city = row[indexes["REGION NAME"]]?.trim();
   const regionId = Number(row[indexes["REGION ID"]]);
-  const monthsOfSupply = Number(row[indexes["MONTHS OF SUPPLY"]]);
-  if (!city || !Number.isFinite(regionId) || !Number.isFinite(monthsOfSupply)) {
+  if (!city || !Number.isFinite(regionId)) {
     rejectedRows += 1;
     continue;
   }
 
   const rowNumber = index + 1;
-  const periodEnd = isoDate(row[indexes["PERIOD END"]], "PERIOD END", rowNumber);
-  const lastUpdated = isoDate(
-    row[indexes["LAST UPDATED"]],
-    "LAST UPDATED",
-    rowNumber,
-  );
-  const key = `${state}|${regionId}|${city}`;
+  let periodEnd;
+  let lastUpdated;
+  try {
+    periodEnd = isoDate(row[indexes["PERIOD END"]], "PERIOD END", rowNumber);
+    lastUpdated = isoDate(
+      row[indexes["LAST UPDATED"]],
+      "LAST UPDATED",
+      rowNumber,
+    );
+  } catch {
+    rejectedRows += 1;
+    continue;
+  }
+
+  const parsedMonthsOfSupply = Number(row[indexes["MONTHS OF SUPPLY"]]);
+  const monthsOfSupply = Number.isFinite(parsedMonthsOfSupply)
+    ? parsedMonthsOfSupply
+    : 0;
+  const key = String(regionId);
   const existing = latestByCity.get(key);
   if (!existing || periodEnd > existing.periodEnd) {
     latestByCity.set(key, {
-      state,
-      regionId,
-      city,
+      state: existing?.state ?? state,
+      regionId: existing?.regionId ?? regionId,
+      city: existing?.city ?? city,
       periodEnd,
       monthsOfSupply,
       lastUpdated,
@@ -151,7 +162,7 @@ const entries = [...latestByCity.values()].sort(
   (a, b) => a.state.localeCompare(b.state) || a.city.localeCompare(b.city),
 );
 if (entries.length === 0) {
-  throw new Error("No supported city records with numeric months-of-supply values were found.");
+  throw new Error("No supported city records were found.");
 }
 
 const snapshot = {
@@ -176,5 +187,5 @@ const snapshot = {
 
 await writeFile(outputPath, `${JSON.stringify(snapshot)}\n`, "utf8");
 process.stdout.write(
-  `Wrote ${entries.length} cities to ${outputPath}; ${rejectedRows} supported-state rows without numeric market data were skipped.\n`,
+  `Wrote ${entries.length} cities to ${outputPath}; ${rejectedRows} supported-state rows with invalid identity or date fields were skipped.\n`,
 );

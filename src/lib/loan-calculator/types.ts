@@ -20,7 +20,8 @@ export type LoanCalculatorInput = {
   fico: number;
   purpose: LoanPurpose;
   propertyType: PropertyType;
-  totalBorrowerExposure: number;
+  constructionAdvanceExposure: number;
+  virtualInspectionExposure: number;
   city: string;
   monthsOfSupply: number;
   purchasePrice: number;

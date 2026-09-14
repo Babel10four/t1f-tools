@@ -12,12 +12,15 @@ describe("GET /api/market/months-of-supply", () => {
     };
     expect(response.status).toBe(200);
     expect(body.snapshot).toEqual({
-      lastUpdated: "2026-08-03",
-      dataThrough: "2026-07-31",
+      lastUpdated: "2026-09-03",
+      dataThrough: "2026-08-31",
     });
-    expect(body.cities.length).toBeGreaterThan(700);
+    expect(body.cities.length).toBeGreaterThan(750);
     expect(body.cities).toContainEqual(
-      expect.objectContaining({ city: "Tampa, FL", monthsOfSupply: 4.3 }),
+      expect.objectContaining({ city: "Tampa, FL", monthsOfSupply: 4.9 }),
+    );
+    expect(body.cities).toContainEqual(
+      expect.objectContaining({ city: "Oak Hill, FL", monthsOfSupply: 0 }),
     );
   });
 

@@ -10,14 +10,15 @@ function workbookExample(
 ): LoanCalculatorInput {
   return {
     state: "FL",
-    borrowerTier: 1,
-    flipsCompletedWithT1f: 3,
+    borrowerTier: 2,
+    flipsCompletedWithT1f: 0,
     fico: 736,
     purpose: "purchase_with_rehab",
     propertyType: "sfr",
-    totalBorrowerExposure: 0,
+    constructionAdvanceExposure: 0,
+    virtualInspectionExposure: 0,
     city: "Tampa, FL",
-    monthsOfSupply: 4.3,
+    monthsOfSupply: 4.9,
     purchasePrice: 250_000,
     assignmentFees: 0,
     sellerConcessions: 0,
@@ -49,14 +50,14 @@ describe("T1F Loan Calculator workbook parity", () => {
     expect(result.downPaymentRequired).toBe(25_000);
     expect(result.actualInitialLtc).toBe(0.9);
     expect(result.actualArvLtv).toBe(0.275);
-    expect(result.borrowerRatePercent).toBe(9.25);
-    expect(result.budgetPointsPercent).toBe(0.4);
-    expect(result.adjustedPointsPercent).toBe(0.75);
-    expect(result.revisedRatePercent).toBe(8.75);
+    expect(result.borrowerRatePercent).toBe(9.625);
+    expect(result.budgetPointsPercent).toBe(0.5);
+    expect(result.adjustedPointsPercent).toBe(1);
+    expect(result.revisedRatePercent).toBe(9.625);
     expect(result.maxInitialConstructionDraw).toBe(15_000);
     expect(result.initialPlusFirstAdvanceLtc).toBe(0.96);
-    expect(result.constructionAdvance.eligible).toBe(true);
-    expect(result.virtualInspection.eligible).toBe(true);
+    expect(result.constructionAdvance.eligible).toBe(false);
+    expect(result.virtualInspection.eligible).toBe(false);
     expect(result.warnings).toEqual([]);
   });
 
@@ -78,7 +79,7 @@ describe("T1F Loan Calculator workbook parity", () => {
     expect(result.calculatedTotalLoan).toBe(350_000);
     expect(result.initialLoanAmount).toBe(350_000);
     expect(result.actualAsIsLtv).toBe(0.7);
-    expect(result.borrowerRatePercent).toBe(10.125);
+    expect(result.borrowerRatePercent).toBe(10.5);
   });
 
   it("returns a pricing exception for the unavailable tier-four rate grid", () => {
@@ -121,12 +122,27 @@ describe("T1F Loan Calculator workbook parity", () => {
 
   it("keeps the 4.5-month supply boundary eligible", () => {
     const atBoundary = calculateLoanCalculator(
-      workbookExample({ monthsOfSupply: 4.5 }),
+      workbookExample({ borrowerTier: 1, flipsCompletedWithT1f: 3, monthsOfSupply: 4.5 }),
     );
     const overBoundary = calculateLoanCalculator(
-      workbookExample({ monthsOfSupply: 4.6 }),
+      workbookExample({ borrowerTier: 1, flipsCompletedWithT1f: 3, monthsOfSupply: 4.6 }),
     );
     expect(atBoundary.constructionAdvance.eligible).toBe(true);
     expect(overBoundary.constructionAdvance.eligible).toBe(false);
+  });
+
+  it("uses separate exposure limits for construction advances and virtual inspections", () => {
+    const result = calculateLoanCalculator(
+      workbookExample({
+        borrowerTier: 1,
+        flipsCompletedWithT1f: 3,
+        monthsOfSupply: 4.3,
+        constructionAdvanceExposure: 3_000_001,
+        virtualInspectionExposure: 0,
+      }),
+    );
+
+    expect(result.constructionAdvance.eligible).toBe(false);
+    expect(result.virtualInspection.eligible).toBe(true);
   });
 });
