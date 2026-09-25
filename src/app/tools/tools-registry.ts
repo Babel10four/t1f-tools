@@ -86,7 +86,17 @@ export const PROPERTY_INTEL_TOOL: LiveToolDef = {
   ctaLabel: "Open",
 };
 
+/** Market research — live T1F geospatial explorer. */
+export const T1F_GIS_TOOL: LiveToolDef = {
+  href: "/tools/gis",
+  label: "T1F GIS",
+  description:
+    "Explore covered lending markets with months of supply, Zillow, Redfin, Census, and private-lending activity.",
+  ctaLabel: "Open",
+};
+
 export const LIVE_INTEL_TOOLS: LiveToolDef[] = [
+  T1F_GIS_TOOL,
   PROPERTY_INTEL_TOOL,
 ];
 

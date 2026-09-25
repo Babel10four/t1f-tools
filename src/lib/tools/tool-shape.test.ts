@@ -71,6 +71,7 @@ describe("TOOL_STATUS", () => {
 
   it("maps rep reviews to ready", () => {
     expect(getToolStatus("/tools/reviews")).toBe("ready");
+    expect(getToolStatus("/tools/gis")).toBe("ready");
   });
 
   it("maps coming-soon placeholders to placeholder", () => {

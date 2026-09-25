@@ -20,6 +20,7 @@ const USER_NAV_HREFS = new Set([
   "/tools/term-sheet",
   "/tools/reviews",
   "/tools/credit-copilot",
+  "/tools/gis",
   "/tools/property-intel",
   "/tools/email-templates",
 ]);
@@ -31,6 +32,7 @@ const USER_RAIL_HREFS = new Set([
   "/tools/term-sheet",
   "/tools/reviews",
   "/tools/credit-copilot",
+  "/tools/gis",
   "/tools/property-intel",
   "/tools/email-templates",
 ]);
@@ -69,7 +71,10 @@ describe("tool-visibility (launch restriction)", () => {
   it("user hub model shows shipped rep tools and hides advanced tools", () => {
     const hub = filterHubPageModel("user");
     expect(hub.performanceTools.map((t) => t.href)).toEqual(["/tools/reviews"]);
-    expect(hub.liveIntelTools.map((t) => t.href)).toEqual(["/tools/property-intel"]);
+    expect(hub.liveIntelTools.map((t) => t.href)).toEqual([
+      "/tools/gis",
+      "/tools/property-intel",
+    ]);
     expect(hub.resourcesTools.map((t) => t.href)).toEqual([
       "/tools/email-templates",
     ]);

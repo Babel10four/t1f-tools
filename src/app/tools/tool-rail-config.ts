@@ -64,6 +64,12 @@ export const TOOL_RAIL_ITEMS: ToolRailItem[] = [
     icon: "sparkles",
   },
   {
+    href: "/tools/gis",
+    shortLabel: "T1F GIS",
+    title: "T1F Geo-spatial Information",
+    icon: "map",
+  },
+  {
     href: "/tools/property-intel",
     shortLabel: "Property",
     title: "Property Intel — Firecrawl + GPT",

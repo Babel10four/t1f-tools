@@ -38,6 +38,7 @@ export const TOOL_STATUS: Record<string, ToolStatus> = {
   "/tools/email-templates": "ready",
   "/tools/deal-analyzer": "ready",
   "/tools/borrower-intel": "prototype",
+  "/tools/gis": "ready",
   "/tools/property-intel": "prototype",
   // Coming-soon placeholders
   "/tools/pricing-comparator": "placeholder",
@@ -162,6 +163,13 @@ export const TOOL_SHAPES: Record<string, ToolShape> = {
     next: [
       { href: "/tools/term-sheet", label: "Deal Sheet Builder" },
     ],
+  },
+  "/tools/gis": {
+    goal: "Explore market and private-lending signals across T1F's covered geography.",
+    inputs: ["A state, ZIP, market, or lender-research view"],
+    output:
+      "Interactive maps and ranked market views using the current T1F GIS data snapshot.",
+    next: [{ href: "/tools/property-intel", label: "Property Intel" }],
   },
   "/tools/email-templates": {
     goal: "Grab a ready-to-send email draft for any stage of a deal.",

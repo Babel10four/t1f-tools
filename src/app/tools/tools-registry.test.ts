@@ -72,7 +72,7 @@ describe("tools-registry (BRAND-001)", () => {
     expect(all.includes("/tools/pricing")).toBe(false);
   });
 
-  it("includes rep reviews, property research, and live Credit Copilot", () => {
+  it("includes rep reviews, GIS, property research, and live Credit Copilot", () => {
     const performance = TOOLS_NAV_SECTIONS.find((s) => s.id === "performance")!;
     expect(performance.links).toEqual([
       {
@@ -82,7 +82,13 @@ describe("tools-registry (BRAND-001)", () => {
       },
     ]);
     const intel = TOOLS_NAV_SECTIONS.find((s) => s.id === "intel")!;
-    expect(intel.links.map((l) => l.href)).toEqual(["/tools/property-intel"]);
+    expect(intel.links.map((l) => l.href)).toEqual([
+      "/tools/gis",
+      "/tools/property-intel",
+    ]);
+    expect(intel.links.find((l) => l.href === "/tools/gis")?.isPlaceholder).toBe(
+      false,
+    );
     expect(intel.links.find((l) => l.href === "/tools/property-intel")?.isPlaceholder).toBe(
       false,
     );
