@@ -5,7 +5,7 @@ import type {
 } from "./types";
 
 export const LOAN_CALCULATOR_POLICY_VERSION = "2026-06-29";
-export const LOAN_CALCULATOR_WORKBOOK_VERSION = "2026-09-14";
+export const LOAN_CALCULATOR_WORKBOOK_VERSION = "2026-09-29";
 
 export const SUPPORTED_STATES = [
   "CA",
@@ -80,10 +80,10 @@ export const BASE_RATE_BY_TIER: Record<
   BorrowerTier,
   readonly [number | null, number | null, number | null, number | null]
 > = {
-  0: [8.375, 8.375, 8.5, 8.75],
-  1: [8.625, 8.75, 8.875, 9],
-  2: [8.75, 8.875, 9, 9.125],
-  3: [9, 9.25, 9.5, null],
+  0: [8.625, 8.625, 8.75, 9],
+  1: [8.875, 9, 9.125, 9.25],
+  2: [9, 9.125, 9.25, 9.375],
+  3: [9.25, 9.5, 9.75, null],
   4: [null, null, null, null],
 };
 

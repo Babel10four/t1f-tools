@@ -57,7 +57,7 @@ describe("LoanCalculatorClient", () => {
     const results = await screen.findByTestId("loan-calculator-results");
     expect(within(results).getAllByText("$275,000").length).toBeGreaterThan(0);
     expect(within(results).getAllByText("$225,000").length).toBeGreaterThan(0);
-    expect(within(results).getAllByText("9.625%")).toHaveLength(2);
+    expect(within(results).getAllByText("9.875%")).toHaveLength(2);
     expect(within(results).getAllByText("Not eligible")).toHaveLength(2);
   });
 

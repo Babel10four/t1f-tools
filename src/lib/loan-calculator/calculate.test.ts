@@ -3,6 +3,10 @@ import {
   calculateLoanCalculator,
   validateLoanCalculatorInput,
 } from "./calculate";
+import {
+  BASE_RATE_BY_TIER,
+  LOAN_CALCULATOR_WORKBOOK_VERSION,
+} from "./rules";
 import type { LoanCalculatorInput } from "./types";
 
 function workbookExample(
@@ -33,6 +37,17 @@ function workbookExample(
 }
 
 describe("T1F Loan Calculator workbook parity", () => {
+  it("uses the September 29 workbook version and complete investor base-rate grid", () => {
+    expect(LOAN_CALCULATOR_WORKBOOK_VERSION).toBe("2026-09-29");
+    expect(BASE_RATE_BY_TIER).toEqual({
+      0: [8.625, 8.625, 8.75, 9],
+      1: [8.875, 9, 9.125, 9.25],
+      2: [9, 9.125, 9.25, 9.375],
+      3: [9.25, 9.5, 9.75, null],
+      4: [null, null, null, null],
+    });
+  });
+
   it("matches the visible workbook example", () => {
     const input = workbookExample();
     expect(validateLoanCalculatorInput(input)).toEqual([]);
@@ -50,10 +65,10 @@ describe("T1F Loan Calculator workbook parity", () => {
     expect(result.downPaymentRequired).toBe(25_000);
     expect(result.actualInitialLtc).toBe(0.9);
     expect(result.actualArvLtv).toBe(0.275);
-    expect(result.borrowerRatePercent).toBe(9.625);
+    expect(result.borrowerRatePercent).toBe(9.875);
     expect(result.budgetPointsPercent).toBe(0.5);
     expect(result.adjustedPointsPercent).toBe(1);
-    expect(result.revisedRatePercent).toBe(9.625);
+    expect(result.revisedRatePercent).toBe(9.875);
     expect(result.maxInitialConstructionDraw).toBe(15_000);
     expect(result.initialPlusFirstAdvanceLtc).toBe(0.96);
     expect(result.constructionAdvance.eligible).toBe(false);
@@ -79,7 +94,7 @@ describe("T1F Loan Calculator workbook parity", () => {
     expect(result.calculatedTotalLoan).toBe(350_000);
     expect(result.initialLoanAmount).toBe(350_000);
     expect(result.actualAsIsLtv).toBe(0.7);
-    expect(result.borrowerRatePercent).toBe(10.5);
+    expect(result.borrowerRatePercent).toBe(10.75);
   });
 
   it("returns a pricing exception for the unavailable tier-four rate grid", () => {
