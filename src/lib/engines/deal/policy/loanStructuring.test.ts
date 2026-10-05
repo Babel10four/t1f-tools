@@ -58,4 +58,33 @@ describe("splitAcquisitionRehabLoan", () => {
     expect(r.acquisitionLoanAmount).toBe(100_000);
     expect(r.rehabLoanAmount).toBe(0);
   });
+
+  it("reserves the full refinance rehab holdback and applies the remainder toward payoff", () => {
+    expect(splitAcquisitionRehabLoan({
+      totalLoan: 1_027_500,
+      purpose: "refinance",
+      payoffAmount: 978_500,
+      rehabBudget: 150_000,
+      borrowingRehabFunds: true,
+    })).toEqual({ acquisitionLoanAmount: 877_500, rehabLoanAmount: 150_000 });
+  });
+
+  it("keeps a refinance without financed rehab entirely in initial funds", () => {
+    expect(splitAcquisitionRehabLoan({
+      totalLoan: 877_500,
+      purpose: "refinance",
+      payoffAmount: 978_500,
+      rehabBudget: 150_000,
+      borrowingRehabFunds: false,
+    })).toEqual({ acquisitionLoanAmount: 877_500, rehabLoanAmount: 0 });
+  });
+
+  it("limits a refinance rehab holdback to the available loan commitment", () => {
+    expect(splitAcquisitionRehabLoan({
+      totalLoan: 100_000,
+      purpose: "refinance",
+      rehabBudget: 150_000,
+      borrowingRehabFunds: true,
+    })).toEqual({ acquisitionLoanAmount: 0, rehabLoanAmount: 100_000 });
+  });
 });

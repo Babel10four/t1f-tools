@@ -29,7 +29,7 @@ export type CashToCloseDisplayLine = {
 };
 
 export type CashToCloseLoanCostSummary = {
-  basisLabel: "Down payment" | "Payoff / unwind amount";
+  basisLabel: "Down payment" | "Payoff shortfall";
   basisAmount: number;
   loanFees: number;
   titleInsuranceEstimate: number;
@@ -78,6 +78,12 @@ export function transformCashToCloseDisplayLines(
 
     if (options.purpose === "purchase" && row.label === "Borrower equity") {
       out.push({ label: "Down payment", amount: row.amount });
+      i += 1;
+      continue;
+    }
+
+    if (options.purpose === "refinance" && row.label === "Payoff / unwind amount") {
+      out.push({ label: "Payoff shortfall", amount: row.amount });
       i += 1;
       continue;
     }
@@ -174,7 +180,7 @@ export function buildCashToCloseLoanCostSummary(input: {
   const { flow, response } = input;
   const asOf = input.asOfDate ?? new Date();
   const basisLabel =
-    flow === "purchase" ? "Down payment" : "Payoff / unwind amount";
+    flow === "purchase" ? "Down payment" : "Payoff shortfall";
   const basisAmount = sumByLabel(
     response.cashToClose.items,
     flow === "purchase" ? "Borrower equity" : "Payoff / unwind amount",
@@ -184,7 +190,9 @@ export function buildCashToCloseLoanCostSummary(input: {
     response.cashToClose.items,
     TITLE_INSURANCE_LABEL,
   );
-  const hasRecognizedBasisOrFees = basisAmount > 0 || loanFees > 0;
+  const hasRecognizedBasisOrFees = response.cashToClose.items.some(
+    (item) => item.label === "Borrower equity" || item.label === "Payoff / unwind amount" || FEE_LINE_LABELS.has(item.label),
+  );
 
   const principal =
     response.loan.acquisitionLoanAmount ?? response.loan.amount ?? undefined;

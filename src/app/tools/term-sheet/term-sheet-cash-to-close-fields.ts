@@ -71,8 +71,16 @@ export function buildTermSheetCtcInputRows(
     });
     const ref = loan.amount;
     rows.push({
-      label: "Total loan amount (basis for estimate)",
+      label: "Total loan commitment (includes rehab holdback)",
       value: ref !== undefined ? formatMoneyWholeDollars(ref) : "—",
+    });
+    rows.push({
+      label: "Initial funds toward payoff",
+      value: formatMoneyWholeDollars(acquisitionFundsForCtce(loan)),
+    });
+    rows.push({
+      label: "Financed rehab holdback",
+      value: formatMoneyWholeDollars(loan.rehabLoanAmount),
     });
   }
 
@@ -83,6 +91,9 @@ export function buildTermSheetCtcEstimateRows(
   response: DealAnalyzeResponseV1,
   asOfDate?: Date,
 ): { label: string; value: string }[] {
+  if (response.cashToClose.status === "insufficient_inputs" && response.cashToClose.items.length === 0) {
+    return [];
+  }
   const flow = response.loan.purpose === "refinance" ? "refinance" : "purchase";
   const summary = buildCashToCloseLoanCostSummary({ flow, response, asOfDate });
   const rows: { label: string; value: string }[] = [

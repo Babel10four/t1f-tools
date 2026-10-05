@@ -49,11 +49,6 @@ export function parseDealStructuringAssumptions(
 }
 
 /**
- * Splits total loan across acquisition vs rehab using the same cost mix as purchase policy
- * (purchase price + rehab) or refinance (payoff + rehab). When not borrowing rehab or rehab
- * budget is zero, the full amount is treated as acquisition.
- */
-/**
  * Tier 1/2 purchase: fund rehab up to budget first, then acquisition up to 90% of purchase.
  */
 function tier12PurchaseWaterfall(
@@ -82,6 +77,7 @@ function tier12PurchaseWaterfall(
   };
 }
 
+/** Refinance reserves the rehab holdback first, then applies remaining funds toward payoff. */
 export function splitAcquisitionRehabLoan(params: {
   totalLoan: number;
   purpose: "purchase" | "refinance";
@@ -131,15 +127,7 @@ export function splitAcquisitionRehabLoan(params: {
   }
 
   if (purpose === "refinance") {
-    const payoff = params.payoffAmount ?? 0;
-    const denom = payoff + rehabBudget;
-    if (!(denom > 0)) {
-      return {
-        acquisitionLoanAmount: money(totalLoan),
-        rehabLoanAmount: 0,
-      };
-    }
-    const rehabLoanAmount = money(totalLoan * (rehabBudget / denom));
+    const rehabLoanAmount = money(Math.min(rehabBudget, totalLoan));
     return {
       acquisitionLoanAmount: money(totalLoan - rehabLoanAmount),
       rehabLoanAmount,

@@ -62,6 +62,10 @@ Single basis, frozen order:
 
 **Unsupported products:** omit **`loan.amount`** entirely — do not imply a policy-backed recommendation.
 
+### Refinance rehab allocation
+
+When the borrower takes rehab funds, reserve the rehab budget from the recommended total loan first, up to the available total. The initial advance is the remaining total loan. This preserves the requested rehab holdback rather than prorating it against the outstanding payoff. When the borrower declines rehab funds, the whole recommended amount is the initial advance. The refinance total-loan cap and `REQUEST_EXCEEDS_POLICY_MAX` behavior still apply before allocation.
+
 ---
 
 ## LTV / LTC units
@@ -93,6 +97,7 @@ Aligned with [`TICKET-002`](../specs/TICKET-002.md) §9.
 - **Total row** — The **sixth** line is always **`Total estimated cash to close`**; its **`amount`** equals the **sum of amounts on lines 1–5** (after per-line rounding).
 - **`estimatedTotal`** — On supported policy paths, equals the **sixth line’s `amount`** (same as sum-of-lines contract).
 - **Unsupported `productType`** — **No** fabricated cash sketch: `cashToClose.status` = **`stub`**, `items` = **`[]`**, `estimatedTotal` = **`null`**.
+- **Refinance payoff contribution** — `Payoff / unwind amount` is the borrower-funded payoff gap: `max(0, payoffAmount − acquisitionLoanAmount)`. Financed rehab is held back and cannot reduce that gap. If the actual payoff is omitted, `cashToClose.status` = **`insufficient_inputs`**, `items` = **`[]`**, and `estimatedTotal` = **`null`**; sizing and loan terms can still be populated.
 
 ### Origination-aware loan fees (Term Sheet / LSA)
 
@@ -120,7 +125,7 @@ If neither assumption is sent, the legacy illustrative model applies: CTC points
 
 ### Refinance
 
-- Payoff / unwind amount *(v1 internal sketch: line amount uses policy-backed **`loan.amount`** as the unwind reference; not a wire instruction.)*
+- Payoff / unwind amount *(borrower contribution needed after initial loan funds are applied to the entered payoff)*
 - Estimated points
 - Estimated lender fees
 - Estimated closing costs
@@ -150,4 +155,4 @@ Outputs labeled **estimated** are **directional** for internal workflow, not gua
 
 ---
 
-*Last updated: 2026-04-17*
+*Last updated: 2026-10-05*

@@ -5,6 +5,7 @@ import { DEAL_FORM_SESSION_STORAGE_KEY } from "../shared/deal-form-session";
 import { TermSheetGeneratorClient } from "./term-sheet-generator-client";
 import { TermSheetPreview } from "./term-sheet-preview";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
+import { runDealAnalyze } from "@/lib/engines/deal/analyze";
 
 afterEach(() => {
   cleanup();
@@ -164,6 +165,52 @@ describe("TermSheetGeneratorClient", () => {
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body.deal.purpose).toBe("refinance");
     expect(body.deal.productType).toBe("bridge_refinance");
+  });
+
+  it("sends refinance rehab and shows the actual financed split without changing the payoff balance", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (_url, options) => {
+      const response = await runDealAnalyze(JSON.parse(options.body));
+      return new Response(JSON.stringify(response), { status: 200 });
+    }));
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    const form = screen.getByTestId("ts-form");
+    await user.click(screen.getByTestId("ts-flow-refinance"));
+    await user.type(within(form).getByTestId("ts-refi-payoff"), "978500");
+    await user.type(within(form).getByTestId("ts-refi-requested"), "1027500");
+    await user.type(within(form).getByTestId("ts-refi-rehab"), "150000");
+    await user.type(within(form).getByTestId("ts-refi-asis"), "1400000");
+    await user.type(within(form).getByRole("textbox", { name: /Note rate/ }), "10");
+    await user.click(screen.getByTestId("ts-generate-button"));
+    const preview = await screen.findByTestId("ts-preview");
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.deal).toMatchObject({
+      payoffAmount: 978_500,
+      requestedLoanAmount: 1_027_500,
+      rehabBudget: 150_000,
+    });
+    expect(body.assumptions.borrowingRehabFunds).toBe(true);
+    expect(preview).toHaveTextContent(/Payoff amount\s*\$978,500/);
+    expect(preview).toHaveTextContent(/Acquisition funds\s*\$877,500/);
+    expect(preview).toHaveTextContent(/Rehab loan\s*\$150,000/);
+    expect(preview).toHaveTextContent(/Total loan\s*\$1,027,500/);
+    expect(preview).toHaveTextContent(/Payoff shortfall\s*\$101,000/);
+    await waitFor(() => {
+      const saved = JSON.parse(sessionStorage.getItem(DEAL_FORM_SESSION_STORAGE_KEY)!);
+      expect(saved?.fields.rehabBudget).toBe("150000");
+    });
+  });
+
+  it("rejects an invalid refinance rehab amount instead of silently using zero", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    const form = screen.getByTestId("ts-form");
+    await user.click(screen.getByTestId("ts-flow-refinance"));
+    await user.type(within(form).getByTestId("ts-refi-payoff"), "978500");
+    await user.type(within(form).getByTestId("ts-refi-rehab"), "-150000");
+    await user.click(screen.getByTestId("ts-generate-button"));
+    expect(screen.getByText("Rehab budget must be a non-negative number.")).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("metadata appears in preview and is excluded from request body", async () => {

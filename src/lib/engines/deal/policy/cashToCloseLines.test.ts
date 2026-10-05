@@ -79,4 +79,34 @@ describe("cashToCloseLines (TICKET-002 / business-rules)", () => {
     expect(items[5].amount).toBeCloseTo(sumFirstFive, 10);
     expect(estimatedTotal).toBe(items[5].amount);
   });
+
+  it("refinance: borrower contributes only the payoff gap, while fees use the total loan", () => {
+    const { items, estimatedTotal } = buildCashToCloseLinesRefinance({
+      referenceAmount: 1_027_500,
+      payoffAmount: 978_500,
+      initialLoanAmount: 877_500,
+      origination: {
+        feeBasisTotalLoan: 1_027_500,
+        originationPointsPercent: 0.5,
+        originationFlatFee: 1_195,
+      },
+    });
+    expect(items[0]).toEqual({ label: "Payoff / unwind amount", amount: 101_000 });
+    expect(items[1].amount).toBe(5_137.5);
+    expect(items[2].amount).toBe(1_195);
+    expect(estimatedTotal).toBe(122_745);
+    expect(items[5].amount).toBe(
+      items.slice(0, 5).reduce((sum, item) => sum + item.amount, 0),
+    );
+  });
+
+  it("refinance: a fully funded payoff does not require borrower payoff cash", () => {
+    const { items } = buildCashToCloseLinesRefinance({
+      referenceAmount: 550_000,
+      payoffAmount: 400_000,
+      initialLoanAmount: 450_000,
+    });
+    expect(items[0].amount).toBe(0);
+    expect(items[1].amount).toBe(2_750);
+  });
 });

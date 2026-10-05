@@ -110,7 +110,12 @@ export function buildCashToCloseLinesPurchase(params: {
 }
 
 export function buildCashToCloseLinesRefinance(params: {
+  /** Total loan reference for illustrative fee and closing-cost multipliers. */
   referenceAmount: number;
+  /** Actual outstanding payoff; paired with initialLoanAmount for borrower contribution. */
+  payoffAmount?: number;
+  /** Funds available at closing, excluding financed rehab holdback. */
+  initialLoanAmount?: number;
   ctcPointsPct?: number;
   ctcLenderFeesPct?: number;
   ctcClosingCostsPct?: number;
@@ -124,7 +129,13 @@ export function buildCashToCloseLinesRefinance(params: {
     origination,
   } = params;
   const ref = referenceAmount;
-  const payoff = money(ref);
+  // Older direct callers provide only the illustrative reference. Actual deal
+  // analysis supplies both values so financed principal is not borrower cash.
+  const payoff = money(
+    params.payoffAmount !== undefined && params.initialLoanAmount !== undefined
+      ? Math.max(0, params.payoffAmount - params.initialLoanAmount)
+      : ref,
+  );
   let points: number;
   let lenderFees: number;
   if (hasOriginationFeePath(origination)) {
@@ -158,7 +169,11 @@ export function cashToCloseLinesForPurpose(
   purpose: DealPurpose,
   params:
     | { purchasePrice: number; loanAmount: number }
-    | { referenceAmount: number },
+    | {
+        referenceAmount: number;
+        payoffAmount?: number;
+        initialLoanAmount?: number;
+      },
   ctc?: {
     ctcPointsPct: number;
     ctcLenderFeesPct: number;
@@ -177,6 +192,10 @@ export function cashToCloseLinesForPurpose(
     const p = params as { purchasePrice: number; loanAmount: number };
     return buildCashToCloseLinesPurchase({ ...p, ...mult, origination });
   }
-  const p = params as { referenceAmount: number };
+  const p = params as {
+    referenceAmount: number;
+    payoffAmount?: number;
+    initialLoanAmount?: number;
+  };
   return buildCashToCloseLinesRefinance({ ...p, ...mult, origination });
 }

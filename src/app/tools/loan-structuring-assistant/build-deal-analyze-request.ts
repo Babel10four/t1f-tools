@@ -122,6 +122,14 @@ export function buildDealAnalyzeRequest(
   fields: LoanAssistantFields,
 ): BuildRequestResult {
   const termMonths = parseTermMonths(fields.termMonths);
+  const rehab = parseNonNegNumber(fields.rehabBudget);
+  if (fields.rehabBudget.trim() !== "" && rehab === undefined) {
+    return {
+      ok: false,
+      clientHint: "Rehab budget must be a non-negative number.",
+    };
+  }
+  const rehabBudget = rehab ?? 0;
 
   const borrower: NonNullable<DealAnalyzeRequestV1["borrower"]> = {};
   const fico = parsePositiveNumber(fields.fico);
@@ -143,8 +151,6 @@ export function buildDealAnalyzeRequest(
           "Purchase price is required and must be a positive number.",
       };
     }
-    const rehab = parseNonNegNumber(fields.rehabBudget);
-    const rehabBudget = rehab === undefined ? 0 : rehab;
     const requestedLoanAmount = parsePositiveNumber(fields.requestedLoanAmount);
     const deal: DealAnalyzeRequestV1["deal"] = {
       purpose: "purchase",
@@ -183,9 +189,6 @@ export function buildDealAnalyzeRequest(
         "Enter at least one of payoff amount or requested loan amount (positive numbers).",
     };
   }
-
-  const rehab = parseNonNegNumber(fields.rehabBudget);
-  const rehabBudget = rehab === undefined ? 0 : rehab;
 
   const deal: DealAnalyzeRequestV1["deal"] = {
     purpose: "refinance",

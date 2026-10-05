@@ -385,12 +385,15 @@ export async function runDealAnalyze(
   } else if (
     policyMax !== undefined &&
     loan.amount !== undefined &&
-    deal.purpose === "refinance"
+    deal.purpose === "refinance" &&
+    deal.payoffAmount !== undefined
   ) {
     const built = cashToCloseLinesForPurpose(
       "refinance",
       {
         referenceAmount: loan.amount,
+        payoffAmount: deal.payoffAmount,
+        initialLoanAmount: loan.acquisitionLoanAmount ?? loan.amount,
       },
       {
         ctcPointsPct: calc.ctcPointsPct,

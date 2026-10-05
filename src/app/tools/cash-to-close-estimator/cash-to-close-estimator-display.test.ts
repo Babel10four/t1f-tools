@@ -43,7 +43,7 @@ describe("transformCashToCloseDisplayLines", () => {
     ).toBe(false);
   });
 
-  it("merges fee lines on refinance without renaming payoff", () => {
+  it("merges fee lines on refinance and identifies the borrower payoff shortfall", () => {
     const items = [
       { label: "Payoff / unwind amount", amount: 200_000 },
       { label: "Estimated points", amount: 1_000 },
@@ -53,7 +53,7 @@ describe("transformCashToCloseDisplayLines", () => {
       { label: "Total estimated cash to close", amount: 206_000 },
     ];
     const out = transformCashToCloseDisplayLines(items, { purpose: "refinance" });
-    expect(out[0]?.label).toBe("Payoff / unwind amount");
+    expect(out[0]?.label).toBe("Payoff shortfall");
     expect(out[1]).toMatchObject({
       label: "Loan fees (points + lender fees)",
       amount: 3_000,
@@ -65,6 +65,25 @@ describe("transformCashToCloseDisplayLines", () => {
 });
 
 describe("buildCashToCloseLoanCostSummary", () => {
+  it("includes initial-funds interest when a refinance fully covers payoff and has zero fees", () => {
+    const response = {
+      loan: { amount: 350_000, acquisitionLoanAmount: 200_000 },
+      pricing: { noteRatePercent: 9 },
+      cashToClose: { items: [
+        { label: "Payoff / unwind amount", amount: 0 },
+        { label: "Estimated points", amount: 0 },
+        { label: "Estimated lender fees", amount: 0 },
+      ] },
+    } as unknown as DealAnalyzeResponseV1;
+    const summary = buildCashToCloseLoanCostSummary({
+      flow: "refinance", response, asOfDate: new Date(2026, 4, 8),
+    });
+    expect(summary.basisLabel).toBe("Payoff shortfall");
+    expect(summary.basisAmount).toBe(0);
+    expect(summary.perDiem).toBe(50);
+    expect(summary.estimatedLoanCostsExcludingTitleInsurance).toBe(2700);
+  });
+
   it("computes loan costs excluding title/insurance with per-diem interest formula", () => {
     const response = {
       loan: { amount: 90_000, acquisitionLoanAmount: 80_000 },

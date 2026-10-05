@@ -490,6 +490,9 @@ export function TermSheetGeneratorClient() {
                 inputMode="decimal"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Existing balance to be paid off, before applying the new loan funds.
+              </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -503,6 +506,9 @@ export function TermSheetGeneratorClient() {
                 inputMode="decimal"
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                Total loan commitment, including the financed rehab holdback.
+              </span>
             </label>
             <p className="text-xs text-zinc-500 sm:col-span-2">
               At least one of payoff or requested amount is required (positive
@@ -535,6 +541,24 @@ export function TermSheetGeneratorClient() {
                 </label>
               </div>
             </div>
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                Rehab budget
+              </span>
+              <input
+                name="rehabBudget"
+                data-testid="ts-refi-rehab"
+                value={fields.rehabBudget}
+                onChange={onField("rehabBudget")}
+                placeholder="0"
+                inputMode="decimal"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                When taking rehab funds, this amount is reserved as a holdback within
+                the total loan. The remaining loan funds are available toward payoff.
+              </span>
+            </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 As-is value{" "}
