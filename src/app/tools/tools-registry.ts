@@ -21,8 +21,8 @@ export type AdvancedToolDef = {
   ctaLabel: string;
 };
 
-/** Primary CTA on the hub: first live execution tool (Loan Calculator). */
-export const HUB_PRIMARY_CTA_HREF = "/tools/loan-calculator" as const;
+/** Primary CTA on the hub while the Loan Calculator is temporarily hidden. */
+export const HUB_PRIMARY_CTA_HREF = "/tools/term-sheet" as const;
 
 export const TOOL_HUB = {
   href: "/tools",

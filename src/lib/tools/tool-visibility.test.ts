@@ -7,6 +7,7 @@ import {
   filterToolRailItems,
   hrefVisibleToRole,
   primaryCtaHrefForRole,
+  primaryCtaLabelForRole,
   TOOL_HREF_AUDIENCES,
   toolAudiencesForHref,
   workflowStepTitleWithoutIndex,
@@ -16,7 +17,6 @@ import {
 /** User nav: shipped rep tools only. */
 const USER_NAV_HREFS = new Set([
   "/tools",
-  "/tools/loan-calculator",
   "/tools/term-sheet",
   "/tools/reviews",
   "/tools/credit-copilot",
@@ -28,7 +28,6 @@ const USER_NAV_HREFS = new Set([
 /** User rail: same core user-visible tools on the left rail. */
 const USER_RAIL_HREFS = new Set([
   "/tools",
-  "/tools/loan-calculator",
   "/tools/term-sheet",
   "/tools/reviews",
   "/tools/credit-copilot",
@@ -38,6 +37,7 @@ const USER_RAIL_HREFS = new Set([
 ]);
 
 const USER_HIDDEN_HREFS = new Set([
+  "/tools/loan-calculator",
   "/tools/loan-structuring-assistant",
   "/tools/pricing-calculator",
   "/tools/pricing-comparator",
@@ -79,29 +79,40 @@ describe("tool-visibility (launch restriction)", () => {
       "/tools/email-templates",
     ]);
     expect(hub.advancedTools).toHaveLength(0);
-    expect(hub.executionSequence).toHaveLength(2);
+    expect(hub.executionSequence).toHaveLength(1);
     expect(hub.executionSequence.map((x) => x.tool.href)).toEqual([
-      "/tools/loan-calculator",
       "/tools/term-sheet",
     ]);
   });
 
-  it("user primary CTA points to Loan Calculator", () => {
-    expect(primaryCtaHrefForRole("user")).toBe("/tools/loan-calculator");
+  it("primary CTA points to the visible Deal Sheet Builder for both roles", () => {
+    for (const role of ["user", "admin"] as const) {
+      expect(primaryCtaHrefForRole(role)).toBe("/tools/term-sheet");
+      expect(primaryCtaLabelForRole(role)).toBe("Deal Sheet Builder");
+      expect(hrefVisibleToRole(primaryCtaHrefForRole(role), role)).toBe(true);
+    }
   });
 
-  it("admin rail and nav keep full canonical list", () => {
+  it("admin rail and nav hide the calculator but retain other tools", () => {
     expect(filterToolRailItems("admin").map((i) => i.href)).toEqual(
-      TOOL_RAIL_ITEMS.map((i) => i.href),
+      TOOL_RAIL_ITEMS.filter((i) => i.href !== "/tools/loan-calculator").map((i) => i.href),
     );
-    expect(filterNavSections("admin")).toEqual(TOOLS_NAV_SECTIONS);
+    expect(filterNavSections("admin")).toEqual(
+      TOOLS_NAV_SECTIONS.map((section) => ({
+        ...section,
+        links: section.links.filter((link) => link.href !== "/tools/loan-calculator"),
+      })),
+    );
   });
 
-  it("admin hub model matches unfiltered execution, intel, and advanced", () => {
+  it("admin hub model hides the calculator and retains intel and advanced tools", () => {
     const hub = filterHubPageModel("admin");
     expect(hub.performanceTools.map((t) => t.href)).toEqual(["/tools/reviews"]);
     expect(hub.advancedTools.length).toBeGreaterThan(0);
-    expect(hub.executionSequence).toHaveLength(5);
+    expect(hub.executionSequence).toHaveLength(4);
+    expect(hub.executionSequence.map((x) => x.tool.href)).not.toContain("/tools/loan-calculator");
+    expect(hrefVisibleToRole("/tools/loan-calculator", "user")).toBe(false);
+    expect(hrefVisibleToRole("/tools/loan-calculator", "admin")).toBe(false);
   });
 
   it("toolAudiencesForHref returns admin-only for unknown hrefs", () => {
@@ -118,24 +129,21 @@ describe("tool-visibility (launch restriction)", () => {
   it("workflowStepsForRole renumbers labels sequentially after filtering by role", () => {
     const userSteps = workflowStepsForRole("user");
     expect(userSteps.map((s) => s.href)).toEqual([
-      "/tools/loan-calculator",
       "/tools/term-sheet",
       "/tools/credit-copilot",
     ]);
     expect(userSteps.map((s) => s.label)).toEqual([
-      "1. Calculate",
-      "2. Deal Sheet",
-      "3. Policy Q&A",
+      "1. Deal Sheet",
+      "2. Policy Q&A",
     ]);
 
     const adminSteps = workflowStepsForRole("admin");
-    expect(adminSteps).toHaveLength(5);
+    expect(adminSteps).toHaveLength(4);
     expect(adminSteps.map((s) => s.label)).toEqual([
-      "1. Calculate",
-      "2. Structure",
-      "3. Deal Sheet",
-      "4. Cash to Close",
-      "5. Policy Q&A",
+      "1. Structure",
+      "2. Deal Sheet",
+      "3. Cash to Close",
+      "4. Policy Q&A",
     ]);
   });
 });

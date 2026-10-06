@@ -24,7 +24,8 @@ const RAIL_EXCLUDED_HREFS = new Set<string>();
  */
 export const TOOL_HREF_AUDIENCES: Record<string, readonly ("user" | "admin")[]> = {
   [TOOL_HUB.href]: ["user", "admin"],
-  "/tools/loan-calculator": ["user", "admin"],
+  /** Temporarily hidden for everyone; preserve the calculator for re-enabling. */
+  "/tools/loan-calculator": [],
   /** Internal tool — hidden for standard users. */
   "/tools/loan-structuring-assistant": ["admin"],
   "/tools/term-sheet": ["user", "admin"],
@@ -77,16 +78,6 @@ export type HubPageModel = {
 };
 
 export function filterHubPageModel(role: AuthRole): HubPageModel {
-  if (role === "admin") {
-    return {
-      executionSequence: EXECUTION_LAYER_SEQUENCE,
-      performanceTools: REP_PERFORMANCE_TOOLS,
-      liveIntelTools: LIVE_INTEL_TOOLS,
-      resourcesTools: RESOURCES_TOOLS,
-      advancedTools: ADVANCED_TOOLS,
-    };
-  }
-
   const executionSequence = EXECUTION_LAYER_SEQUENCE.filter((item) =>
     hrefVisibleToRole(item.tool.href, role),
   );
@@ -128,7 +119,7 @@ export function primaryCtaHrefForRole(_role: AuthRole): string {
 
 export function primaryCtaLabelForRole(_role: AuthRole): string {
   void _role;
-  return LIVE_TOOLS[0]!.label;
+  return LIVE_TOOLS.find((tool) => tool.href === HUB_PRIMARY_CTA_HREF)!.label;
 }
 
 /** Hero paragraph under the hub title — user copy omits JSON harness and admin-only tools. */
