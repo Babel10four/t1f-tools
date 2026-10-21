@@ -16,13 +16,13 @@ import {
   type LoanAssistantFields,
   type LoanAssistantFlow,
 } from "../loan-structuring-assistant/build-deal-analyze-request";
-import { purchaseRequestedLoanSuggestedString } from "../loan-structuring-assistant/requested-loan-suggest";
+import {
+  purchaseRequestedLoanSuggestedString,
+  purchaseRequestedLoanSuggestionDescription,
+  type PurchaseSuggestionPolicy,
+} from "../loan-structuring-assistant/requested-loan-suggest";
 import { useDealFormSession } from "../shared/use-deal-form-session";
 import { todayLocalYmd } from "../shared/closing-date";
-import {
-  TIER12_INITIAL_ADVANCE_PCT,
-  TIER12_REHAB_ADVANCE_PCT,
-} from "@/lib/engines/deal/policy/constants";
 import { PricingComparisonPanel } from "./pricing-comparison-panel";
 import { TermSheetPreview } from "./term-sheet-preview";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
@@ -49,7 +49,7 @@ type UiPhase =
   | "error_4xx"
   | "error_5xx";
 
-export function TermSheetGeneratorClient() {
+export function TermSheetGeneratorClient({ calculator }: { calculator?: PurchaseSuggestionPolicy }) {
   const { flow, setFlow, fields, setFields, clearSession } = useDealFormSession();
   const [metadata, setMetadata] = useState<TermSheetLocalMetadata>(() => ({
     ...EMPTY_METADATA,
@@ -78,14 +78,16 @@ export function TermSheetGeneratorClient() {
       return nextFields;
     }
 
-    const next = purchaseRequestedLoanSuggestedString(nextFields);
-    if (next === null) {
-      lastSuggestedPurchaseRequestedRef.current = null;
-      return nextFields;
-    }
-
+    const next = purchaseRequestedLoanSuggestedString(nextFields, calculator);
     const cur = nextFields.requestedLoanAmount.trim();
     const prevSuggestion = lastSuggestedPurchaseRequestedRef.current;
+    if (next === null) {
+      lastSuggestedPurchaseRequestedRef.current = null;
+      return prevSuggestion !== null && cur === prevSuggestion
+        ? { ...nextFields, requestedLoanAmount: "" }
+        : nextFields;
+    }
+
     const stillTrackingSuggestion =
       cur === "" ||
       (prevSuggestion !== null && cur === prevSuggestion);
@@ -380,12 +382,7 @@ export function TermSheetGeneratorClient() {
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
               <span className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-                Suggested automatically as {Math.round(TIER12_INITIAL_ADVANCE_PCT * 100)}
-                % of purchase price
-                {fields.borrowingRehabFunds === "yes"
-                  ? ` plus ${Math.round(TIER12_REHAB_ADVANCE_PCT * 100)}% of rehab budget when Taking rehab funds? is Yes`
-                  : ` when Taking rehab funds? is No (rehab is excluded)`}{" "}
-                — edit anytime.
+                {purchaseRequestedLoanSuggestionDescription(fields, calculator)}
               </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">

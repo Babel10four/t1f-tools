@@ -25,6 +25,27 @@
 - maxArvLtvPct: `0.70` (70% of ARV)
 - defaultTermMonths: `12`
 
+#### Published Tier 3 purchase rule (2026-10-21)
+
+The generic provisional scalars above are **not** the Tier 3 purchase rule. A bound
+`calculator_assumptions` payload may include an optional top-level `purchaseTierRules`
+map. Each canonical numeric tier key maps to `initialAdvancePct`, `rehabAdvancePct`,
+and `maxArvLtvPct` fractions. The verified Tier 3 publication payload is
+[`../operations/tier3-purchase-policy-2026-10-21.json`](../operations/tier3-purchase-policy-2026-10-21.json),
+with policy provenance and the limited scope of verification recorded there.
+
+- Tier 3: 85% of purchase price plus 100% of financed SOW, limited to 75% of ARV.
+- The complete financed SOW holdback is reserved first; remaining proceeds are the initial acquisition loan.
+- A lower requested total remains respected. If it or the ARV cap cannot fund the configured holdback,
+  withhold loan/cash-to-close amounts, mark the analysis incomplete and pricing `needs_review`,
+  and emit `PURCHASE_REHAB_HOLDBACK_SHORTFALL`.
+- Missing or invalid published Tier 3 configuration does not fall through to the generic 75%-of-cost rule:
+  withhold amounts and emit `PURCHASE_TIER_POLICY_UNAVAILABLE` with `needs_review` pricing.
+- Tier 3 displayed **Initial LTC** is acquisition divided by purchase price; future SOW is separately held back.
+  Total LTC remains total loan divided by purchase plus rehab. Existing other-tier/refinance display is unchanged.
+- Existing Tier 1/2 and refinance sizing/allocation behavior is preserved; this narrow repair does not certify
+  the rest of the engine as a complete implementation of current credit policy.
+
 ### Refinance path
 
 - maxLtvPct: `0.75` (75% of chosen collateral basis)

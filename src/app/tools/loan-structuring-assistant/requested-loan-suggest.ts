@@ -1,8 +1,11 @@
 import type { LoanAssistantFields } from "./build-deal-analyze-request";
-import {
-  TIER12_INITIAL_ADVANCE_PCT,
-  TIER12_REHAB_ADVANCE_PCT,
-} from "@/lib/engines/deal/policy/constants";
+import type { DealAnalyzeCalculatorSlice } from "@/lib/engines/deal/policy/policy-snapshot";
+import { resolvePurchaseTierRule } from "@/lib/engines/deal/policy/purchaseTierRule";
+
+export type PurchaseSuggestionPolicy = Pick<
+  DealAnalyzeCalculatorSlice,
+  "purchaseTierRules"
+>;
 
 export function parsePurchasePricePositive(s: string): number | null {
   const t = s.trim();
@@ -20,15 +23,37 @@ export function parseNonNegativeMoney(s: string): number {
   return n;
 }
 
-/** Rounded indicative total: 90% LTC-style acquisition slice + rehab when borrower takes rehab proceeds. */
+/** Indicative tier-specific advance, constrained by ARV when supplied. No rule means no suggestion. */
 export function purchaseRequestedLoanSuggestedString(
   fields: LoanAssistantFields,
+  calculator?: PurchaseSuggestionPolicy,
 ): string | null {
   const purchasePrice = parsePurchasePricePositive(fields.purchasePrice);
   if (purchasePrice === null) return null;
+  const rule = resolvePurchaseTierRule(calculator, fields.experienceTier);
+  if (!rule) return null;
   const rehab = parseNonNegativeMoney(fields.rehabBudget);
   const rehabPart =
-    fields.borrowingRehabFunds === "yes" ? TIER12_REHAB_ADVANCE_PCT * rehab : 0;
-  const acquisitionPart = TIER12_INITIAL_ADVANCE_PCT * purchasePrice;
-  return String(Math.round(acquisitionPart + rehabPart));
+    fields.borrowingRehabFunds === "yes" ? rule.rehabAdvancePct * rehab : 0;
+  const acquisitionPart = rule.initialAdvancePct * purchasePrice;
+  const arv = parsePurchasePricePositive(fields.arv);
+  const amount = Math.min(
+    acquisitionPart + rehabPart,
+    arv === null ? Number.POSITIVE_INFINITY : rule.maxArvLtvPct * arv,
+  );
+  return String(Math.round((amount + Number.EPSILON) * 100) / 100);
+}
+
+export function purchaseRequestedLoanSuggestionDescription(
+  fields: LoanAssistantFields,
+  calculator?: PurchaseSuggestionPolicy,
+): string {
+  const rule = resolvePurchaseTierRule(calculator, fields.experienceTier);
+  if (!rule) {
+    return "No automatic suggestion is available without a configured experience tier. Enter a requested amount or leave blank for analysis; no current-policy amount is assumed.";
+  }
+  const rehab = fields.borrowingRehabFunds === "yes"
+    ? ` plus ${rule.rehabAdvancePct * 100}% of rehab budget`
+    : " (rehab funding excluded)";
+  return `Suggested as ${rule.initialAdvancePct * 100}% of purchase price${rehab}, capped at ${rule.maxArvLtvPct * 100}% of ARV when entered — edit anytime. Final analysis rechecks the current policy.`;
 }

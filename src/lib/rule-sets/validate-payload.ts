@@ -1,4 +1,5 @@
 import type { RuleType } from "./constants";
+import type { PurchaseTierRules } from "@/lib/engines/deal/policy/purchaseTierRule";
 
 export type ValidatedPayload =
   | RatesPayload
@@ -24,6 +25,8 @@ export type RatesPayload = {
 export type CalculatorAssumptionsPayload = {
   schemaVersion: 1;
   assumptions: Record<string, number>;
+  /** Optional published advance rules; legacy numeric assumptions remain unchanged. */
+  purchaseTierRules?: PurchaseTierRules;
 };
 
 /**
@@ -194,9 +197,33 @@ function validateCalculator(
       };
     }
   }
+  if (raw.purchaseTierRules !== undefined) {
+    if (!isObject(raw.purchaseTierRules)) {
+      return { ok: false, error: "purchaseTierRules must be an object" };
+    }
+    const fields = ["initialAdvancePct", "rehabAdvancePct", "maxArvLtvPct"];
+    for (const [tier, rule] of Object.entries(raw.purchaseTierRules)) {
+      if (!/^[1-9]\d*$/.test(tier) || !isObject(rule)) {
+        return { ok: false, error: "purchaseTierRules requires canonical numeric tier keys and rule objects" };
+      }
+      if (Object.keys(rule).some((key) => !fields.includes(key))) {
+        return { ok: false, error: `purchaseTierRules.${tier} contains an unknown field` };
+      }
+      for (const field of fields) {
+        const value = rule[field];
+        if (!isFiniteNumber(value) || value > 1 ||
+          (field === "rehabAdvancePct" ? value < 0 : value <= 0)) {
+          return { ok: false, error: `purchaseTierRules.${tier}.${field} must be a valid 0–1 fraction` };
+        }
+      }
+    }
+  }
   const payload: CalculatorAssumptionsPayload = {
     schemaVersion: 1,
     assumptions: raw.assumptions as CalculatorAssumptionsPayload["assumptions"],
+    ...(raw.purchaseTierRules !== undefined
+      ? { purchaseTierRules: raw.purchaseTierRules as PurchaseTierRules }
+      : {}),
   };
   return { ok: true, payload };
 }

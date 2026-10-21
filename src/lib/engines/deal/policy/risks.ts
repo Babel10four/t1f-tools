@@ -109,7 +109,10 @@ export function buildDealAnalyzeRisks(
     const basis = purchaseBreakdown.basis;
     const ltcCap = purchaseBreakdown.ltcCap;
     const tier12 = purchaseBreakdown.tier12AdvanceRule === true;
-    const detail = tier12
+    const advanceRule = purchaseBreakdown.purchaseAdvanceRule;
+    const detail = advanceRule && !tier12
+      ? `Requested amount ${fmtMoney(ltcAsk)} exceeds the advance-sum maximum ${fmtMoney(ltcCap)} (${advanceRule.initialAdvancePct * 100}% of purchase + ${advanceRule.rehabAdvancePct * 100}% of financed rehab before ARV cap; cost basis ${fmtMoney(basis)}). The recommended amount is capped; confirm leverage with capital policy.`
+      : tier12
       ? `Requested amount ${fmtMoney(ltcAsk)} exceeds the advance-sum maximum ${fmtMoney(ltcCap)} (90% of purchase + 100% of rehab before ARV cap; cost basis ${fmtMoney(basis)}). The recommended amount is capped; confirm leverage with capital policy.`
       : `Requested amount ${fmtMoney(ltcAsk)} exceeds the LTC-based maximum ${fmtMoney(ltcCap)} (${maxLtcPct} of cost basis ${fmtMoney(basis)}). The recommended amount is capped; confirm leverage with capital policy.`;
     risks.push({
@@ -121,6 +124,7 @@ export function buildDealAnalyzeRisks(
   }
 
   if (
+    req.deal.purpose === "refinance" &&
     refi.basisSource === "arv" &&
     (req.property?.asIsValue === undefined || req.property.asIsValue <= 0)
   ) {

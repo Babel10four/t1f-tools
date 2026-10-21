@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
+import { resolveDealAnalyzePolicy } from "@/lib/engines/deal/policy/resolvePolicySnapshot";
 import { TermSheetGeneratorClient } from "./term-sheet-generator-client";
 
 export const metadata: Metadata = {
@@ -11,6 +13,8 @@ export const metadata: Metadata = {
  * Deal Sheet Builder — route frozen at /tools/term-sheet (no /tools/term-sheet-generator).
  * @see docs/specs/TICKET-007.md
  */
-export default function TermSheetPage() {
-  return <TermSheetGeneratorClient />;
+export default async function TermSheetPage() {
+  await connection();
+  const policy = await resolveDealAnalyzePolicy();
+  return <TermSheetGeneratorClient calculator={{ purchaseTierRules: policy.calculator.purchaseTierRules }} />;
 }

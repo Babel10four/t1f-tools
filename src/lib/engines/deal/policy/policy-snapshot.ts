@@ -4,6 +4,7 @@
  */
 import type { RatesPayload } from "@/lib/rule-sets/validate-payload";
 import type { BindingTypeV1 } from "@/db/schema";
+import type { PurchaseTierRules } from "./purchaseTierRule";
 import {
   POLICY_CTC_CLOSING_COSTS_PCT,
   POLICY_CTC_LENDER_FEES_PCT,
@@ -35,6 +36,7 @@ export const CALCULATOR_ASSUMPTION_KEYS = [
 ] as const;
 
 export type DealAnalyzeCalculatorSlice = {
+  purchaseTierRules?: PurchaseTierRules;
   maxLtcPct: number;
   maxArvLtvPct: number;
   refinanceMaxLtvPct: number;
@@ -70,6 +72,7 @@ function isFinitePositive(n: number): boolean {
  */
 export function parseCalculatorAssumptionsRecord(
   assumptions: Record<string, number>,
+  purchaseTierRules?: PurchaseTierRules,
 ): DealAnalyzeCalculatorSlice | null {
   for (const key of CALCULATOR_ASSUMPTION_KEYS) {
     if (!(key in assumptions) || !Number.isFinite(assumptions[key])) {
@@ -120,6 +123,7 @@ export function parseCalculatorAssumptionsRecord(
   }
 
   return {
+    ...(purchaseTierRules !== undefined ? { purchaseTierRules } : {}),
     maxLtcPct,
     maxArvLtvPct,
     refinanceMaxLtvPct,

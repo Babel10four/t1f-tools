@@ -6,6 +6,13 @@ import { TermSheetGeneratorClient } from "./term-sheet-generator-client";
 import { TermSheetPreview } from "./term-sheet-preview";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
 import { runDealAnalyze } from "@/lib/engines/deal/analyze";
+import type { PurchaseSuggestionPolicy } from "../loan-structuring-assistant/requested-loan-suggest";
+
+const tier3Policy: PurchaseSuggestionPolicy = {
+  purchaseTierRules: {
+    "3": { initialAdvancePct: 0.85, rehabAdvancePct: 1, maxArvLtvPct: 0.75 },
+  },
+};
 
 afterEach(() => {
   cleanup();
@@ -92,6 +99,7 @@ describe("TermSheetGeneratorClient", () => {
     const user = userEvent.setup();
     render(<TermSheetGeneratorClient />);
     const form = screen.getByTestId("ts-form");
+    await user.type(within(form).getByRole("textbox", { name: /Experience tier/ }), "1");
     await user.type(within(form).getByTestId("ts-purchase-price"), "100000");
     await user.type(within(form).getByTestId("ts-purchase-arv"), "200000");
     await user.click(screen.getByTestId("ts-generate-button"));
@@ -116,6 +124,7 @@ describe("TermSheetGeneratorClient", () => {
     const user = userEvent.setup();
     render(<TermSheetGeneratorClient />);
     const form = screen.getByTestId("ts-form");
+    await user.type(within(form).getByRole("textbox", { name: /Experience tier/ }), "1");
     await user.type(within(form).getByTestId("ts-purchase-price"), "100000");
     await user.type(within(form).getByTestId("ts-purchase-rehab"), "25000");
     await waitFor(() => {
@@ -127,6 +136,7 @@ describe("TermSheetGeneratorClient", () => {
     const user = userEvent.setup();
     render(<TermSheetGeneratorClient />);
     const form = screen.getByTestId("ts-form");
+    await user.type(within(form).getByRole("textbox", { name: /Experience tier/ }), "1");
     await user.type(within(form).getByTestId("ts-purchase-price"), "100000");
     await user.type(within(form).getByTestId("ts-purchase-rehab"), "25000");
     await user.click(within(form).getByTestId("ts-borrowing-rehab-no"));
@@ -139,6 +149,7 @@ describe("TermSheetGeneratorClient", () => {
     const user = userEvent.setup();
     render(<TermSheetGeneratorClient />);
     const form = screen.getByTestId("ts-form");
+    await user.type(within(form).getByRole("textbox", { name: /Experience tier/ }), "1");
     await user.type(within(form).getByTestId("ts-purchase-price"), "100000");
     await waitFor(() => {
       expect(within(form).getByTestId("ts-purchase-requested")).toHaveValue("90000");
@@ -149,6 +160,52 @@ describe("TermSheetGeneratorClient", () => {
     await user.clear(within(form).getByTestId("ts-purchase-price"));
     await user.type(within(form).getByTestId("ts-purchase-price"), "200000");
     expect(requested).toHaveValue("77777");
+  });
+
+  it("uses published Tier 3 rules for Kayla's suggestion without inventing FICO", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient calculator={tier3Policy} />);
+    const form = within(screen.getByTestId("ts-form"));
+    await user.type(form.getByTestId("ts-purchase-price"), "517500");
+    await user.type(form.getByTestId("ts-purchase-rehab"), "27500");
+    await user.type(form.getByTestId("ts-purchase-arv"), "680000");
+    expect(form.getByTestId("ts-purchase-requested")).toHaveValue("");
+    await user.type(form.getByRole("textbox", { name: /Experience tier/ }), "3");
+    expect(form.getByTestId("ts-purchase-requested")).toHaveValue("467375");
+    expect(form.getByText(/Suggested as 85% of purchase price plus 100% of rehab budget/)).toBeInTheDocument();
+    await user.click(screen.getByTestId("ts-generate-button"));
+    await screen.findByTestId("ts-preview");
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.deal.requestedLoanAmount).toBe(467375);
+    expect(body.borrower).toEqual({ experienceTier: "3" });
+  });
+
+  it("preserves Kayla's manual requested total when other deal fields change", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient calculator={tier3Policy} />);
+    const form = within(screen.getByTestId("ts-form"));
+    await user.type(form.getByRole("textbox", { name: /Experience tier/ }), "3");
+    await user.type(form.getByTestId("ts-purchase-price"), "517500");
+    await user.type(form.getByTestId("ts-purchase-rehab"), "27500");
+    const requested = form.getByTestId("ts-purchase-requested");
+    await user.clear(requested);
+    await user.type(requested, "467300");
+    await user.type(form.getByTestId("ts-purchase-arv"), "680000");
+    expect(requested).toHaveValue("467300");
+  });
+
+  it("clears a prior automatic amount when switching to an unconfigured tier", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    const form = within(screen.getByTestId("ts-form"));
+    const tier = form.getByRole("textbox", { name: /Experience tier/ });
+    await user.type(tier, "1");
+    await user.type(form.getByTestId("ts-purchase-price"), "100000");
+    expect(form.getByTestId("ts-purchase-requested")).toHaveValue("90000");
+    await user.clear(tier);
+    await user.type(tier, "3");
+    expect(form.getByTestId("ts-purchase-requested")).toHaveValue("");
+    expect(form.getByText(/No automatic suggestion is available/)).toBeInTheDocument();
   });
 
   it("refinance happy path uses bridge_refinance", async () => {

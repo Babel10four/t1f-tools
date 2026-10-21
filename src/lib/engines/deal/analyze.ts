@@ -26,6 +26,7 @@ import {
   enrichLoanWithLeveragePresentation,
   isPurchaseNoRehabPolicyMappingPending,
 } from "./policy/leveragePresentation";
+import { isPurchaseTierPolicyMissing, normalizePurchaseTier } from "./policy/purchaseTierRule";
 
 function parseNoteRatePercentAssumption(
   assumptions: DealAnalyzeRequestV1["assumptions"],
@@ -217,9 +218,12 @@ export async function runDealAnalyze(
   const purchaseCaps = {
     maxLtcPct: calc.maxLtcPct,
     maxArvLtvPct: calc.maxArvLtvPct,
+    purchaseTierRules: calc.purchaseTierRules,
   };
   const { deal } = req;
   const supported = supportedProduct(deal.purpose, deal.productType);
+  const purchaseTierPolicyMissing = supported && deal.purpose === "purchase" &&
+    isPurchaseTierPolicyMissing(calc, req.borrower?.experienceTier);
 
   const purchaseBreakdown =
     supported && deal.purpose === "purchase"
@@ -227,6 +231,13 @@ export async function runDealAnalyze(
       : undefined;
 
   const extraFlags: AnalysisFlag[] = [];
+  if (purchaseTierPolicyMissing) {
+    extraFlags.push({
+      code: "PURCHASE_TIER_POLICY_UNAVAILABLE",
+      severity: "high",
+      message: "Published tier 3 purchase advance rules are unavailable. Loan sizing and cash-to-close amounts are withheld; an administrator must publish and bind the verified tier policy.",
+    });
+  }
   if (
     options.includePolicyConfigFallbackFlag &&
     policy.source === "fallback"
@@ -251,11 +262,12 @@ export async function runDealAnalyze(
     });
   }
 
-  const { status: analysisStatus, flags: analysisFlags } = buildAnalysisFlags(
+  const { status: inputAnalysisStatus, flags: analysisFlags } = buildAnalysisFlags(
     req,
     normalizationNotes,
     extraFlags,
   );
+  let analysisStatus = purchaseTierPolicyMissing ? "incomplete" : inputAnalysisStatus;
 
   const refi = refinancePolicyMax(req, calc.refinanceMaxLtvPct);
 
@@ -306,14 +318,32 @@ export async function runDealAnalyze(
       : refi.policyMax;
 
   let loan: DealAnalyzeResponseV1["loan"] = { ...buildLoanBase(req) };
+  let purchaseRehabHoldbackShortfall = false;
 
   if (policyMax !== undefined) {
     const amount = recommendedLoanAmount(req, policyMax);
-    loan = { ...loan, amount };
+    const configuredTier3 = deal.purpose === "purchase" &&
+      normalizePurchaseTier(req.borrower?.experienceTier) === "3" &&
+      purchaseBreakdown?.purchaseAdvanceRule !== undefined;
+    const requiredHoldback = Math.round((deal.rehabBudget ?? 0) *
+      (purchaseBreakdown?.purchaseAdvanceRule?.rehabAdvancePct ?? 0) * 100) / 100;
+    purchaseRehabHoldbackShortfall = configuredTier3 &&
+      req.assumptions?.borrowingRehabFunds !== false && amount < requiredHoldback;
+    if (purchaseRehabHoldbackShortfall) {
+      analysisStatus = "incomplete";
+      analysisFlags.push({
+        code: "PURCHASE_REHAB_HOLDBACK_SHORTFALL",
+        severity: "high",
+        message: "The requested amount or ARV cap cannot cover the published Tier 3 rehab holdback. Loan sizing and cash-to-close amounts are withheld; review the request and complete SOW funding before proceeding.",
+        context: { availableLoanAmount: amount, requiredRehabHoldback: requiredHoldback },
+      });
+    } else {
+      loan = { ...loan, amount };
+    }
   }
 
   loan = attachLtv(loan, req, refi);
-  loan = applyLoanStructuring(loan, req);
+  loan = applyLoanStructuring(loan, req, purchaseBreakdown?.purchaseAdvanceRule);
   loan = enrichLoanWithLeveragePresentation(loan, req, refi, purchaseBreakdown);
 
   const risks = buildDealAnalyzeRisks(
@@ -332,7 +362,7 @@ export async function runDealAnalyze(
     },
   );
 
-  const pricingStatus = pricingStatusForSupportedDeal({
+  const pricingStatus = purchaseTierPolicyMissing || purchaseRehabHoldbackShortfall ? "needs_review" : pricingStatusForSupportedDeal({
     policyMaxDefined: policyMax !== undefined,
     borrowerFicoDefined:
       req.borrower?.fico !== undefined && typeof req.borrower.fico === "number",

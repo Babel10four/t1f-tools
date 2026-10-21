@@ -156,4 +156,29 @@ describe("resolveDealAnalyzePolicy (POLICY-ADOPTION-001A)", () => {
     expect(snap.rates).toBeNull();
     expect(snap.calculator.maxLtcPct).toBe(0.75);
   });
+
+  it("passes published tier rules through the calculator snapshot", async () => {
+    const purchaseTierRules = { "3": { initialAdvancePct: 0.85, rehabAdvancePct: 1, maxArvLtvPct: 0.75 } };
+    vi.mocked(resolveMod.resolveToolBinding).mockImplementation(async (_tool, bindingType) => {
+      if (bindingType === DEAL_ENGINE_BINDING_CALCULATOR) {
+        return { state: "resolved", bindingId: "tier3-binding", kind: "rule_set",
+          ruleSet: mockRuleSet("calculator_assumptions", { schemaVersion: 1, assumptions: fullCalcAssumptions, purchaseTierRules }) };
+      }
+      return { state: "missing", reason: "no_published_binding" };
+    });
+    const result = await resolveDealAnalyzePolicy();
+    expect(result.source).toBe("published");
+    expect(result.calculator.purchaseTierRules).toEqual(purchaseTierRules);
+  });
+
+  it("does not retain Tier 3 policy on invalid published tier config", async () => {
+    vi.mocked(resolveMod.resolveToolBinding).mockResolvedValue({
+      state: "resolved", bindingId: "invalid", kind: "rule_set",
+      ruleSet: mockRuleSet("calculator_assumptions", { schemaVersion: 1, assumptions: fullCalcAssumptions,
+        purchaseTierRules: { "3": { initialAdvancePct: 85, rehabAdvancePct: 1, maxArvLtvPct: 0.75 } } }),
+    });
+    const result = await resolveDealAnalyzePolicy();
+    expect(result.source).toBe("fallback");
+    expect(result.calculator.purchaseTierRules).toBeUndefined();
+  });
 });

@@ -41,6 +41,7 @@ async function resolveDealAnalyzePolicyInner(): Promise<DealAnalyzePolicySnapsho
     if (validated.ok && "assumptions" in validated.payload) {
       calculator = parseCalculatorAssumptionsRecord(
         validated.payload.assumptions,
+        validated.payload.purchaseTierRules,
       );
     }
   }

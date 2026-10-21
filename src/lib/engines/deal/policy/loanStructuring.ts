@@ -2,6 +2,7 @@ import type { DealAnalyzeRequestV1 } from "../schemas/canonical-request";
 import type { DealAnalyzeLoanOutV1 } from "../schemas/canonical-response";
 import { isBorrowerTier1Or2 } from "./borrowerTier";
 import { TIER12_INITIAL_ADVANCE_PCT } from "./constants";
+import type { PurchaseTierRule } from "./purchaseTierRule";
 
 function money(n: number): number {
   return Math.round(n * 100) / 100;
@@ -87,6 +88,8 @@ export function splitAcquisitionRehabLoan(params: {
   borrowingRehabFunds: boolean | undefined;
   /** Tier 1/2 purchase bridge split (90% / 100% advances), rehab-first when short. */
   useTier12PurchaseWaterfall?: boolean;
+  /** Published purchase rule; supplied by the same breakdown that sized the total. */
+  purchaseAdvanceRule?: PurchaseTierRule;
 }): { acquisitionLoanAmount: number; rehabLoanAmount: number } {
   const { totalLoan, purpose, rehabBudget } = params;
   const useRehabSplit =
@@ -96,6 +99,15 @@ export function splitAcquisitionRehabLoan(params: {
     return {
       acquisitionLoanAmount: money(totalLoan),
       rehabLoanAmount: 0,
+    };
+  }
+
+  if (purpose === "purchase" && params.purchaseAdvanceRule) {
+    const rehabLimit = money(rehabBudget * params.purchaseAdvanceRule.rehabAdvancePct);
+    const rehabLoanAmount = money(Math.min(rehabLimit, totalLoan));
+    return {
+      acquisitionLoanAmount: money(totalLoan - rehabLoanAmount),
+      rehabLoanAmount,
     };
   }
 
@@ -161,6 +173,7 @@ function costBasisForLtc(req: DealAnalyzeRequestV1): number | undefined {
 export function applyLoanStructuring(
   loan: DealAnalyzeLoanOutV1,
   req: DealAnalyzeRequestV1,
+  purchaseAdvanceRule?: PurchaseTierRule,
 ): DealAnalyzeLoanOutV1 {
   const parsed = parseDealStructuringAssumptions(req.assumptions);
   let out: DealAnalyzeLoanOutV1 = { ...loan };
@@ -199,6 +212,8 @@ export function applyLoanStructuring(
     rehabBudget,
     borrowingRehabFunds: parsed.borrowingRehabFunds,
     useTier12PurchaseWaterfall: tier12Waterfall,
+    // Existing tier 1/2 allocation remains unchanged.
+    purchaseAdvanceRule: tier12Waterfall ? undefined : purchaseAdvanceRule,
   });
 
   return {

@@ -2,12 +2,22 @@ import type { DealAnalyzeRequestV1 } from "../schemas/canonical-request";
 import type { AnalysisFlag } from "../schemas/canonical-response";
 import { isBorrowerTier1Or2 } from "./borrowerTier";
 import {
+  isPurchaseTierPolicyMissing,
+  normalizePurchaseTier,
+  resolvePurchaseTierRule,
+  type PurchaseTierRule,
+  type PurchaseTierRules,
+} from "./purchaseTierRule";
+import {
   POLICY_MAX_ARV_LTV_PCT,
   POLICY_MAX_LTC_PCT,
-  TIER12_INITIAL_ADVANCE_PCT,
-  TIER12_MAX_ARV_LTV_PCT,
-  TIER12_REHAB_ADVANCE_PCT,
 } from "./constants";
+
+type PurchaseCaps = {
+  maxLtcPct: number;
+  maxArvLtvPct: number;
+  purchaseTierRules?: PurchaseTierRules;
+};
 
 function defaultPurchaseCaps(): { maxLtcPct: number; maxArvLtvPct: number } {
   return { maxLtcPct: POLICY_MAX_LTC_PCT, maxArvLtvPct: POLICY_MAX_ARV_LTV_PCT };
@@ -35,6 +45,9 @@ export type PurchasePolicyBreakdown = {
   policyMax: number;
   /** When true, `costBasisCap` / `ltcCap` are 90% of purchase + 100% of rehab (tier 1/2). */
   tier12AdvanceRule?: boolean;
+  /** Resolved advance rule used for both sizing and allocation. */
+  purchaseAdvanceRule?: PurchaseTierRule;
+  purchaseTier?: string;
 };
 
 /**
@@ -43,7 +56,7 @@ export type PurchasePolicyBreakdown = {
  */
 export function purchasePolicyBreakdown(
   req: DealAnalyzeRequestV1,
-  caps: { maxLtcPct: number; maxArvLtvPct: number } = defaultPurchaseCaps(),
+  caps: PurchaseCaps = defaultPurchaseCaps(),
 ): PurchasePolicyBreakdown | undefined {
   const { maxLtcPct, maxArvLtvPct } = caps;
   const { deal, property } = req;
@@ -58,14 +71,21 @@ export function purchasePolicyBreakdown(
   }
 
   const tier12 = isBorrowerTier1Or2(req.borrower?.experienceTier);
-  if (tier12) {
-    const sumAdvanceCap = money(
-      TIER12_INITIAL_ADVANCE_PCT * purchasePrice +
-        TIER12_REHAB_ADVANCE_PCT * rehab,
-    );
+  const advanceRule = resolvePurchaseTierRule(caps, req.borrower?.experienceTier);
+  if (isPurchaseTierPolicyMissing(caps, req.borrower?.experienceTier)) {
+    return undefined;
+  }
+  if (advanceRule) {
+    // Preserve legacy tier 1/2 behavior; configured tiers never include declined rehab proceeds.
+    const financedRehab = !tier12 && req.assumptions?.borrowingRehabFunds === false
+      ? 0 : rehab;
+    const sumAdvanceCap = tier12
+      ? money(advanceRule.initialAdvancePct * purchasePrice + advanceRule.rehabAdvancePct * rehab)
+      : money(money(advanceRule.initialAdvancePct * purchasePrice) +
+          money(advanceRule.rehabAdvancePct * financedRehab));
     const arv = property?.arv;
     if (arv !== undefined && typeof arv === "number" && arv > 0) {
-      const arvCap = money(TIER12_MAX_ARV_LTV_PCT * arv);
+      const arvCap = money(advanceRule.maxArvLtvPct * arv);
       const policyMax = money(Math.min(sumAdvanceCap, arvCap));
       return {
         basis,
@@ -73,7 +93,9 @@ export function purchasePolicyBreakdown(
         ltcCap: sumAdvanceCap,
         arvCap,
         policyMax,
-        tier12AdvanceRule: true,
+        ...(tier12 ? { tier12AdvanceRule: true } : {}),
+        purchaseAdvanceRule: advanceRule,
+        purchaseTier: normalizePurchaseTier(req.borrower?.experienceTier),
       };
     }
     return {
@@ -82,7 +104,9 @@ export function purchasePolicyBreakdown(
       ltcCap: sumAdvanceCap,
       arvCap: undefined,
       policyMax: sumAdvanceCap,
-      tier12AdvanceRule: true,
+      ...(tier12 ? { tier12AdvanceRule: true } : {}),
+      purchaseAdvanceRule: advanceRule,
+      purchaseTier: normalizePurchaseTier(req.borrower?.experienceTier),
     };
   }
 
@@ -114,7 +138,7 @@ export function purchasePolicyBreakdown(
 
 export function purchasePolicyMax(
   req: DealAnalyzeRequestV1,
-  caps: { maxLtcPct: number; maxArvLtvPct: number } = defaultPurchaseCaps(),
+  caps: PurchaseCaps = defaultPurchaseCaps(),
 ): number | undefined {
   return purchasePolicyBreakdown(req, caps)?.policyMax;
 }
@@ -125,7 +149,7 @@ export function purchasePolicyMax(
  */
 export function purchaseBindingFlags(
   breakdown: PurchasePolicyBreakdown,
-  caps: { maxLtcPct: number; maxArvLtvPct: number } = defaultPurchaseCaps(),
+  caps: PurchaseCaps = defaultPurchaseCaps(),
 ): AnalysisFlag[] {
   const { maxLtcPct, maxArvLtvPct } = caps;
   const { costBasisCap, arvCap, policyMax, tier12AdvanceRule } = breakdown;
@@ -137,17 +161,28 @@ export function purchaseBindingFlags(
     costBasisCap,
     arvCap,
     policyMax,
-    maxLtcPct,
-    maxArvLtvPct,
+    ...(breakdown.purchaseAdvanceRule && !tier12AdvanceRule
+      ? {
+          initialAdvancePct: breakdown.purchaseAdvanceRule.initialAdvancePct,
+          rehabAdvancePct: breakdown.purchaseAdvanceRule.rehabAdvancePct,
+          maxArvLtvPct: breakdown.purchaseAdvanceRule.maxArvLtvPct,
+          purchaseTier: breakdown.purchaseTier,
+        }
+      : { maxLtcPct, maxArvLtvPct }),
     tier12AdvanceRule: tier12AdvanceRule === true,
   };
 
+  const advanceRule = breakdown.purchaseAdvanceRule;
   const firstLegLabel = tier12AdvanceRule
     ? "advance-sum cap (90% of purchase + 100% of rehab)"
+    : advanceRule
+      ? `advance-sum cap (${advanceRule.initialAdvancePct * 100}% of purchase + ${advanceRule.rehabAdvancePct * 100}% of financed rehab)`
     : "LTC (cost-basis) cap";
   const secondLegLabel = tier12AdvanceRule
     ? "ARV cap (75% of ARV for tier 1–2)"
-    : "ARV cap";
+    : advanceRule
+      ? `ARV cap (${advanceRule.maxArvLtvPct * 100}% of ARV for tier ${breakdown.purchaseTier})`
+      : "ARV cap";
 
   if (approxEqualCents(costBasisCap, arvCap)) {
     return [

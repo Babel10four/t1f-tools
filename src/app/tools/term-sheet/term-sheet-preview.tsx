@@ -14,7 +14,7 @@ import {
   formatNoteRatePercentDisplay,
   formatPricingScalar,
 } from "../pricing-calculator/pricing-display";
-import { computeInitialLtcPercent } from "@/lib/engines/deal/policy/initial-ltc-display";
+import { computeInitialLtcPercent, initialLtcDescription } from "@/lib/engines/deal/policy/initial-ltc-display";
 import { TermSheetExportBar } from "./term-sheet-export-bar";
 import {
   buildTermSheetCtcEstimateRows,
@@ -318,8 +318,7 @@ export function TermSheetPreview({
                 {initialLtcPercent !== undefined ? `${initialLtcPercent}%` : "—"}
               </span>
               <span className="mt-1 block text-xs font-normal text-zinc-500 dark:text-zinc-400">
-                Acquisition loan as % of project cost basis (purchase + rehab, or payoff +
-                rehab).
+                {initialLtcDescription(request)}
               </span>
             </dd>
           </div>

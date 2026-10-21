@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "assumptions": {
+    "maxLtcPct": 0.75,
+    "maxArvLtvPct": 0.7,
+    "refinanceMaxLtvPct": 0.75,
+    "defaultTermMonths": 12,
+    "ltvOverLimitThresholdPct": 75,
+    "ctcPointsPct": 0.005,
+    "ctcLenderFeesPct": 0.01,
+    "ctcClosingCostsPct": 0.015
+  },
+  "purchaseTierRules": {
+    "3": {
+      "initialAdvancePct": 0.85,
+      "rehabAdvancePct": 1,
+      "maxArvLtvPct": 0.75
+    }
+  },
+  "_provenance": {
+    "title": "Tier One Funding Credit Policy ver. 8.2026",
+    "url": "https://docs.google.com/document/d/1oQ6Gni0qvOHFCbVfLcnRGUnFXXGq5CdZJSyxH2XnPxo/edit",
+    "sourceModifiedAt": "2026-10-19T20:07:43.912Z",
+    "verifiedAt": "2026-10-21T21:12:07Z",
+    "sections": ["2.2 Loan-to-Cost", "4.1 Borrower Tiering & Program Matrices", "8.1 Construction Holdback Minimums/Maximums"],
+    "verifiedScope": "Tier 3 purchase acquisition advance, rehab holdback, and ARV cap only. The existing eight generic scalar assumptions are preserved for compatibility, not newly certified as a complete current-policy implementation. Pricing is supplied by the user; no rates rule set is created."
+  }
+}

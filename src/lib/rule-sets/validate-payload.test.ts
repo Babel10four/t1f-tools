@@ -91,6 +91,28 @@ describe("validateRulePayload", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("preserves a strictly validated optional purchase tier map", () => {
+    const purchaseTierRules = { "3": { initialAdvancePct: 0.85, rehabAdvancePct: 1, maxArvLtvPct: 0.75 } };
+    const result = validateRulePayload("calculator_assumptions", { ...validCalc, purchaseTierRules });
+    expect(result.ok).toBe(true);
+    if (result.ok && "assumptions" in result.payload) {
+      expect(result.payload.purchaseTierRules).toEqual(purchaseTierRules);
+    }
+  });
+
+  it.each([
+    null,
+    [],
+    { "Tier 3": { initialAdvancePct: 0.85, rehabAdvancePct: 1, maxArvLtvPct: 0.75 } },
+    { "3": { initialAdvancePct: 85, rehabAdvancePct: 1, maxArvLtvPct: 0.75 } },
+    { "3": { initialAdvancePct: 0.85, rehabAdvancePct: -1, maxArvLtvPct: 0.75 } },
+    { "3": { initialAdvancePct: 0.85, rehabAdvancePct: 1 } },
+    { "3": { initialAdvancePct: 0.85, rehabAdvancePct: 1, maxArvLtvPct: 0 } },
+    { "3": { initialAdvancePct: 0.85, rehabAdvancePct: 1, maxArvLtvPct: 0.75, typo: 1 } },
+  ])("rejects invalid purchase tier configuration %#", (purchaseTierRules) => {
+    expect(validateRulePayload("calculator_assumptions", { ...validCalc, purchaseTierRules }).ok).toBe(false);
+  });
+
   it("rejects calculator with non-numeric assumption", () => {
     const r = validateRulePayload("calculator_assumptions", {
       schemaVersion: 1,

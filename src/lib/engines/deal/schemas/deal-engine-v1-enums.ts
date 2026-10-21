@@ -13,6 +13,10 @@ export const DEAL_ANALYZE_KNOWN_FLAG_CODES = [
   "POLICY_CONFIG_FALLBACK",
   /** POLICY-ENGINE-REWRITE — AIV-forward / no-rehab purchase mapping not finalized. */
   "POLICY_MAPPING_PENDING",
+  /** A tier requiring published advance rules has no valid bound configuration. */
+  "PURCHASE_TIER_POLICY_UNAVAILABLE",
+  /** Available Tier 3 proceeds cannot cover its configured rehab holdback. */
+  "PURCHASE_REHAB_HOLDBACK_SHORTFALL",
 ] as const;
 
 export type DealAnalyzeKnownFlagCode =

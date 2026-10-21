@@ -28,11 +28,12 @@ export function isPurchaseNoRehabPolicyMappingPending(
 export function inferPurchaseBindingLeg(
   breakdown: PurchasePolicyBreakdown,
 ): DealAnalyzeBindingLegV1 {
-  const { costBasisCap, arvCap, policyMax, tier12AdvanceRule } = breakdown;
+  const { costBasisCap, arvCap, policyMax, tier12AdvanceRule, purchaseAdvanceRule } = breakdown;
+  const usesAdvanceSum = tier12AdvanceRule === true || purchaseAdvanceRule !== undefined;
   if (arvCap === undefined) {
-    return tier12AdvanceRule === true ? "advance_sum" : "ltc";
+    return usesAdvanceSum ? "advance_sum" : "ltc";
   }
-  const ltcLeg = tier12AdvanceRule === true ? "advance_sum" : "ltc";
+  const ltcLeg = usesAdvanceSum ? "advance_sum" : "ltc";
   if (approxEqualCents(policyMax, costBasisCap) && approxEqualCents(policyMax, arvCap)) {
     return "tie";
   }
