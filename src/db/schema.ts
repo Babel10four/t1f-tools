@@ -34,7 +34,7 @@ export const documents = pgTable("documents", {
   publishedAt: timestamp("published_at", { withTimezone: true }),
   archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdByRole: text("created_by_role"),
-});
+}).enableRLS();
 
 export type DocumentRow = typeof documents.$inferSelect;
 export type DocumentInsert = typeof documents.$inferInsert;
@@ -59,7 +59,7 @@ export const ruleSets = pgTable("rule_sets", {
   publishedAt: timestamp("published_at", { withTimezone: true }),
   archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdByRole: text("created_by_role"),
-});
+}).enableRLS();
 
 export type RuleSetRow = typeof ruleSets.$inferSelect;
 export type RuleSetInsert = typeof ruleSets.$inferInsert;
@@ -120,7 +120,7 @@ export const toolContextBindings = pgTable(
       foreignColumns: [table.id],
     }).onDelete("set null"),
   ],
-);
+).enableRLS();
 
 export type ToolContextBindingRow = typeof toolContextBindings.$inferSelect;
 export type ToolContextBindingInsert = typeof toolContextBindings.$inferInsert;

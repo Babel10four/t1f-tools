@@ -145,6 +145,23 @@ Append-only **`events`** rows in Postgres (`drizzle/0003_events.sql` or `npm run
 
 This repo does **not** use `@supabase/supabase-js` — only **`DATABASE_URL`** (standard Postgres). Supabase is just hosted Postgres.
 
+### Policy configuration access (2026-10-21)
+
+Apply `drizzle/0006_policy_configuration_permissions.sql` after migrations 0001–0005.
+This migration is required even when using `db:push`: Drizzle's schema records RLS,
+but does not replace the explicit privilege revocations in the SQL migration.
+`documents`, `rule_sets`, and `tool_context_bindings` are server-only tables:
+RLS is enabled with intentional default-deny for direct clients, and `PUBLIC`,
+`anon`, and `authenticated` have no table privileges. Existing trusted database
+owner/service-role access is unchanged. The calculator continues reading through
+the server, and every policy mutation route independently requires a verified
+app `admin` session. App roles are not Supabase Auth roles; do not add a blanket
+`authenticated` write policy or authorize from client-supplied role fields.
+
+Verify with `scripts/verify-policy-permissions.sql` using the trusted database
+operator connection. See [the security runbook](docs/operations/policy-permissions-2026-10-21.md)
+for scope, evidence, and remaining limitations.
+
 | Step | Who |
 |------|-----|
 | Create a Supabase project and set the **database password** (save it in a password manager). | You |

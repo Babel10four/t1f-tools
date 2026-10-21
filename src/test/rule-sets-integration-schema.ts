@@ -3,8 +3,8 @@ import { join } from "node:path";
 import postgres from "postgres";
 
 /**
- * Applies `drizzle/0001_documents.sql` then `drizzle/0002_rule_sets.sql` using a
- * standalone client (not `getDb()`), for integration tests.
+ * Applies the rule lifecycle schema and server-only policy permissions using a
+ * standalone client (not `getDb()`), so CI also exercises lifecycle writes with RLS enabled.
  */
 export async function applyRuleSetsIntegrationSchema(
   databaseUrl: string,
@@ -29,6 +29,10 @@ export async function applyRuleSetsIntegrationSchema(
     await sql.unsafe(ruleSetsSql);
     await sql.unsafe(eventsSql);
     await sql.unsafe(bindingsSql);
+    await sql.unsafe(readFileSync(
+      join(root, "drizzle/0006_policy_configuration_permissions.sql"),
+      "utf8",
+    ));
   } finally {
     await sql.end({ timeout: 5 });
   }
