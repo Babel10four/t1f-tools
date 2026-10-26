@@ -1,7 +1,7 @@
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEAL_FORM_SESSION_STORAGE_KEY } from "../shared/deal-form-session";
+import { DEAL_FORM_SESSION_STORAGE_KEY, DEFAULT_DEAL_FORM_FIELDS } from "../shared/deal-form-session";
 import { TermSheetGeneratorClient } from "./term-sheet-generator-client";
 import { TermSheetPreview } from "./term-sheet-preview";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
@@ -222,6 +222,124 @@ describe("TermSheetGeneratorClient", () => {
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body.deal.purpose).toBe("refinance");
     expect(body.deal.productType).toBe("bridge_refinance");
+    expect(body.programContext).toBeUndefined();
+  });
+
+  function fillSyntheticSeasonedRefinance() {
+    const form = within(screen.getByTestId("ts-form"));
+    for (const [testId, value] of Object.entries({
+      "ts-refi-payoff": "700000",
+      "ts-refi-requested": "900000",
+      "ts-refi-rehab": "200000",
+      "ts-refi-arv": "1400000",
+      "ts-refi-asis": "1000000",
+      "ts-refi-note-rate": "10",
+      "ts-refi-origination-points": "0.5",
+    })) {
+      fireEvent.change(form.getByTestId(testId), { target: { value } });
+    }
+    fireEvent.change(form.getByRole("textbox", { name: /Experience tier/ }), { target: { value: "1" } });
+    fireEvent.change(form.getByRole("textbox", { name: /Term \(months\)/ }), { target: { value: "12" } });
+    fireEvent.change(form.getByTestId("ts-closing-date"), { target: { value: "2026-11-09" } });
+  }
+
+  it("explicitly selects and persists seasoned refinance, showing the ARV-based financed split", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (_url, options) => {
+      const response = await runDealAnalyze(JSON.parse(options.body));
+      return new Response(JSON.stringify(response), { status: 200 });
+    }));
+    const user = userEvent.setup();
+    const view = render(<TermSheetGeneratorClient />);
+    await user.click(screen.getByTestId("ts-flow-refinance"));
+    fillSyntheticSeasonedRefinance();
+    const selection = screen.getByRole("checkbox", { name: "Seasoned refinance with rehab (Tier 0/1)" });
+    expect(selection).not.toBeChecked();
+    expect(selection).toHaveAccessibleDescription(/more than 180 days.*70% ARV cap/);
+    await user.click(selection);
+    await user.click(screen.getByTestId("ts-generate-button"));
+    const preview = await screen.findByTestId("ts-preview");
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.programContext).toEqual({ scenario: "refinance_seasoned" });
+    expect(body.deal).toMatchObject({ payoffAmount: 700_000, requestedLoanAmount: 900_000, rehabBudget: 200_000, termMonths: 12 });
+    expect(body.assumptions).toMatchObject({ noteRatePercent: 10, originationPointsPercent: 0.5 });
+    expect(body.closingDate).toBeUndefined();
+    expect(preview).toHaveTextContent(/Acquisition funds\s*\$700,000/);
+    expect(preview).toHaveTextContent(/Rehab loan\s*\$200,000/);
+    expect(preview).toHaveTextContent(/Total loan \(64\.3% of ARV\)\s*\$900,000/);
+    expect(within(preview).getByTestId("ts-scenario-basis")).toHaveTextContent("70% ARV total-loan cap");
+    await waitFor(() => {
+      const saved = JSON.parse(sessionStorage.getItem(DEAL_FORM_SESSION_STORAGE_KEY)!);
+      expect(saved.fields.refinanceScenario).toBe("refinance_seasoned");
+      expect(saved.fields.closingDate).toBe("2026-11-09");
+    });
+    view.unmount();
+    render(<TermSheetGeneratorClient />);
+    expect(screen.getByTestId("ts-refi-seasoned-scenario")).toBeChecked();
+    expect(screen.getByTestId("ts-closing-date")).toHaveValue("2026-11-09");
+  });
+
+  it.each([
+    ["ts-refi-arv", ""],
+    ["ts-refi-rehab", "0"],
+    ["tier", "2"],
+    ["borrow", "no"],
+  ])("blocks selected seasoned refinance with invalid %s without sending a fallback request", async (field, value) => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    await user.click(screen.getByTestId("ts-flow-refinance"));
+    fillSyntheticSeasonedRefinance();
+    await user.click(screen.getByTestId("ts-refi-seasoned-scenario"));
+    if (field === "borrow") {
+      await user.click(screen.getByTestId("ts-refi-borrowing-rehab-no"));
+    } else {
+      const input = field === "tier"
+        ? within(screen.getByTestId("ts-form")).getByRole("textbox", { name: /Experience tier/ })
+        : screen.getByTestId(field);
+      fireEvent.change(input, { target: { value } });
+    }
+    await user.click(screen.getByTestId("ts-generate-button"));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("No fallback calculation has been run");
+    expect(screen.getByTestId("ts-refi-seasoned-scenario")).toBeChecked();
+  });
+
+  it("deselects the scenario explicitly without changing generic refinance serialization", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    await user.click(screen.getByTestId("ts-flow-refinance"));
+    fillSyntheticSeasonedRefinance();
+    await user.click(screen.getByTestId("ts-refi-seasoned-scenario"));
+    await user.click(screen.getByTestId("ts-refi-seasoned-scenario"));
+    await user.click(screen.getByTestId("ts-generate-button"));
+    await screen.findByTestId("ts-preview");
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.programContext).toBeUndefined();
+  });
+
+  it("clears the scenario when switching back to purchase and does not restore it automatically", async () => {
+    const user = userEvent.setup();
+    render(<TermSheetGeneratorClient />);
+    await user.click(screen.getByTestId("ts-flow-refinance"));
+    fillSyntheticSeasonedRefinance();
+    await user.click(screen.getByTestId("ts-refi-seasoned-scenario"));
+    await user.click(screen.getByTestId("ts-flow-purchase"));
+    fireEvent.change(screen.getByTestId("ts-purchase-price"), { target: { value: "1000000" } });
+    await user.click(screen.getByTestId("ts-generate-button"));
+    await screen.findByTestId("ts-preview");
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.deal.purpose).toBe("purchase");
+    expect(body.programContext).toBeUndefined();
+    await user.click(screen.getByTestId("ts-flow-refinance"));
+    expect(screen.getByTestId("ts-refi-seasoned-scenario")).not.toBeChecked();
+  });
+
+  it("keeps older saved refinance inputs generic", () => {
+    const oldFields = { ...DEFAULT_DEAL_FORM_FIELDS, payoffAmount: "700000", rehabBudget: "200000", experienceTier: "1", arv: "1400000" };
+    delete oldFields.refinanceScenario;
+    sessionStorage.setItem(DEAL_FORM_SESSION_STORAGE_KEY, JSON.stringify({ flow: "refinance", fields: oldFields }));
+    render(<TermSheetGeneratorClient />);
+    expect(screen.getByTestId("ts-refi-seasoned-scenario")).not.toBeChecked();
+    expect(screen.getByTestId("ts-refi-payoff")).toHaveValue("700000");
   });
 
   it("sends refinance rehab and shows the actual financed split without changing the payoff balance", async () => {

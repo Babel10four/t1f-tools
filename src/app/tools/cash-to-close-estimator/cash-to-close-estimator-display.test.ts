@@ -5,6 +5,8 @@ import type {
 } from "@/lib/engines/deal/schemas/canonical-response";
 import type { DealAnalyzeRequestV1 } from "@/lib/engines/deal/schemas/canonical-request";
 import type { DealAnalyzeResponseV1 } from "@/lib/engines/deal/schemas/canonical-response";
+import { runDealAnalyze } from "@/lib/engines/deal/analyze";
+import { termSheetScenarioBasis } from "../term-sheet/term-sheet-scenario";
 import {
   buildCashToCloseLoanCostSummary,
   buildCashToCloseClientSummaryText,
@@ -180,6 +182,31 @@ describe("buildCashToCloseClientSummaryText", () => {
     expect(text).toContain("Loan fees (points + lender fees)");
     expect(text).toMatch(/Title\/insurance: not included/i);
     expect(text).toMatch(/Assumed closing date for interest/i);
+    expect(text).not.toContain("Selected scenario:");
+  });
+
+  it("includes the inherited selected scenario in copied refinance summaries", async () => {
+    const request: DealAnalyzeRequestV1 = {
+      schemaVersion: "deal_analyze.v1",
+      deal: {
+        purpose: "refinance",
+        productType: "bridge_refinance",
+        payoffAmount: 700_000,
+        requestedLoanAmount: 900_000,
+        rehabBudget: 200_000,
+        termMonths: 12,
+      },
+      property: { asIsValue: 1_000_000, arv: 1_400_000 },
+      borrower: { experienceTier: "1" },
+      assumptions: { borrowingRehabFunds: true },
+      programContext: { scenario: "refinance_seasoned" },
+    };
+    const response = await runDealAnalyze(request);
+    const text = buildCashToCloseClientSummaryText({ flow: "refinance", response, request });
+    expect(text).toContain(`Selected scenario: ${termSheetScenarioBasis(request)}`);
+    expect(text).toContain("70% ARV total-loan cap including rehab holdback");
+    expect(text).toContain("subject to underwriting verification");
+    expect(text).toContain("Loan amount: $900,000");
   });
 
   it("names a user-selected closing date and excludes the 'today' fallback wording", () => {

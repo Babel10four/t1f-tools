@@ -61,7 +61,7 @@ Any other `productType` (or mismatch with `purpose`) is **policy-unsupported** f
 | **`validateDealAnalyzeRequest`** (existing) | TICKET-001A floor only: JSON, `schemaVersion`, `deal`/`property` sufficiency, canonical numerics, ambiguous `deal`+`loan`, ignored request `pricing`/`cashToClose` flags. **No** product whitelist here. |
 | **`policy/support.ts`** (or equivalent) | Map `(purpose, productType)` → supported v1 program or `unsupported`. |
 | **`policy/purchaseMax.ts`** | Purchase **policyMax**: `min(costBasisCap, arvCap)` per [Purchase value logic](#purchase-value-logic). **LTC** computed here or in a shared **`policy/metrics.ts`** for internal use only. |
-| **`policy/refinanceMax.ts`** | Refinance **policyMax**: single collateral basis [precedence](#refinance-value-logic); indeterminate basis → no invented max; signals via **`pricing.status`** / **flags** / **risks**. |
+| **`policy/refinanceMax.ts`** | Refinance **policyMax**: explicit seasoned T0/T1 rehab uses 70% ARV; otherwise legacy collateral basis [precedence](#refinance-value-logic); missing/unsupported required inputs → no invented max. |
 | **`policy/recommendedAmount.ts`** | **`min(requestedLoanAmount, policyMax)`** if ask present; else **`policyMax`**. |
 | **`policy/pricingStatus.ts`** | Choose **`pricing.status`** from frozen enum given inputs + support + indeterminacy. |
 | **`policy/cashToClose.ts`** | Build **`cashToClose.items`** using **only** [fixed labels](#cash-to-close-line-labels) from business-rules; amounts from policy formulas (illustrative). |
@@ -92,7 +92,7 @@ Any other `productType` (or mismatch with `purpose`) is **policy-unsupported** f
    - If **`(purpose, productType)`** not in supported table → **policy unsupported** path (still **200** if validation passed): set **`analysis.flags`**, **`risks`** with **`UNSUPPORTED_PRODUCT_V1`**, **`pricing.status`** per [§ Pricing status](#pricing-status-semantics) (e.g. not **`complete`** for a supported path—use **`stub`** or **`needs_review`** / **`insufficient_inputs`** per table below).  
 4. **If supported:**  
    - **Purchase:** compute **policyMax** = **min**(costBasisCap, arvCap) with **arv leg** applied **only** when `arv` present and **> 0** (see business-rules).  
-   - **Refinance:** choose **one** basis: `asIsValue` if **> 0**, else `arv` if **> 0**, else **indeterminate**.  
+   - **Refinance:** apply the explicit seasoned T0/T1 rehab exception below first; otherwise choose **one** basis: `asIsValue` if **> 0**, else `arv` if **> 0**, else **indeterminate**.
 5. **Recommended amount** = **`min(requestedLoanAmount, policyMax)`** if ask exists; else **`policyMax`**. If **policyMax** cannot be computed (e.g. refi indeterminate basis), recommended amount rules follow **flags** / **status** (may be `null` or omit per existing **loan** shape—**do not** invent numbers).  
 6. **loan.ltv:** compute when definition allows (unit: **0–100 percent**, see below); omit if not meaningful.  
 7. **LTC:** compute internally for purchase path; emit **only** in **`analysis.flags`** / **`risks`** (e.g. **`LTC_OVER_LIMIT`** or narrative context per codes).  
@@ -121,7 +121,21 @@ Any other `productType` (or mismatch with `purpose`) is **policy-unsupported** f
 
 ## Refinance value logic
 
-**Single basis — frozen order** (same as business-rules):
+**Narrow verified exception, 2026-10-26:** Explicit `programContext.scenario = refinance_seasoned`
+with positive `deal.rehabBudget` and Tier 0/1 uses **70% ARV as the total-loan cap**, per the specific
+seasoned-refinance-with-SOW row of Credit Policy v8.2026 table 4.1. The generic published refi scalar
+does not override this branch. Require positive ARV and supported tier; no as-is or generic-tier fallback.
+Missing ARV emits `MISSING_COLLATERAL_VALUE`; missing/unsupported tier emits
+`SEASONED_REFINANCE_POLICY_UNAVAILABLE`. Withhold amounts, mark incomplete, and use `needs_review` pricing.
+The explicit scenario requires `assumptions.borrowingRehabFunds === true` (boolean). Missing/invalid/
+declined funding or no positive rehab also withholds amounts with
+`SEASONED_REFINANCE_POLICY_UNAVAILABLE`; it must not inherit the generic AIV cap through a direct API request.
+Reserve the full financed rehab budget before initial proceeds; if the requested/capped amount cannot
+cover it, withhold sizing and cash-to-close and emit `REFINANCE_REHAB_HOLDBACK_SHORTFALL`.
+ARV is the intentional governing basis, not `VALUE_BASIS_ASSUMED`. No new initial as-is cap is inferred.
+See the business-rules file for provenance and exact scope; other paths retain existing behavior.
+
+**Otherwise, single basis — frozen order** (same as business-rules):
 
 1. **`property.asIsValue`** if present and **> 0**  
 2. Else **`property.arv`** if present and **> 0**  
@@ -205,6 +219,8 @@ Use these **`risks[].code`** values before adding any new code (spec + business-
 | `UNSUPPORTED_PRODUCT_V1` |
 | `VALUE_BASIS_ASSUMED` |
 | `TERM_OUT_OF_RANGE` |
+| `SEASONED_REFINANCE_POLICY_UNAVAILABLE` |
+| `REFINANCE_REHAB_HOLDBACK_SHORTFALL` |
 
 Map founder scenarios to these (e.g. unsupported product → **`UNSUPPORTED_PRODUCT_V1`**; LTV threshold → **`LTV_OVER_LIMIT`**). **Do not** emit ad-hoc codes outside this set without updating the business-rules doc.
 
@@ -252,7 +268,7 @@ Map founder scenarios to these (e.g. unsupported product → **`UNSUPPORTED_PROD
 
 1. **Supported purchase** `bridge_purchase` — **policyMax** matches **min**(cost basis cap, ARV cap) with provisional constants; **loan** amount rule **min**(ask, max) or max.  
 2. **Purchase** missing **arv** or **arv ≤ 0** — ARV leg omitted; flags/pricing reflect gap; **no** invented request fields.  
-3. **Supported refinance** `bridge_refinance` — basis **asIs** preferred over **arv**; **`VALUE_BASIS_ASSUMED`** / risks when documented.  
+3. **Supported generic refinance** `bridge_refinance` — basis **asIs** preferred over **arv**; **`VALUE_BASIS_ASSUMED`** / risks when documented. Explicit seasoned T0/T1 financed rehab instead requires ARV and uses the verified 70% total cap.
 4. **Refinance** no positive basis — **`insufficient_inputs`** or **`needs_review`**; no fake **policyMax**.  
 5. **Unsupported** `productType` — **200**, **`UNSUPPORTED_PRODUCT_V1`**, not **400**.  
 6. **LTC** appears only in **flags** / **risks**, not new top-level key.  

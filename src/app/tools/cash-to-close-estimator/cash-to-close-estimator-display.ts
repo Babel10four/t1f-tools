@@ -7,6 +7,7 @@ import type {
 } from "@/lib/engines/deal/schemas/canonical-response";
 import { formatMoney } from "../loan-structuring-assistant/display-helpers";
 import { formatDateLong } from "../shared/closing-date";
+import { termSheetScenarioBasis } from "../term-sheet/term-sheet-scenario";
 
 const FEE_LINE_LABELS = new Set([
   "Estimated points",
@@ -262,6 +263,10 @@ export function buildCashToCloseClientSummaryText(input: {
   );
   const lines: string[] = [];
   lines.push(`Cash to close summary — ${flow === "purchase" ? "Purchase (bridge)" : "Refinance (bridge)"}`);
+  const scenarioBasis = termSheetScenarioBasis(request);
+  if (scenarioBasis) {
+    lines.push(`Selected scenario: ${scenarioBasis}`);
+  }
   lines.push("");
   lines.push(`Pricing status: ${response.pricing.status}`);
   if (

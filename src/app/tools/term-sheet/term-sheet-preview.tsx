@@ -25,6 +25,7 @@ import {
 import { parseLocalYmd } from "../shared/closing-date";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 import { T1fTermSheetLogo } from "@/components/branding/t1f-term-sheet-logo";
+import { termSheetScenarioBasis } from "./term-sheet-scenario";
 
 export type { TermSheetLocalMetadata } from "./term-sheet-types";
 
@@ -87,6 +88,7 @@ export function TermSheetPreview({
   const riskGroups = groupRisksBySeverity(response.risks);
   const pricing = response.pricing;
   const loan = response.loan;
+  const scenarioBasis = termSheetScenarioBasis(request);
   const initialLtcPercent =
     request !== undefined
       ? computeInitialLtcPercent(request, loan)
@@ -178,6 +180,12 @@ export function TermSheetPreview({
               {purposeLabel(loan.purpose)}
             </dd>
           </div>
+          {scenarioBasis ? (
+            <div className="border-b border-zinc-100 py-3 dark:border-zinc-800/80" data-testid="ts-scenario-basis">
+              <dt className="text-zinc-500">Selected scenario</dt>
+              <dd className="mt-1 text-sm">{scenarioBasis}</dd>
+            </div>
+          ) : null}
           {request?.deal.purchasePrice !== undefined ? (
             <div className="flex justify-between gap-4 border-b border-zinc-100 py-3 dark:border-zinc-800/80">
               <dt className="text-zinc-500">Purchase price</dt>

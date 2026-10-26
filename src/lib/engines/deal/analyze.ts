@@ -15,7 +15,7 @@ import {
   purchasePolicyBreakdown,
 } from "./policy/purchaseMax";
 import { recommendedLoanAmount } from "./policy/recommendedAmount";
-import { refinancePolicyMax } from "./policy/refinanceMax";
+import { isSeasonedRehabRefinance, refinancePolicyMax, seasonedRehabPolicyIssue } from "./policy/refinanceMax";
 import { buildDealAnalyzeRisks } from "./policy/risks";
 import { supportedProduct } from "./policy/support";
 import {
@@ -224,6 +224,7 @@ export async function runDealAnalyze(
   const supported = supportedProduct(deal.purpose, deal.productType);
   const purchaseTierPolicyMissing = supported && deal.purpose === "purchase" &&
     isPurchaseTierPolicyMissing(calc, req.borrower?.experienceTier);
+  const seasonedRefinanceIssue = supported ? seasonedRehabPolicyIssue(req) : undefined;
 
   const purchaseBreakdown =
     supported && deal.purpose === "purchase"
@@ -231,6 +232,13 @@ export async function runDealAnalyze(
       : undefined;
 
   const extraFlags: AnalysisFlag[] = [];
+  if (seasonedRefinanceIssue) {
+    extraFlags.push({
+      code: seasonedRefinanceIssue.code,
+      severity: "high",
+      message: seasonedRefinanceIssue.detail,
+    });
+  }
   if (purchaseTierPolicyMissing) {
     extraFlags.push({
       code: "PURCHASE_TIER_POLICY_UNAVAILABLE",
@@ -267,7 +275,8 @@ export async function runDealAnalyze(
     normalizationNotes,
     extraFlags,
   );
-  let analysisStatus = purchaseTierPolicyMissing ? "incomplete" : inputAnalysisStatus;
+  let analysisStatus = purchaseTierPolicyMissing || seasonedRefinanceIssue
+    ? "incomplete" : inputAnalysisStatus;
 
   const refi = refinancePolicyMax(req, calc.refinanceMaxLtvPct);
 
@@ -319,6 +328,7 @@ export async function runDealAnalyze(
 
   let loan: DealAnalyzeResponseV1["loan"] = { ...buildLoanBase(req) };
   let purchaseRehabHoldbackShortfall = false;
+  let refinanceRehabHoldbackShortfall = false;
 
   if (policyMax !== undefined) {
     const amount = recommendedLoanAmount(req, policyMax);
@@ -329,7 +339,18 @@ export async function runDealAnalyze(
       (purchaseBreakdown?.purchaseAdvanceRule?.rehabAdvancePct ?? 0) * 100) / 100;
     purchaseRehabHoldbackShortfall = configuredTier3 &&
       req.assumptions?.borrowingRehabFunds !== false && amount < requiredHoldback;
-    if (purchaseRehabHoldbackShortfall) {
+    const requiredRefinanceHoldback = Math.round(deal.rehabBudget * 100) / 100;
+    refinanceRehabHoldbackShortfall = isSeasonedRehabRefinance(req) &&
+      req.assumptions?.borrowingRehabFunds !== false && amount < requiredRefinanceHoldback;
+    if (refinanceRehabHoldbackShortfall) {
+      analysisStatus = "incomplete";
+      analysisFlags.push({
+        code: "REFINANCE_REHAB_HOLDBACK_SHORTFALL",
+        severity: "high",
+        message: "The requested amount or 70% ARV cap cannot cover the full seasoned refinance rehab holdback. Loan sizing and cash-to-close amounts are withheld; review the request and SOW funding.",
+        context: { availableLoanAmount: amount, requiredRehabHoldback: requiredRefinanceHoldback },
+      });
+    } else if (purchaseRehabHoldbackShortfall) {
       analysisStatus = "incomplete";
       analysisFlags.push({
         code: "PURCHASE_REHAB_HOLDBACK_SHORTFALL",
@@ -354,6 +375,7 @@ export async function runDealAnalyze(
       refi,
       req,
       purchaseBreakdown,
+      refinanceRehabHoldbackShortfall,
     },
     {
       maxLtcPct: calc.maxLtcPct,
@@ -362,7 +384,8 @@ export async function runDealAnalyze(
     },
   );
 
-  const pricingStatus = purchaseTierPolicyMissing || purchaseRehabHoldbackShortfall ? "needs_review" : pricingStatusForSupportedDeal({
+  const pricingStatus = purchaseTierPolicyMissing || purchaseRehabHoldbackShortfall ||
+    seasonedRefinanceIssue || refinanceRehabHoldbackShortfall ? "needs_review" : pricingStatusForSupportedDeal({
     policyMaxDefined: policyMax !== undefined,
     borrowerFicoDefined:
       req.borrower?.fico !== undefined && typeof req.borrower.fico === "number",

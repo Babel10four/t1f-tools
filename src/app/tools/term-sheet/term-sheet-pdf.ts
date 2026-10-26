@@ -12,6 +12,7 @@ import {
 } from "./term-sheet-cash-to-close-fields";
 import { parseLocalYmd } from "../shared/closing-date";
 import { jsPDF } from "jspdf";
+import { termSheetScenarioBasis } from "./term-sheet-scenario";
 
 const PDF_PAGE_W = 612;
 const PAGE_H = 792;
@@ -573,6 +574,20 @@ export async function downloadTermSheetPdf(
 
   doc.addPage();
   yCursor = MARGIN;
+  // Use a full-width block on page 2 so the explicit scenario basis cannot crowd
+  // or truncate the two-column financial terms on page 1.
+  const scenarioBasis = termSheetScenarioBasis(request);
+  if (scenarioBasis) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    const scenarioLines = doc.splitTextToSize(
+      `Selected scenario: ${scenarioBasis}`,
+      PDF_PAGE_W - MARGIN * 2,
+    );
+    doc.text(scenarioLines, MARGIN, yCursor);
+    yCursor += scenarioLines.length * 11 + 14;
+  }
   yCursor = drawCashToCloseSectionPdf(doc, yCursor, request, response, asOfDate);
   yCursor += 20;
 

@@ -19,6 +19,7 @@ export const DEFAULT_DEAL_FORM_FIELDS: LoanAssistantFields = {
   experienceTier: "",
   payoffAmount: "",
   asIsValue: "",
+  refinanceScenario: "",
   borrowingRehabFunds: "yes",
   originationPointsPercent: "",
   originationFlatFee: "",
@@ -67,6 +68,11 @@ function parseFields(raw: unknown): LoanAssistantFields | null {
   if (!isBorrowingRehabFunds(o.borrowingRehabFunds)) {
     return null;
   }
+  // Older sessions predate explicit refinance scenarios. Do not infer seasoning.
+  const refinanceScenario = o.refinanceScenario ?? "";
+  if (refinanceScenario !== "" && refinanceScenario !== "refinance_seasoned") {
+    return null;
+  }
   const collateralPropertyAddress =
     typeof o.collateralPropertyAddress === "string" ? o.collateralPropertyAddress : "";
   // Older sessions predate the closing date; default to today so the field stays populated.
@@ -82,6 +88,7 @@ function parseFields(raw: unknown): LoanAssistantFields | null {
     experienceTier: o.experienceTier as string,
     payoffAmount: o.payoffAmount as string,
     asIsValue: o.asIsValue as string,
+    refinanceScenario,
     borrowingRehabFunds: o.borrowingRehabFunds,
     originationPointsPercent: o.originationPointsPercent as string,
     originationFlatFee: o.originationFlatFee as string,
@@ -112,7 +119,10 @@ export function loadDealFormSession(): DealFormSessionPayload | null {
     if (!fields) {
       return null;
     }
-    return { flow: o.flow, fields };
+    return {
+      flow: o.flow,
+      fields: o.flow === "purchase" ? { ...fields, refinanceScenario: "" } : fields,
+    };
   } catch {
     return null;
   }
@@ -125,7 +135,12 @@ export function writeDealFormSession(payload: DealFormSessionPayload): void {
   try {
     window.sessionStorage.setItem(
       DEAL_FORM_SESSION_STORAGE_KEY,
-      JSON.stringify(payload),
+      JSON.stringify({
+        ...payload,
+        fields: payload.flow === "purchase"
+          ? { ...payload.fields, refinanceScenario: "" }
+          : payload.fields,
+      }),
     );
     window.dispatchEvent(new Event(DEAL_FORM_SESSION_CHANGED_EVENT));
   } catch {

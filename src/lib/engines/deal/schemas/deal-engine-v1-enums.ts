@@ -17,6 +17,8 @@ export const DEAL_ANALYZE_KNOWN_FLAG_CODES = [
   "PURCHASE_TIER_POLICY_UNAVAILABLE",
   /** Available Tier 3 proceeds cannot cover its configured rehab holdback. */
   "PURCHASE_REHAB_HOLDBACK_SHORTFALL",
+  "SEASONED_REFINANCE_POLICY_UNAVAILABLE",
+  "REFINANCE_REHAB_HOLDBACK_SHORTFALL",
 ] as const;
 
 export type DealAnalyzeKnownFlagCode =
@@ -55,6 +57,8 @@ export const DEAL_ANALYZE_STABLE_RISK_CODES = [
   "UNSUPPORTED_PRODUCT_V1",
   "VALUE_BASIS_ASSUMED",
   "TERM_OUT_OF_RANGE",
+  "SEASONED_REFINANCE_POLICY_UNAVAILABLE",
+  "REFINANCE_REHAB_HOLDBACK_SHORTFALL",
 ] as const;
 
 export type DealAnalyzeStableRiskCode =

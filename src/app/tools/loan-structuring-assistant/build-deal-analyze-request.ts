@@ -14,6 +14,8 @@ export type LoanAssistantFields = {
   experienceTier: string;
   payoffAmount: string;
   asIsValue: string;
+  /** Explicit opt-in; selecting confirms >180-day seasoning. Never inferred from values. */
+  refinanceScenario?: "" | "refinance_seasoned";
   /** When "no", the full approved loan is treated as acquisition; rehab loan is zero. */
   borrowingRehabFunds: "yes" | "no";
   /** Percent points (e.g. 0.65 for 0.65%). */
@@ -209,6 +211,20 @@ export function buildDealAnalyzeRequest(
     property.asIsValue = asIsValue;
   }
   const arv = parsePositiveNumber(fields.arv);
+  const seasonedRefinance = fields.refinanceScenario === "refinance_seasoned";
+  if (
+    seasonedRefinance &&
+    (rehabBudget <= 0 ||
+      fields.borrowingRehabFunds !== "yes" ||
+      arv === undefined ||
+      !/^(?:tier\s*|t)?[01]$/i.test(tier))
+  ) {
+    return {
+      ok: false,
+      clientHint:
+        "Seasoned refinance with rehab requires a positive rehab budget, Taking rehab funds = Yes, a positive ARV, and experience Tier 0 or Tier 1. Confirm the property has been held for more than 180 days, or deselect this scenario to use generic refinance. No fallback calculation has been run.",
+    };
+  }
   if (arv !== undefined) {
     property.arv = arv;
   }
@@ -218,6 +234,9 @@ export function buildDealAnalyzeRequest(
     schemaVersion: DEAL_ANALYZE_SCHEMA_VERSION,
     deal,
     assumptions: buildAssumptions(fields),
+    ...(seasonedRefinance
+      ? { programContext: { scenario: "refinance_seasoned" as const } }
+      : {}),
     ...(hasProperty ? { property } : {}),
     ...(hasBorrower ? { borrower } : {}),
   };

@@ -12,6 +12,7 @@ import {
   TERM_SHEET_CTC_THIRD_PARTY_ASSUMPTIONS,
 } from "./term-sheet-cash-to-close-fields";
 import { parseLocalYmd } from "../shared/closing-date";
+import { termSheetScenarioBasis } from "./term-sheet-scenario";
 
 function purposeLabel(p: string): string {
   switch (p) {
@@ -47,6 +48,10 @@ export function buildTermSheetPlainText(
   lines.push("");
   lines.push("INPUTS");
   lines.push(`Transaction type: ${purposeLabel(loan.purpose)}`);
+  const scenarioBasis = termSheetScenarioBasis(request);
+  if (scenarioBasis) {
+    lines.push(`Selected scenario: ${scenarioBasis}`);
+  }
   if (request?.deal.purchasePrice !== undefined) {
     lines.push(`Purchase price: ${formatMoneyWholeDollars(request.deal.purchasePrice)}`);
   }

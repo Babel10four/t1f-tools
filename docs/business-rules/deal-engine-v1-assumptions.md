@@ -51,6 +51,30 @@ with policy provenance and the limited scope of verification recorded there.
 - maxLtvPct: `0.75` (75% of chosen collateral basis)
 - defaultTermMonths: `12`
 
+#### Explicit seasoned refinance with SOW, Tier 0/1 (2026-10-26)
+
+For `deal.purpose = refinance`, `programContext.scenario = refinance_seasoned`, and
+positive `deal.rehabBudget`, the verified Tier 0/1 **total** loan cap is **70% of ARV**.
+Source: Tier One Funding Credit Policy v8.2026, table 4.1,
+the specific "Seasoned Refinance ARV LTV (w/SOW)" row; user confirmed this written-policy
+cap on 2026-10-26. Do not substitute the general 75% ARV row or the completed-rehab-only
+75% AIV program. The generic refinance scalar above does not override this narrow branch.
+
+- Require a positive ARV and explicit Tier 0 or Tier 1 (`0`/`1`, `T0`/`T1`, or `Tier 0`/`Tier 1`).
+  Missing ARV never falls back to as-is; missing/unsupported tiers never fall through to generic sizing.
+- Missing inputs/policy mapping withhold loan and cash-to-close amounts, mark analysis incomplete and
+  pricing `needs_review`, and emit `MISSING_COLLATERAL_VALUE` or `SEASONED_REFINANCE_POLICY_UNAVAILABLE`.
+- Respect `min(requestedLoanAmount, 70% × ARV)`, or the ARV cap when no request is given.
+- Reserve the **entire financed rehab budget** before allocating the remaining initial advance.
+  If the requested/capped total cannot cover it, withhold amounts and emit
+  `REFINANCE_REHAB_HOLDBACK_SHORTFALL`; never silently shrink the holdback.
+- Require `assumptions.borrowingRehabFunds === true` (a boolean). An explicit seasoned scenario
+  with no positive rehab or missing/invalid/declined funding is unsupported by this narrow mapping:
+  withhold amounts with `SEASONED_REFINANCE_POLICY_UNAVAILABLE`, not generic AIV sizing.
+- The ARV basis is deliberate, not `VALUE_BASIS_ASSUMED`. No independent as-is initial cap is added here.
+- Generic refinance with no explicit seasoned scenario, other scenarios, and purchase behavior are unchanged.
+  This is a narrow verified correction, not certification of all other existing engine rules.
+
 ---
 
 ## Value basis precedence
@@ -64,7 +88,7 @@ Compute **policyMaxPurchase** = **min**(costBasisCap, arvCap):
 
 ### Refinance path
 
-Single basis, frozen order:
+Except for the explicit seasoned Tier 0/1 rehab branch above, single basis, frozen order:
 
 1. Use **asIsValue** when present and **> 0**.
 2. Else use **arv** when present and **> 0**.
@@ -85,7 +109,7 @@ Single basis, frozen order:
 
 ### Refinance rehab allocation
 
-When the borrower takes rehab funds, reserve the rehab budget from the recommended total loan first, up to the available total. The initial advance is the remaining total loan. This preserves the requested rehab holdback rather than prorating it against the outstanding payoff. When the borrower declines rehab funds, the whole recommended amount is the initial advance. The refinance total-loan cap and `REQUEST_EXCEEDS_POLICY_MAX` behavior still apply before allocation.
+When the borrower takes rehab funds, reserve the rehab budget from the recommended total loan first, up to the available total on legacy paths. The explicit seasoned Tier 0/1 rehab path instead withholds sizing if that total cannot fund the entire holdback. The initial advance is the remaining total loan. This preserves the requested rehab holdback rather than prorating it against the outstanding payoff. When the borrower declines rehab funds, the whole recommended amount is the initial advance. The refinance total-loan cap and `REQUEST_EXCEEDS_POLICY_MAX` behavior still apply before allocation.
 
 ---
 
@@ -167,6 +191,8 @@ Use **`risks[].code`** from this set before adding new codes (revise via spec + 
 - `UNSUPPORTED_PRODUCT_V1`
 - `VALUE_BASIS_ASSUMED`
 - `TERM_OUT_OF_RANGE`
+- `SEASONED_REFINANCE_POLICY_UNAVAILABLE`
+- `REFINANCE_REHAB_HOLDBACK_SHORTFALL`
 
 ---
 
@@ -176,4 +202,4 @@ Outputs labeled **estimated** are **directional** for internal workflow, not gua
 
 ---
 
-*Last updated: 2026-10-05*
+*Last updated: 2026-10-26*

@@ -6,7 +6,7 @@ import {
   POLICY_MAX_LTC_PCT,
 } from "./constants";
 import type { PurchasePolicyBreakdown } from "./purchaseMax";
-import type { RefinancePolicyMaxResult } from "./refinanceMax";
+import { isSeasonedRehabRefinance, seasonedRehabPolicyIssue, type RefinancePolicyMaxResult } from "./refinanceMax";
 
 function defaultPolicyTerms(): {
   maxLtcPct: number;
@@ -37,6 +37,7 @@ export function buildDealAnalyzeRisks(
     req: DealAnalyzeRequestV1;
     /** Supported purchase LTC breakdown when basis is positive (TICKET-002A). */
     purchaseBreakdown?: PurchasePolicyBreakdown | undefined;
+    refinanceRehabHoldbackShortfall?: boolean;
   },
   policyTerms: {
     maxLtcPct: number;
@@ -61,6 +62,11 @@ export function buildDealAnalyzeRisks(
   }
 
   if (req.deal.purpose === "refinance" && policyMax === undefined) {
+    const seasonedIssue = seasonedRehabPolicyIssue(req);
+    if (seasonedIssue) {
+      risks.push({ ...seasonedIssue, severity: "high" });
+      return risks;
+    }
     risks.push({
       code: "MISSING_COLLATERAL_VALUE",
       severity: "high",
@@ -69,6 +75,15 @@ export function buildDealAnalyzeRisks(
         "Neither as-is value nor ARV yields a positive collateral basis under frozen precedence; policy max was not computed.",
     });
     return risks;
+  }
+
+  if (input.refinanceRehabHoldbackShortfall) {
+    risks.push({
+      code: "REFINANCE_REHAB_HOLDBACK_SHORTFALL",
+      severity: "high",
+      title: "Full refinance rehab holdback cannot be funded",
+      detail: "The requested amount or 70% ARV cap is below the complete financed rehab budget. Loan sizing and cash-to-close amounts are withheld rather than silently reducing the rehab holdback.",
+    });
   }
 
   if (
@@ -95,7 +110,9 @@ export function buildDealAnalyzeRisks(
       code: "REQUEST_EXCEEDS_POLICY_MAX",
       severity: "medium",
       title: "Requested amount exceeds policy maximum",
-      detail: `Requested ${ask} exceeds policy max ${policyMax}; loan.amount is capped to policy max.`,
+      detail: input.refinanceRehabHoldbackShortfall
+        ? `Requested ${ask} exceeds policy max ${policyMax}; amounts are withheld because the cap cannot cover the full rehab holdback.`
+        : `Requested ${ask} exceeds policy max ${policyMax}; loan.amount is capped to policy max.`,
     });
   }
 
@@ -125,6 +142,7 @@ export function buildDealAnalyzeRisks(
 
   if (
     req.deal.purpose === "refinance" &&
+    !isSeasonedRehabRefinance(req) &&
     refi.basisSource === "arv" &&
     (req.property?.asIsValue === undefined || req.property.asIsValue <= 0)
   ) {

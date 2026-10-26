@@ -107,6 +107,36 @@ describe("CashToCloseEstimatorClient", () => {
     expect(sessionStorage.getItem(DEAL_FORM_SESSION_STORAGE_KEY)).toBeNull();
   });
 
+  it("shows an inherited seasoned scenario with a link to edit it and retains it on the wire", async () => {
+    sessionStorage.setItem(DEAL_FORM_SESSION_STORAGE_KEY, JSON.stringify({
+      flow: "refinance",
+      fields: {
+        ...DEFAULT_DEAL_FORM_FIELDS,
+        payoffAmount: "700000",
+        requestedLoanAmount: "900000",
+        rehabBudget: "200000",
+        arv: "1400000",
+        experienceTier: "1",
+        refinanceScenario: "refinance_seasoned",
+      },
+    }));
+    const user = userEvent.setup();
+    render(<CashToCloseEstimatorClient />);
+    const notice = screen.getByTestId("ctc-refi-scenario-notice");
+    expect(notice).toHaveTextContent("70% ARV cap");
+    expect(screen.getByRole("textbox", { name: "ARV (required)" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Experience tier (0 or 1 required)" })).toBeInTheDocument();
+    expect(within(notice).getByRole("link", { name: /Review or change/ })).toHaveAttribute("href", "/tools/term-sheet");
+    await user.click(screen.getByTestId("ctc-estimate-button"));
+    await screen.findByTestId("ctc-results");
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.programContext).toEqual({ scenario: "refinance_seasoned" });
+    await user.click(screen.getByTestId("ctc-flow-purchase"));
+    expect(screen.queryByTestId("ctc-refi-scenario-notice")).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("ctc-flow-refinance"));
+    expect(screen.queryByTestId("ctc-refi-scenario-notice")).not.toBeInTheDocument();
+  });
+
   it("purchase happy path posts bridge_purchase and shows cash-first results", async () => {
     const user = userEvent.setup();
     render(<CashToCloseEstimatorClient />);

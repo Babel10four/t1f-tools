@@ -131,7 +131,10 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
 
   const onFlowChange = (next: LoanAssistantFlow) => {
     setFlow(next);
-    setFields((f) => applyPurchaseRequestedLoanSuggestion(f, next));
+    setFields((f) => applyPurchaseRequestedLoanSuggestion(
+      next === "purchase" ? { ...f, refinanceScenario: "" } : f,
+      next,
+    ));
     setClientHint(null);
     bumpToEditing();
   };
@@ -475,6 +478,35 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-zinc-200 p-3 sm:col-span-2">
+              <label className="flex cursor-pointer items-start gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  name="refinanceScenario"
+                  data-testid="ts-refi-seasoned-scenario"
+                  aria-describedby="ts-refi-seasoned-help"
+                  checked={fields.refinanceScenario === "refinance_seasoned"}
+                  disabled={disabled}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setFields((f) => ({
+                      ...f,
+                      refinanceScenario: checked ? "refinance_seasoned" : "",
+                    }));
+                    setClientHint(null);
+                    bumpToEditing();
+                  }}
+                />
+                Seasoned refinance with rehab (Tier 0/1)
+              </label>
+              <p id="ts-refi-seasoned-help" className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
+                Select only after confirming the property has been held for more than
+                180 days. Applies a 70% ARV cap to the total loan, including the rehab
+                holdback. Requires positive rehab and ARV, Taking rehab funds = Yes,
+                and Tier 0 or Tier 1. Leave unchecked for generic refinance; this is
+                never selected automatically. Subject to underwriting verification.
+              </p>
+            </div>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 Payoff amount
@@ -573,7 +605,9 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 ARV{" "}
-                <span className="font-normal text-zinc-500">(optional)</span>
+                <span className="font-normal text-zinc-500">
+                  {fields.refinanceScenario === "refinance_seasoned" ? "(required)" : "(optional)"}
+                </span>
               </span>
               <input
                 name="arv"
@@ -615,7 +649,9 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 Experience tier{" "}
-                <span className="font-normal text-zinc-500">(1, 2, or 3)</span>
+                <span className="font-normal text-zinc-500">
+                  {fields.refinanceScenario === "refinance_seasoned" ? "(0 or 1 required)" : "(0, 1, 2, or 3)"}
+                </span>
               </span>
               <input
                 name="experienceTier"
@@ -624,7 +660,9 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
               <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                Optional — not required for an indicative term sheet.
+                {fields.refinanceScenario === "refinance_seasoned"
+                  ? "Tier 0 or Tier 1 is required for the selected seasoned refinance scenario."
+                  : "Optional — not required for an indicative term sheet."}
               </span>
             </label>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">

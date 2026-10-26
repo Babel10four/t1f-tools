@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import Link from "next/link";
 import { DisclosureBanner } from "@/components/tools/disclosure-banner";
 import { ToolPageHeader } from "@/components/tools/tool-page-header";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,9 @@ export function CashToCloseEstimatorClient() {
 
   const onFlowChange = (next: LoanAssistantFlow) => {
     setFlow(next);
+    if (next === "purchase") {
+      setFields((f) => ({ ...f, refinanceScenario: "" }));
+    }
     setClientHint(null);
     if (phase === "success" || phase === "error_4xx" || phase === "error_5xx") {
       setPhase("editing");
@@ -307,6 +311,18 @@ export function CashToCloseEstimatorClient() {
           </div>
         </fieldset>
 
+        {flow === "refinance" && fields.refinanceScenario === "refinance_seasoned" ? (
+          <p className="rounded-lg border border-zinc-200 p-3 text-sm" data-testid="ctc-refi-scenario-notice">
+            Selected in Deal Sheet: Seasoned refinance with rehab (Tier 0/1).
+            The total loan uses a 70% ARV cap, including the rehab holdback, with
+            more than 180 days of seasoning confirmed in inputs. Subject to
+            underwriting verification. {" "}
+            <Link href="/tools/term-sheet" className="font-medium underline">
+              Review or change this scenario in Deal Sheet
+            </Link>.
+          </p>
+        ) : null}
+
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-zinc-800 dark:text-zinc-200">
             Subject property address{" "}
@@ -500,7 +516,9 @@ export function CashToCloseEstimatorClient() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                ARV <span className="font-normal text-zinc-500">(optional)</span>
+                ARV <span className="font-normal text-zinc-500">
+                  {fields.refinanceScenario === "refinance_seasoned" ? "(required)" : "(optional)"}
+                </span>
               </span>
               <input
                 name="arv"
@@ -539,7 +557,9 @@ export function CashToCloseEstimatorClient() {
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 Experience tier{" "}
-                <span className="font-normal text-zinc-500">(1, 2, or 3)</span>
+                <span className="font-normal text-zinc-500">
+                  {fields.refinanceScenario === "refinance_seasoned" ? "(0 or 1 required)" : "(1, 2, or 3)"}
+                </span>
               </span>
               <input
                 name="experienceTier"
