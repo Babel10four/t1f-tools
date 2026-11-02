@@ -162,6 +162,39 @@ describe("TermSheetGeneratorClient", () => {
     expect(requested).toHaveValue("77777");
   });
 
+  it.each([
+    { arv: "275000", total: "180000", acquisition: 120000 },
+    { arv: "240000", total: "168000", acquisition: 108000 },
+  ])("protects all of Tier 4 rehab at ARV $arv from form through engine and preview", async ({ arv, total, acquisition }) => {
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, options: RequestInit) => {
+      const response = await runDealAnalyze(JSON.parse(String(options.body)));
+      return new Response(JSON.stringify(response), { status: 200 });
+    }));
+    render(<TermSheetGeneratorClient />);
+    const form = within(screen.getByTestId("ts-form"));
+    for (const [id, value] of Object.entries({
+      "ts-purchase-price": "160000",
+      "ts-purchase-rehab": "60000",
+      "ts-purchase-arv": arv,
+    })) {
+      fireEvent.change(form.getByTestId(id), { target: { value } });
+    }
+    fireEvent.change(form.getByRole("textbox", { name: /Experience tier/ }), { target: { value: "4" } });
+    expect(form.getByTestId("ts-purchase-requested")).toHaveValue(total);
+    expect(form.getByLabelText("Yes — 100% of rehab")).toBeChecked();
+    expect(form.getByLabelText("No — 0% of rehab")).not.toBeChecked();
+    fireEvent.click(screen.getByTestId("ts-generate-button"));
+    const preview = await screen.findByTestId("ts-preview");
+    expect(preview).toHaveTextContent("$60,000");
+    expect(preview).toHaveTextContent("100%");
+    expect(preview).toHaveTextContent(`$${acquisition.toLocaleString("en-US")}`);
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    const result = await runDealAnalyze(body);
+    expect(result.loan.amount).toBe(Number(total));
+    expect(result.loan.rehabLoanAmount).toBe(60000);
+    expect(result.loan.acquisitionLoanAmount).toBe(acquisition);
+  });
+
   it("uses published Tier 3 rules for Kayla's suggestion without inventing FICO", async () => {
     const user = userEvent.setup();
     render(<TermSheetGeneratorClient calculator={tier3Policy} />);

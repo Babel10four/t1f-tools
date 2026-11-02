@@ -11,11 +11,12 @@ import {
 } from "./policy/policy-snapshot";
 import { pricingStatusForSupportedDeal } from "./policy/pricingStatus";
 import {
+  hasUnsupportedPurchaseRehabRule,
   purchaseBindingFlags,
   purchasePolicyBreakdown,
 } from "./policy/purchaseMax";
 import { recommendedLoanAmount } from "./policy/recommendedAmount";
-import { isSeasonedRehabRefinance, refinancePolicyMax, seasonedRehabPolicyIssue } from "./policy/refinanceMax";
+import { refinancePolicyMax, seasonedRehabPolicyIssue } from "./policy/refinanceMax";
 import { buildDealAnalyzeRisks } from "./policy/risks";
 import { supportedProduct } from "./policy/support";
 import {
@@ -26,7 +27,7 @@ import {
   enrichLoanWithLeveragePresentation,
   isPurchaseNoRehabPolicyMappingPending,
 } from "./policy/leveragePresentation";
-import { isPurchaseTierPolicyMissing, normalizePurchaseTier } from "./policy/purchaseTierRule";
+import { isPurchaseTierPolicyMissing, isUsingVerifiedTier4PurchaseRule, VERIFIED_TIER4_PURCHASE_POLICY } from "./policy/purchaseTierRule";
 
 function parseNoteRatePercentAssumption(
   assumptions: DealAnalyzeRequestV1["assumptions"],
@@ -224,6 +225,8 @@ export async function runDealAnalyze(
   const supported = supportedProduct(deal.purpose, deal.productType);
   const purchaseTierPolicyMissing = supported && deal.purpose === "purchase" &&
     isPurchaseTierPolicyMissing(calc, req.borrower?.experienceTier);
+  const purchaseRehabPolicyInvalid = supported && deal.purpose === "purchase" &&
+    hasUnsupportedPurchaseRehabRule(req, purchaseCaps);
   const seasonedRefinanceIssue = supported ? seasonedRehabPolicyIssue(req) : undefined;
 
   const purchaseBreakdown =
@@ -244,6 +247,22 @@ export async function runDealAnalyze(
       code: "PURCHASE_TIER_POLICY_UNAVAILABLE",
       severity: "high",
       message: "Published tier 3 purchase advance rules are unavailable. Loan sizing and cash-to-close amounts are withheld; an administrator must publish and bind the verified tier policy.",
+    });
+  }
+  if (purchaseRehabPolicyInvalid) {
+    extraFlags.push({
+      code: "PURCHASE_REHAB_POLICY_UNAVAILABLE",
+      severity: "high",
+      message: "The published purchase rule does not support the selected all-or-none rehab funding option. Loan sizing and cash-to-close amounts are withheld; an administrator must verify the tier's rehab rule. Partial rehab funding is not permitted.",
+    });
+  }
+  if (supported && deal.purpose === "purchase" &&
+    isUsingVerifiedTier4PurchaseRule(calc, req.borrower?.experienceTier)) {
+    extraFlags.push({
+      code: "VERIFIED_TIER4_PURCHASE_POLICY",
+      severity: "info",
+      message: "Tier 4 uses the verified BA Credit Policy v8.2026 purchase rule: up to 75% initial acquisition plus 100% of financed rehab, subject to 70% ARV. No published Tier 4 override is bound; this is a source-verified embedded rule.",
+      context: VERIFIED_TIER4_PURCHASE_POLICY,
     });
   }
   if (
@@ -275,7 +294,7 @@ export async function runDealAnalyze(
     normalizationNotes,
     extraFlags,
   );
-  let analysisStatus = purchaseTierPolicyMissing || seasonedRefinanceIssue
+  let analysisStatus = purchaseTierPolicyMissing || purchaseRehabPolicyInvalid || seasonedRefinanceIssue
     ? "incomplete" : inputAnalysisStatus;
 
   const refi = refinancePolicyMax(req, calc.refinanceMaxLtvPct);
@@ -332,30 +351,25 @@ export async function runDealAnalyze(
 
   if (policyMax !== undefined) {
     const amount = recommendedLoanAmount(req, policyMax);
-    const configuredTier3 = deal.purpose === "purchase" &&
-      normalizePurchaseTier(req.borrower?.experienceTier) === "3" &&
-      purchaseBreakdown?.purchaseAdvanceRule !== undefined;
-    const requiredHoldback = Math.round((deal.rehabBudget ?? 0) *
-      (purchaseBreakdown?.purchaseAdvanceRule?.rehabAdvancePct ?? 0) * 100) / 100;
-    purchaseRehabHoldbackShortfall = configuredTier3 &&
+    const requiredHoldback = Math.round((deal.rehabBudget ?? 0) * 100) / 100;
+    purchaseRehabHoldbackShortfall = deal.purpose === "purchase" &&
       req.assumptions?.borrowingRehabFunds !== false && amount < requiredHoldback;
-    const requiredRefinanceHoldback = Math.round(deal.rehabBudget * 100) / 100;
-    refinanceRehabHoldbackShortfall = isSeasonedRehabRefinance(req) &&
-      req.assumptions?.borrowingRehabFunds !== false && amount < requiredRefinanceHoldback;
+    refinanceRehabHoldbackShortfall = deal.purpose === "refinance" &&
+      req.assumptions?.borrowingRehabFunds !== false && amount < requiredHoldback;
     if (refinanceRehabHoldbackShortfall) {
       analysisStatus = "incomplete";
       analysisFlags.push({
         code: "REFINANCE_REHAB_HOLDBACK_SHORTFALL",
         severity: "high",
-        message: "The requested amount or 70% ARV cap cannot cover the full seasoned refinance rehab holdback. Loan sizing and cash-to-close amounts are withheld; review the request and SOW funding.",
-        context: { availableLoanAmount: amount, requiredRehabHoldback: requiredRefinanceHoldback },
+        message: "The requested amount or policy cap cannot cover the full refinance rehab holdback. Loan sizing and cash-to-close amounts are withheld for underwriting review; partial rehab funding is not permitted.",
+        context: { availableLoanAmount: amount, requiredRehabHoldback: requiredHoldback },
       });
     } else if (purchaseRehabHoldbackShortfall) {
       analysisStatus = "incomplete";
       analysisFlags.push({
         code: "PURCHASE_REHAB_HOLDBACK_SHORTFALL",
         severity: "high",
-        message: "The requested amount or ARV cap cannot cover the published Tier 3 rehab holdback. Loan sizing and cash-to-close amounts are withheld; review the request and complete SOW funding before proceeding.",
+        message: "The requested amount or policy cap cannot cover the full rehab holdback. Loan sizing and cash-to-close amounts are withheld for underwriting review; partial rehab funding is not permitted.",
         context: { availableLoanAmount: amount, requiredRehabHoldback: requiredHoldback },
       });
     } else {
@@ -384,7 +398,7 @@ export async function runDealAnalyze(
     },
   );
 
-  const pricingStatus = purchaseTierPolicyMissing || purchaseRehabHoldbackShortfall ||
+  const pricingStatus = purchaseTierPolicyMissing || purchaseRehabPolicyInvalid || purchaseRehabHoldbackShortfall ||
     seasonedRefinanceIssue || refinanceRehabHoldbackShortfall ? "needs_review" : pricingStatusForSupportedDeal({
     policyMaxDefined: policyMax !== undefined,
     borrowerFicoDefined:

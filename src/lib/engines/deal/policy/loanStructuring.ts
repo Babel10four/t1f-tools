@@ -1,7 +1,5 @@
 import type { DealAnalyzeRequestV1 } from "../schemas/canonical-request";
 import type { DealAnalyzeLoanOutV1 } from "../schemas/canonical-response";
-import { isBorrowerTier1Or2 } from "./borrowerTier";
-import { TIER12_INITIAL_ADVANCE_PCT } from "./constants";
 import type { PurchaseTierRule } from "./purchaseTierRule";
 
 function money(n: number): number {
@@ -50,35 +48,10 @@ export function parseDealStructuringAssumptions(
 }
 
 /**
- * Tier 1/2 purchase: fund rehab up to budget first, then acquisition up to 90% of purchase.
+ * Rehab funding is binary for every tier and purpose: none, or the full budget.
+ * Policy sizing caps the total first; any reduction comes from initial proceeds,
+ * never from the rehab holdback. An infeasible total has no valid allocation.
  */
-function tier12PurchaseWaterfall(
-  totalLoan: number,
-  purchasePrice: number,
-  rehabBudget: number,
-): { acquisitionLoanAmount: number; rehabLoanAmount: number } {
-  const maxAcq = money(TIER12_INITIAL_ADVANCE_PCT * purchasePrice);
-  let rehabLoan = money(Math.min(rehabBudget, totalLoan));
-  let acquisitionLoan = money(totalLoan - rehabLoan);
-  if (acquisitionLoan > maxAcq) {
-    acquisitionLoan = maxAcq;
-    rehabLoan = money(totalLoan - acquisitionLoan);
-  }
-  if (rehabLoan > rehabBudget) {
-    rehabLoan = money(rehabBudget);
-    acquisitionLoan = money(totalLoan - rehabLoan);
-    if (acquisitionLoan > maxAcq) {
-      acquisitionLoan = maxAcq;
-      rehabLoan = money(totalLoan - acquisitionLoan);
-    }
-  }
-  return {
-    acquisitionLoanAmount: acquisitionLoan,
-    rehabLoanAmount: rehabLoan,
-  };
-}
-
-/** Refinance reserves the rehab holdback first, then applies remaining funds toward payoff. */
 export function splitAcquisitionRehabLoan(params: {
   totalLoan: number;
   purpose: "purchase" | "refinance";
@@ -86,11 +59,11 @@ export function splitAcquisitionRehabLoan(params: {
   payoffAmount?: number;
   rehabBudget: number;
   borrowingRehabFunds: boolean | undefined;
-  /** Tier 1/2 purchase bridge split (90% / 100% advances), rehab-first when short. */
+  /** Retained for callers; all tiers now use the same full-rehab-first allocation. */
   useTier12PurchaseWaterfall?: boolean;
   /** Published purchase rule; supplied by the same breakdown that sized the total. */
   purchaseAdvanceRule?: PurchaseTierRule;
-}): { acquisitionLoanAmount: number; rehabLoanAmount: number } {
+}): { acquisitionLoanAmount: number; rehabLoanAmount: number } | undefined {
   const { totalLoan, purpose, rehabBudget } = params;
   const useRehabSplit =
     params.borrowingRehabFunds !== false && rehabBudget > 0;
@@ -102,53 +75,22 @@ export function splitAcquisitionRehabLoan(params: {
     };
   }
 
-  if (purpose === "purchase" && params.purchaseAdvanceRule) {
-    const rehabLimit = money(rehabBudget * params.purchaseAdvanceRule.rehabAdvancePct);
-    const rehabLoanAmount = money(Math.min(rehabLimit, totalLoan));
-    return {
-      acquisitionLoanAmount: money(totalLoan - rehabLoanAmount),
-      rehabLoanAmount,
-    };
-  }
-
   if (
     purpose === "purchase" &&
-    params.purchasePrice !== undefined &&
-    params.useTier12PurchaseWaterfall
+    params.purchaseAdvanceRule &&
+    params.purchaseAdvanceRule.rehabAdvancePct !== 1
   ) {
-    return tier12PurchaseWaterfall(
-      totalLoan,
-      params.purchasePrice,
-      rehabBudget,
-    );
+    return undefined;
   }
 
-  if (purpose === "purchase" && params.purchasePrice !== undefined) {
-    const denom = params.purchasePrice + rehabBudget;
-    if (!(denom > 0)) {
-      return {
-        acquisitionLoanAmount: money(totalLoan),
-        rehabLoanAmount: 0,
-      };
-    }
-    const rehabLoanAmount = money(totalLoan * (rehabBudget / denom));
-    return {
-      acquisitionLoanAmount: money(totalLoan - rehabLoanAmount),
-      rehabLoanAmount,
-    };
-  }
-
-  if (purpose === "refinance") {
-    const rehabLoanAmount = money(Math.min(rehabBudget, totalLoan));
-    return {
-      acquisitionLoanAmount: money(totalLoan - rehabLoanAmount),
-      rehabLoanAmount,
-    };
+  const rehabLoanAmount = money(rehabBudget);
+  if (money(totalLoan) < rehabLoanAmount) {
+    return undefined;
   }
 
   return {
-    acquisitionLoanAmount: money(totalLoan),
-    rehabLoanAmount: 0,
+    acquisitionLoanAmount: money(money(totalLoan) - rehabLoanAmount),
+    rehabLoanAmount,
   };
 }
 
@@ -200,10 +142,6 @@ export function applyLoanStructuring(
 
   const { deal } = req;
   const rehabBudget = deal.rehabBudget ?? 0;
-  const tier12Waterfall =
-    deal.purpose === "purchase" &&
-    deal.purchasePrice !== undefined &&
-    isBorrowerTier1Or2(req.borrower?.experienceTier);
   const split = splitAcquisitionRehabLoan({
     totalLoan: amt,
     purpose: deal.purpose,
@@ -211,10 +149,21 @@ export function applyLoanStructuring(
     payoffAmount: deal.payoffAmount,
     rehabBudget,
     borrowingRehabFunds: parsed.borrowingRehabFunds,
-    useTier12PurchaseWaterfall: tier12Waterfall,
-    // Existing tier 1/2 allocation remains unchanged.
-    purchaseAdvanceRule: tier12Waterfall ? undefined : purchaseAdvanceRule,
+    purchaseAdvanceRule,
   });
+
+  // The analysis path emits a review flag before reaching this branch. Keep the
+  // allocator safe for other callers too: never expose an infeasible partial loan.
+  if (!split) {
+    return {
+      ...out,
+      amount: undefined,
+      ltv: undefined,
+      ltcPercent: undefined,
+      acquisitionLoanAmount: undefined,
+      rehabLoanAmount: undefined,
+    };
+  }
 
   return {
     ...out,

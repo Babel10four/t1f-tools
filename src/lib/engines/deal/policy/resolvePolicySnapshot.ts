@@ -37,6 +37,7 @@ async function resolveDealAnalyzePolicyInner(): Promise<DealAnalyzePolicySnapsho
     const validated = validateRulePayload(
       "calculator_assumptions",
       rawPayload,
+      "published_read",
     );
     if (validated.ok && "assumptions" in validated.payload) {
       calculator = parseCalculatorAssumptionsRecord(

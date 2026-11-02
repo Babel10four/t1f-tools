@@ -82,7 +82,7 @@ export function buildDealAnalyzeRisks(
       code: "REFINANCE_REHAB_HOLDBACK_SHORTFALL",
       severity: "high",
       title: "Full refinance rehab holdback cannot be funded",
-      detail: "The requested amount or 70% ARV cap is below the complete financed rehab budget. Loan sizing and cash-to-close amounts are withheld rather than silently reducing the rehab holdback.",
+      detail: "The requested amount or policy cap is below the complete financed rehab budget. Loan sizing and cash-to-close amounts are withheld rather than silently reducing the rehab holdback.",
     });
   }
 

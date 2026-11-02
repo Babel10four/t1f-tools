@@ -33,6 +33,8 @@ export function purchaseRequestedLoanSuggestedString(
   const rule = resolvePurchaseTierRule(calculator, fields.experienceTier);
   if (!rule) return null;
   const rehab = parseNonNegativeMoney(fields.rehabBudget);
+  if (rule.rehabAdvancePct !== 0 && rule.rehabAdvancePct !== 1) return null;
+  if (fields.borrowingRehabFunds === "yes" && rehab > 0 && rule.rehabAdvancePct !== 1) return null;
   const rehabPart =
     fields.borrowingRehabFunds === "yes" ? rule.rehabAdvancePct * rehab : 0;
   const acquisitionPart = rule.initialAdvancePct * purchasePrice;
@@ -41,6 +43,7 @@ export function purchaseRequestedLoanSuggestedString(
     acquisitionPart + rehabPart,
     arv === null ? Number.POSITIVE_INFINITY : rule.maxArvLtvPct * arv,
   );
+  if (Math.round(amount * 100) < Math.round(rehabPart * 100)) return null;
   return String(Math.round((amount + Number.EPSILON) * 100) / 100);
 }
 
@@ -51,6 +54,15 @@ export function purchaseRequestedLoanSuggestionDescription(
   const rule = resolvePurchaseTierRule(calculator, fields.experienceTier);
   if (!rule) {
     return "No automatic suggestion is available without a configured experience tier. Enter a requested amount or leave blank for analysis; no current-policy amount is assumed.";
+  }
+  if ((rule.rehabAdvancePct !== 0 && rule.rehabAdvancePct !== 1) ||
+    (fields.borrowingRehabFunds === "yes" && parseNonNegativeMoney(fields.rehabBudget) > 0 && rule.rehabAdvancePct !== 1)) {
+    return "No automatic suggestion is available: this tier's configured rehab rule needs review. Rehab funding must be 0% or 100%; partial funding is not permitted.";
+  }
+  const arv = parsePurchasePricePositive(fields.arv);
+  if (fields.borrowingRehabFunds === "yes" && arv !== null &&
+    Math.round(rule.maxArvLtvPct * arv * 100) < Math.round(parseNonNegativeMoney(fields.rehabBudget) * 100)) {
+    return "No automatic suggestion is available: the ARV cap cannot cover the full rehab budget. Review the inputs or select 0% rehab funding; partial funding is not permitted.";
   }
   const rehab = fields.borrowingRehabFunds === "yes"
     ? ` plus ${rule.rehabAdvancePct * 100}% of rehab budget`

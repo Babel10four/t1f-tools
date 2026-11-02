@@ -100,12 +100,26 @@ describe("validateRulePayload", () => {
     }
   });
 
+  it.each([0, 1])("allows binary rehab policy value %s", (rehabAdvancePct) => {
+    expect(validateRulePayload("calculator_assumptions", {
+      ...validCalc,
+      purchaseTierRules: { "4": { initialAdvancePct: 0.75, rehabAdvancePct, maxArvLtvPct: 0.7 } },
+    }).ok).toBe(true);
+  });
+
+  it("preserves a historical fractional rule only in explicit published-read context", () => {
+    const raw = { ...validCalc, purchaseTierRules: { "4": { initialAdvancePct: 0.65, rehabAdvancePct: 0.75, maxArvLtvPct: 0.6 } } };
+    expect(validateRulePayload("calculator_assumptions", raw).ok).toBe(false);
+    expect(validateRulePayload("calculator_assumptions", raw, "published_read").ok).toBe(true);
+  });
+
   it.each([
     null,
     [],
     { "Tier 3": { initialAdvancePct: 0.85, rehabAdvancePct: 1, maxArvLtvPct: 0.75 } },
     { "3": { initialAdvancePct: 85, rehabAdvancePct: 1, maxArvLtvPct: 0.75 } },
     { "3": { initialAdvancePct: 0.85, rehabAdvancePct: -1, maxArvLtvPct: 0.75 } },
+    { "4": { initialAdvancePct: 0.75, rehabAdvancePct: 0.75, maxArvLtvPct: 0.7 } },
     { "3": { initialAdvancePct: 0.85, rehabAdvancePct: 1 } },
     { "3": { initialAdvancePct: 0.85, rehabAdvancePct: 1, maxArvLtvPct: 0 } },
     { "3": { initialAdvancePct: 0.85, rehabAdvancePct: 1, maxArvLtvPct: 0.75, typo: 1 } },

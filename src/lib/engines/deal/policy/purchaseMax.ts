@@ -32,6 +32,18 @@ function approxEqualCents(a: number, b: number): boolean {
   return Math.abs(a - b) <= 0.01;
 }
 
+/** Reject stale partial-rehab rules rather than silently changing published policy. */
+export function hasUnsupportedPurchaseRehabRule(
+  req: DealAnalyzeRequestV1,
+  caps: PurchaseCaps,
+): boolean {
+  const rule = resolvePurchaseTierRule(caps, req.borrower?.experienceTier);
+  if (!rule) return false;
+  if (rule.rehabAdvancePct !== 0 && rule.rehabAdvancePct !== 1) return true;
+  return (req.deal.rehabBudget ?? 0) > 0 &&
+    req.assumptions?.borrowingRehabFunds !== false && rule.rehabAdvancePct !== 1;
+}
+
 /**
  * Supported purchase policy breakdown (TICKET-002 / TICKET-002A).
  * `ltcCap` equals the cost-basis (LTC) cap leg — same numeric source as `costBasisCap`.
@@ -72,7 +84,8 @@ export function purchasePolicyBreakdown(
 
   const tier12 = isBorrowerTier1Or2(req.borrower?.experienceTier);
   const advanceRule = resolvePurchaseTierRule(caps, req.borrower?.experienceTier);
-  if (isPurchaseTierPolicyMissing(caps, req.borrower?.experienceTier)) {
+  if (isPurchaseTierPolicyMissing(caps, req.borrower?.experienceTier) ||
+    hasUnsupportedPurchaseRehabRule(req, caps)) {
     return undefined;
   }
   if (advanceRule) {

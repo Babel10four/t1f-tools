@@ -89,6 +89,10 @@ function isFiniteNumber(v: unknown): v is number {
 export function validateRulePayload(
   ruleType: RuleType,
   raw: unknown,
+  /** Reading only: preserve historical partial rules so analysis can withhold that
+   * tier instead of discarding stricter published caps for an embedded fallback.
+   * Publication and editing must use the strict default. */
+  context: "publication" | "published_read" = "publication",
 ):
   | { ok: true; payload: ValidatedPayload }
   | { ok: false; error: string } {
@@ -103,7 +107,7 @@ export function validateRulePayload(
     case "rates":
       return validateRates(raw);
     case "calculator_assumptions":
-      return validateCalculator(raw);
+      return validateCalculator(raw, context);
     case "rural_rules":
       return validateRural(raw);
     default: {
@@ -183,6 +187,7 @@ function validateRates(
 
 function validateCalculator(
   raw: Record<string, unknown>,
+  context: "publication" | "published_read",
 ):
   | { ok: true; payload: CalculatorAssumptionsPayload }
   | { ok: false; error: string } {
@@ -215,6 +220,9 @@ function validateCalculator(
           (field === "rehabAdvancePct" ? value < 0 : value <= 0)) {
           return { ok: false, error: `purchaseTierRules.${tier}.${field} must be a valid 0–1 fraction` };
         }
+      }
+      if (context !== "published_read" && rule.rehabAdvancePct !== 0 && rule.rehabAdvancePct !== 1) {
+        return { ok: false, error: `purchaseTierRules.${tier}.rehabAdvancePct must be 0 or 1; partial rehab funding is not permitted` };
       }
     }
   }

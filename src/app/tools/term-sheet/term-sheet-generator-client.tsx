@@ -344,7 +344,7 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
                     checked={fields.borrowingRehabFunds === "yes"}
                     onChange={() => onBorrowingRehabChange("yes")}
                   />
-                  Yes
+                  Yes — 100% of rehab
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 text-sm">
                   <input
@@ -354,9 +354,15 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
                     checked={fields.borrowingRehabFunds === "no"}
                     onChange={() => onBorrowingRehabChange("no")}
                   />
-                  No
+                  No — 0% of rehab
                 </label>
               </div>
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                Rehab funding is all or none. When funding rehab, the full budget
+                is reserved first. If the ARV cap limits the loan, purchase funds
+                decrease instead. A loan that cannot cover the full rehab budget
+                cannot be quoted with rehab funding.
+              </p>
             </div>
             <label className="flex flex-col gap-1 text-sm sm:col-span-2">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -419,7 +425,7 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-zinc-800 dark:text-zinc-200">
                 Experience tier{" "}
-                <span className="font-normal text-zinc-500">(1, 2, or 3)</span>
+                <span className="font-normal text-zinc-500">(1, 2, 3, or 4)</span>
               </span>
               <input
                 name="experienceTier"
@@ -556,7 +562,7 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
                     checked={fields.borrowingRehabFunds === "yes"}
                     onChange={() => onBorrowingRehabChange("yes")}
                   />
-                  Yes
+                  Yes — 100% of rehab
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 text-sm">
                   <input
@@ -566,7 +572,7 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
                     checked={fields.borrowingRehabFunds === "no"}
                     onChange={() => onBorrowingRehabChange("no")}
                   />
-                  No
+                  No — 0% of rehab
                 </label>
               </div>
             </div>
@@ -584,8 +590,10 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
                 className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
               />
               <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                When taking rehab funds, this amount is reserved as a holdback within
-                the total loan. The remaining loan funds are available toward payoff.
+                Rehab funding is all or none. When taking rehab funds, the full
+                budget is reserved as a holdback within the total loan. The remaining
+                loan funds are available toward payoff. A loan that cannot cover
+                the full rehab budget cannot be quoted with rehab funding.
               </span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
