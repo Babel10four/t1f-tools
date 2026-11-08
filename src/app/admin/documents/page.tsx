@@ -22,14 +22,14 @@ export default async function AdminDocumentsPage() {
         : "Database unavailable. Set DATABASE_URL and apply drizzle/0001_documents.sql (see README).";
   }
 
-  if (errorMessage) {
+  if (errorMessage || !initial) {
     return (
       <div className="flex flex-col gap-4" data-testid="admin-documents">
         <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           Documents
         </h1>
         <p className="text-sm text-red-700 dark:text-red-300" role="alert">
-          {errorMessage}
+          {errorMessage ?? "Documents unavailable."}
         </p>
       </div>
     );
