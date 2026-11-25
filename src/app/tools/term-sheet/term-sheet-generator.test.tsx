@@ -260,6 +260,8 @@ describe("TermSheetGeneratorClient", () => {
 
   function fillSyntheticSeasonedRefinance() {
     const form = within(screen.getByTestId("ts-form"));
+    fireEvent.click(form.getByTestId("ts-refi-total-mode"));
+    fireEvent.click(form.getByText("Pricing and fees", { selector: "summary" }));
     for (const [testId, value] of Object.entries({
       "ts-refi-payoff": "700000",
       "ts-refi-requested": "900000",
@@ -315,21 +317,16 @@ describe("TermSheetGeneratorClient", () => {
     ["ts-refi-arv", ""],
     ["ts-refi-rehab", "0"],
     ["tier", "2"],
-    ["borrow", "no"],
   ])("blocks selected seasoned refinance with invalid %s without sending a fallback request", async (field, value) => {
     const user = userEvent.setup();
     render(<TermSheetGeneratorClient />);
     await user.click(screen.getByTestId("ts-flow-refinance"));
     fillSyntheticSeasonedRefinance();
     await user.click(screen.getByTestId("ts-refi-seasoned-scenario"));
-    if (field === "borrow") {
-      await user.click(screen.getByTestId("ts-refi-borrowing-rehab-no"));
-    } else {
-      const input = field === "tier"
-        ? within(screen.getByTestId("ts-form")).getByRole("textbox", { name: /Experience tier/ })
-        : screen.getByTestId(field);
-      fireEvent.change(input, { target: { value } });
-    }
+    const input = field === "tier"
+      ? within(screen.getByTestId("ts-form")).getByRole("textbox", { name: /Experience tier/ })
+      : screen.getByTestId(field);
+    fireEvent.change(input, { target: { value } });
     await user.click(screen.getByTestId("ts-generate-button"));
     expect(fetch).not.toHaveBeenCalled();
     expect(screen.getByRole("status")).toHaveTextContent("No fallback calculation has been run");
@@ -385,6 +382,8 @@ describe("TermSheetGeneratorClient", () => {
     const form = screen.getByTestId("ts-form");
     await user.click(screen.getByTestId("ts-flow-refinance"));
     await user.type(within(form).getByTestId("ts-refi-payoff"), "978500");
+    await user.click(within(form).getByTestId("ts-refi-total-mode"));
+    await user.click(within(form).getByText("Pricing and fees", { selector: "summary" }));
     await user.type(within(form).getByTestId("ts-refi-requested"), "1027500");
     await user.type(within(form).getByTestId("ts-refi-rehab"), "150000");
     await user.type(within(form).getByTestId("ts-refi-asis"), "1400000");
@@ -417,8 +416,33 @@ describe("TermSheetGeneratorClient", () => {
     await user.type(within(form).getByTestId("ts-refi-payoff"), "978500");
     await user.type(within(form).getByTestId("ts-refi-rehab"), "-150000");
     await user.click(screen.getByTestId("ts-generate-button"));
-    expect(screen.getByText("Rehab budget must be a non-negative number.")).toBeInTheDocument();
+    expect(within(form).getByTestId("ts-refi-rehab")).toHaveAccessibleDescription("Rehab budget must be a non-negative number.");
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("only exports the latest refinance inputs and defaults the document address from the deal", async () => {
+    render(<TermSheetGeneratorClient />);
+    fireEvent.click(screen.getByTestId("ts-flow-refinance"));
+    fireEvent.change(screen.getByTestId("ts-collateral-address"), { target: { value: "123 Example St" } });
+    fireEvent.change(screen.getByTestId("ts-refi-payoff"), { target: { value: "500000" } });
+    fireEvent.click(screen.getByTestId("ts-generate-button"));
+    let preview = within(await screen.findByTestId("ts-preview"));
+    expect(preview.getByText("123 Example St")).toBeInTheDocument();
+    expect(preview.getByTestId("ts-download-pdf")).toBeEnabled();
+    fireEvent.click(screen.getByText("Document details", { selector: "summary" }));
+    fireEvent.change(screen.getByTestId("ts-meta-property"), { target: { value: "Example Portfolio" } });
+    expect(preview.getByText("Example Portfolio")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId("ts-refi-payoff"), { target: { value: "510000" } });
+    expect(screen.queryByTestId("ts-download-pdf")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("ts-copy-summary")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Update preview" }));
+    preview = within(await screen.findByTestId("ts-preview"));
+    expect(preview.getByTestId("ts-download-pdf")).toBeEnabled();
+    expect(preview.getByText("Example Portfolio")).toBeInTheDocument();
+    expect(JSON.parse(vi.mocked(fetch).mock.calls.at(-1)![1]!.body as string).deal.payoffAmount).toBe(510000);
+    fireEvent.change(screen.getByTestId("ts-closing-date"), { target: { value: "2030-03-15" } });
+    expect(screen.queryByTestId("ts-export-bar")).not.toBeInTheDocument();
   });
 
   it("metadata appears in preview and is excluded from request body", async () => {

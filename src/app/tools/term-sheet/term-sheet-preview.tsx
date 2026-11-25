@@ -16,6 +16,7 @@ import {
 } from "../pricing-calculator/pricing-display";
 import { computeInitialLtcPercent, initialLtcDescription } from "@/lib/engines/deal/policy/initial-ltc-display";
 import { TermSheetExportBar } from "./term-sheet-export-bar";
+import { RefinanceResultSummary } from "./refinance-result-summary";
 import {
   buildTermSheetCtcEstimateRows,
   buildTermSheetCtcInputRows,
@@ -122,6 +123,10 @@ export function TermSheetPreview({
           ))}
         />
       </section>
+
+      {loan.purpose === "refinance" ? (
+        <RefinanceResultSummary response={response} asOfDate={asOfDate} />
+      ) : null}
 
       <TermSheetExportBar
         metadata={metadata}

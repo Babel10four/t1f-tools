@@ -24,6 +24,7 @@ import {
 import { useDealFormSession } from "../shared/use-deal-form-session";
 import { todayLocalYmd } from "../shared/closing-date";
 import { PricingComparisonPanel } from "./pricing-comparison-panel";
+import { RefinanceDealFields, normalizedRefinanceFields, validateRefinanceFields } from "./refinance-deal-fields";
 import { TermSheetPreview } from "./term-sheet-preview";
 import type { TermSheetLocalMetadata } from "./term-sheet-types";
 
@@ -34,6 +35,14 @@ const EMPTY_METADATA: TermSheetLocalMetadata = {
   preparedBy: "",
   preparedDate: "",
 };
+
+const documentFields = [
+  { key: "counterpartyLabel", label: "Borrower or borrowing entity", testId: "ts-meta-counterparty" },
+  { key: "preparedBy", label: "Prepared by", testId: "ts-meta-prepared-by" },
+  { key: "preparedDate", label: "Prepared date", testId: "ts-meta-prepared-date" },
+  { key: "internalDealLabel", label: "Deal label on the sheet", testId: "ts-meta-internal-deal" },
+  { key: "propertyLabel", label: "Property address override", testId: "ts-meta-property" },
+] as const;
 
 type DealAnalyzeErrorBody = {
   error?: string;
@@ -49,17 +58,23 @@ type UiPhase =
   | "error_4xx"
   | "error_5xx";
 
+function focusGeneratedReview(section: HTMLElement | null) {
+  section?.focus();
+}
+
 export function TermSheetGeneratorClient({ calculator }: { calculator?: PurchaseSuggestionPolicy }) {
-  const { flow, setFlow, fields, setFields, clearSession } = useDealFormSession();
+  const { flow, setFlow, fields, setFields, resumedDraft, clearSession } = useDealFormSession();
   const [metadata, setMetadata] = useState<TermSheetLocalMetadata>(() => ({
     ...EMPTY_METADATA,
     preparedDate: todayLocalYmd(),
   }));
   const [phase, setPhase] = useState<UiPhase>("idle");
+  const [dealNumber, setDealNumber] = useState(0);
   const [clientHint, setClientHint] = useState<string | null>(null);
   const [successPayload, setSuccessPayload] = useState<{
     response: DealAnalyzeResponseV1;
     request: DealAnalyzeRequestV1;
+    fields: LoanAssistantFields;
   } | null>(null);
   const [error4xx, setError4xx] = useState<DealAnalyzeErrorBody | null>(null);
   const [error5xx, setError5xx] = useState<string | null>(null);
@@ -126,7 +141,6 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
     (key: keyof TermSheetLocalMetadata) =>
     (e: ChangeEvent<HTMLInputElement>) => {
       setMetadata((m) => ({ ...m, [key]: e.target.value }));
-      bumpToEditing();
     };
 
   const onFlowChange = (next: LoanAssistantFlow) => {
@@ -148,7 +162,15 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
   };
 
   const runAnalyze = useCallback(async () => {
-    const built = buildDealAnalyzeRequest(flow, fields);
+    if (flow === "refinance") {
+      const issue = validateRefinanceFields(fields);
+      if (issue) {
+        setClientHint(issue);
+        setPhase("editing");
+        return;
+      }
+    }
+    const built = buildDealAnalyzeRequest(flow, flow === "refinance" ? normalizedRefinanceFields(fields) : fields);
     if (!built.ok) {
       setClientHint(built.clientHint);
       setPhase("editing");
@@ -182,6 +204,7 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
         setSuccessPayload({
           response: parsed as DealAnalyzeResponseV1,
           request: built.request,
+          fields,
         });
         setPhase("success");
         return;
@@ -205,30 +228,62 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
     }
   }, [flow, fields]);
 
-  const handleClearSavedDealInputs = useCallback(() => {
+  function handleClearSavedDealInputs() {
     clearSession();
+    setDealNumber((previous) => previous + 1);
+    lastSuggestedPurchaseRequestedRef.current = null;
     setMetadata({ ...EMPTY_METADATA, preparedDate: todayLocalYmd() });
     setSuccessPayload(null);
     setError4xx(null);
     setError5xx(null);
     setClientHint(null);
     setPhase("idle");
-  }, [clearSession]);
+  }
 
-  const showPreview = Boolean(successPayload && phase !== "submitting");
+  // The export must always describe the inputs that produced the engine response,
+  // including the closing date used for the per-diem calculation.
+  const previewIsCurrent = successPayload !== null
+    && successPayload.request.deal.purpose === flow
+    && (Object.keys(fields) as (keyof LoanAssistantFields)[]).every(
+      (key) => (fields[key] ?? "") === (successPayload.fields[key] ?? ""),
+    );
+  const needsUpdate = successPayload !== null && !previewIsCurrent;
+  const documentDetails = (
+    <details className="rounded-xl border border-zinc-200 bg-white px-4 py-3" open={flow === "purchase" ? true : undefined}>
+      <summary className="cursor-pointer text-sm font-semibold">Document details</summary>
+      <fieldset disabled={disabled} className="mt-4 grid gap-4 sm:grid-cols-2" data-testid="ts-metadata-panel">
+        <legend className="sr-only">Details on the term sheet</legend>
+        {documentFields.map(({ key, label, testId }) => (
+          <label key={key} className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">{label}</span>
+            <input
+              className="rounded-lg border border-zinc-300 px-3 py-2"
+              type={key === "preparedDate" ? "date" : "text"}
+              data-testid={testId}
+              value={metadata[key]}
+              onChange={onMeta(key)}
+              placeholder={key === "propertyLabel" ? fields.collateralPropertyAddress || "Use subject property address" : undefined}
+            />
+          </label>
+        ))}
+      </fieldset>
+    </details>
+  );
 
   return (
     <div className="flex flex-col gap-8">
       <ToolPageHeader
         href="/tools/term-sheet"
+        collapseOverview={flow === "refinance"}
         actions={
           <Button
             variant="secondary"
             size="sm"
             data-testid="ts-clear-deal-session"
+            disabled={disabled}
             onClick={handleClearSavedDealInputs}
           >
-            Clear saved deal inputs
+            Start new deal
           </Button>
         }
         disclosure={
@@ -240,8 +295,9 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
               ))}
             />
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Deal numbers (purchase/refi fields below) are saved in this browser tab for the Cash
-              to Close Calculator and other tools until you clear them or close the tab.
+              {resumedDraft
+                ? `Resumed ${resumedDraft.flow} draft${resumedDraft.address ? ` for ${resumedDraft.address}` : ""} from this tab.`
+                : "Deal inputs are saved in this tab until you start a new deal or close the tab."}
             </p>
           </div>
         }
@@ -257,7 +313,7 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
       >
         <fieldset disabled={disabled} className="flex flex-col gap-4">
           <legend className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            Flow
+            What is the borrower doing?
           </legend>
           <div className="flex flex-wrap gap-3">
             <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -268,7 +324,7 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
                 checked={flow === "purchase"}
                 onChange={() => onFlowChange("purchase")}
               />
-              Purchase
+              Buying a property
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-sm">
               <input
@@ -278,7 +334,7 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
                 checked={flow === "refinance"}
                 onChange={() => onFlowChange("refinance")}
               />
-              Refinance
+              Refinancing a property they own
             </label>
           </div>
         </fieldset>
@@ -483,332 +539,38 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
             </label>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-zinc-200 p-3 sm:col-span-2">
-              <label className="flex cursor-pointer items-start gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  name="refinanceScenario"
-                  data-testid="ts-refi-seasoned-scenario"
-                  aria-describedby="ts-refi-seasoned-help"
-                  checked={fields.refinanceScenario === "refinance_seasoned"}
-                  disabled={disabled}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setFields((f) => ({
-                      ...f,
-                      refinanceScenario: checked ? "refinance_seasoned" : "",
-                    }));
-                    setClientHint(null);
-                    bumpToEditing();
-                  }}
-                />
-                Seasoned refinance with rehab (Tier 0/1)
-              </label>
-              <p id="ts-refi-seasoned-help" className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">
-                Select only after confirming the property has been held for more than
-                180 days. Applies a 70% ARV cap to the total loan, including the rehab
-                holdback. Requires positive rehab and ARV, Taking rehab funds = Yes,
-                and Tier 0 or Tier 1. Leave unchecked for generic refinance; this is
-                never selected automatically. Subject to underwriting verification.
-              </p>
-            </div>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Payoff amount
-              </span>
-              <input
-                name="payoffAmount"
-                data-testid="ts-refi-payoff"
-                value={fields.payoffAmount}
-                onChange={onField("payoffAmount")}
-                inputMode="decimal"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                Existing balance to be paid off, before applying the new loan funds.
-              </span>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Requested loan amount
-              </span>
-              <input
-                name="requestedLoanAmount"
-                data-testid="ts-refi-requested"
-                value={fields.requestedLoanAmount}
-                onChange={onField("requestedLoanAmount")}
-                inputMode="decimal"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                Total loan commitment, including the financed rehab holdback.
-              </span>
-            </label>
-            <p className="text-xs text-zinc-500 sm:col-span-2">
-              At least one of payoff or requested amount is required (positive
-              numbers).
-            </p>
-            <div className="sm:col-span-2">
-              <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                Taking rehab funds?
-              </p>
-              <div className="mt-2 flex flex-wrap gap-4">
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="borrowingRehabFunds-refi"
-                    data-testid="ts-refi-borrowing-rehab-yes"
-                    checked={fields.borrowingRehabFunds === "yes"}
-                    onChange={() => onBorrowingRehabChange("yes")}
-                  />
-                  Yes — 100% of rehab
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="borrowingRehabFunds-refi"
-                    data-testid="ts-refi-borrowing-rehab-no"
-                    checked={fields.borrowingRehabFunds === "no"}
-                    onChange={() => onBorrowingRehabChange("no")}
-                  />
-                  No — 0% of rehab
-                </label>
-              </div>
-            </div>
-            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Rehab budget
-              </span>
-              <input
-                name="rehabBudget"
-                data-testid="ts-refi-rehab"
-                value={fields.rehabBudget}
-                onChange={onField("rehabBudget")}
-                placeholder="0"
-                inputMode="decimal"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                Rehab funding is all or none. When taking rehab funds, the full
-                budget is reserved as a holdback within the total loan. The remaining
-                loan funds are available toward payoff. A loan that cannot cover
-                the full rehab budget cannot be quoted with rehab funding.
-              </span>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                As-is value{" "}
-                <span className="font-normal text-zinc-500">(recommended)</span>
-              </span>
-              <input
-                name="asIsValue"
-                data-testid="ts-refi-asis"
-                value={fields.asIsValue}
-                onChange={onField("asIsValue")}
-                inputMode="decimal"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                ARV{" "}
-                <span className="font-normal text-zinc-500">
-                  {fields.refinanceScenario === "refinance_seasoned" ? "(required)" : "(optional)"}
-                </span>
-              </span>
-              <input
-                name="arv"
-                data-testid="ts-refi-arv"
-                value={fields.arv}
-                onChange={onField("arv")}
-                inputMode="decimal"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Term (months){" "}
-                <span className="font-normal text-zinc-500">(typical 6-18)</span>
-              </span>
-              <input
-                name="termMonths"
-                value={fields.termMonths}
-                onChange={onField("termMonths")}
-                inputMode="numeric"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                FICO
-              </span>
-              <input
-                name="fico"
-                value={fields.fico}
-                onChange={onField("fico")}
-                inputMode="numeric"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                Optional — not required for an indicative term sheet.
-              </span>
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Experience tier{" "}
-                <span className="font-normal text-zinc-500">
-                  {fields.refinanceScenario === "refinance_seasoned" ? "(0 or 1 required)" : "(0, 1, 2, or 3)"}
-                </span>
-              </span>
-              <input
-                name="experienceTier"
-                value={fields.experienceTier}
-                onChange={onField("experienceTier")}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                {fields.refinanceScenario === "refinance_seasoned"
-                  ? "Tier 0 or Tier 1 is required for the selected seasoned refinance scenario."
-                  : "Optional — not required for an indicative term sheet."}
-              </span>
-            </label>
-            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Note rate (%) <span className="font-normal text-zinc-500">(optional)</span>
-              </span>
-              <input
-                name="noteRatePercent"
-                data-testid="ts-refi-note-rate"
-                value={fields.noteRatePercent}
-                onChange={onField("noteRatePercent")}
-                placeholder="e.g. 9.125"
-                inputMode="decimal"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Lender points (%){" "}
-                <span className="font-normal text-zinc-500">(optional)</span>
-              </span>
-              <input
-                name="originationPointsPercent"
-                data-testid="ts-refi-origination-points"
-                value={fields.originationPointsPercent}
-                onChange={onField("originationPointsPercent")}
-                placeholder="e.g. 2"
-                inputMode="decimal"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Lender / loan fee ($){" "}
-                <span className="font-normal text-zinc-500">(optional)</span>
-              </span>
-              <input
-                name="originationFlatFee"
-                data-testid="ts-refi-origination-flat-fee"
-                value={fields.originationFlatFee}
-                onChange={onField("originationFlatFee")}
-                placeholder="e.g. 1500"
-                inputMode="decimal"
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-          </div>
+          <RefinanceDealFields
+            fields={fields}
+            disabled={disabled}
+            onChange={(patch) => {
+              setFields((previous) => ({ ...previous, ...patch }));
+              setClientHint(null);
+              bumpToEditing();
+            }}
+          />
         )}
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-zinc-800 dark:text-zinc-200">
-            Closing date
-          </span>
-          <input
-            name="closingDate"
-            data-testid="ts-closing-date"
-            type="date"
-            value={fields.closingDate}
-            onChange={onField("closingDate")}
-            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-          />
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            Drives the per-diem and partial-month interest in the cash-to-close estimate.
-            Defaults to today; shared with the Cash to Close calculator for this tab.
-          </span>
-        </label>
+        {flow === "purchase" && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-zinc-800 dark:text-zinc-200">
+              Closing date
+            </span>
+            <input
+              name="closingDate"
+              data-testid="ts-closing-date"
+              type="date"
+              value={fields.closingDate}
+              onChange={onField("closingDate")}
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              Drives the per-diem and partial-month interest in the cash-to-close estimate.
+              Defaults to today; shared with the Cash to Close calculator for this tab.
+            </span>
+          </label>
+        )}
 
-        <fieldset
-          disabled={disabled}
-          className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
-          data-testid="ts-metadata-panel"
-        >
-          <legend className="px-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
-            Preview labels (not sent to analyze)
-          </legend>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            These fields appear only in the HTML preview header. They are not sent with the
-            deal analysis request.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Internal deal label
-              </span>
-              <input
-                data-testid="ts-meta-internal-deal"
-                value={metadata.internalDealLabel}
-                onChange={onMeta("internalDealLabel")}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Counterparty
-              </span>
-              <input
-                data-testid="ts-meta-counterparty"
-                value={metadata.counterpartyLabel}
-                onChange={onMeta("counterpartyLabel")}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Property Address
-              </span>
-              <input
-                data-testid="ts-meta-property"
-                value={metadata.propertyLabel}
-                onChange={onMeta("propertyLabel")}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Prepared by
-              </span>
-              <input
-                data-testid="ts-meta-prepared-by"
-                value={metadata.preparedBy}
-                onChange={onMeta("preparedBy")}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                Prepared date
-              </span>
-              <input
-                data-testid="ts-meta-prepared-date"
-                type="date"
-                value={metadata.preparedDate}
-                onChange={onMeta("preparedDate")}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 shadow-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-              />
-            </label>
-          </div>
-        </fieldset>
+        {flow === "purchase" ? documentDetails : null}
 
         {clientHint ? (
           <p className="text-sm text-amber-800 dark:text-amber-200" role="status">
@@ -818,10 +580,10 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
 
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" data-testid="ts-generate-button" disabled={disabled}>
-            {phase === "submitting" ? "Generating preview…" : "Generate preview"}
+            {phase === "submitting" ? "Generating preview…" : needsUpdate ? "Update preview" : "Generate preview"}
           </Button>
-          {phase === "editing" ? (
-            <span className="text-xs text-zinc-500">Editing</span>
+          {needsUpdate ? (
+            <span className="text-sm font-medium text-amber-800" role="status">Terms changed. Update the preview to copy or download the new figures.</span>
           ) : null}
         </div>
       </form>
@@ -873,16 +635,27 @@ export function TermSheetGeneratorClient({ calculator }: { calculator?: Purchase
         </div>
       ) : null}
 
-      {showPreview && successPayload ? (
-        <TermSheetPreview
-          metadata={metadata}
-          request={successPayload.request}
-          response={successPayload.response}
-          closingDate={fields.closingDate}
-        />
+      {previewIsCurrent && successPayload ? (
+        <section
+          aria-label="Generated term sheet"
+          className="flex scroll-mt-3 flex-col gap-3"
+          tabIndex={-1}
+          ref={focusGeneratedReview}
+        >
+          {flow === "refinance" ? documentDetails : null}
+          <TermSheetPreview
+            metadata={{ ...metadata, propertyLabel: metadata.propertyLabel.trim() || successPayload.fields.collateralPropertyAddress.trim() }}
+            request={successPayload.request}
+            response={successPayload.response}
+            closingDate={successPayload.fields.closingDate}
+          />
+        </section>
       ) : null}
 
-      <PricingComparisonPanel />
+      <details className="rounded-xl border border-zinc-200 bg-white p-4" open={flow === "purchase" ? true : undefined}>
+        <summary className="cursor-pointer text-sm font-semibold">Compare another offer</summary>
+        <div className="mt-4"><PricingComparisonPanel key={dealNumber} /></div>
+      </details>
     </div>
   );
 }

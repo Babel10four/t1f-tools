@@ -44,6 +44,7 @@ type ToolPageHeaderProps = {
   disclosure?: ReactNode;
   /** Optional title override when a page label differs from the registry. */
   title?: string;
+  collapseOverview?: boolean;
   className?: string;
 };
 
@@ -57,6 +58,7 @@ export function ToolPageHeader({
   actions,
   disclosure,
   title,
+  collapseOverview = false,
   className,
 }: ToolPageHeaderProps) {
   const role = useToolRole();
@@ -66,6 +68,8 @@ export function ToolPageHeader({
   const nextLinks = (shape?.next ?? []).filter((link) =>
     hrefVisibleToRole(link.href, role),
   );
+
+  const OverviewContainer = collapseOverview ? "details" : "div";
 
   return (
     <header className={cn("flex flex-col gap-3", className)}>
@@ -89,56 +93,61 @@ export function ToolPageHeader({
       </div>
 
       {shape ? (
-        <dl className="grid gap-px overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--border-subtle)] text-sm shadow-[0_1px_2px_rgba(17,34,24,0.03)] sm:grid-cols-3">
-          <div className="bg-[var(--surface-chrome)] p-4">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              Inputs
-            </dt>
-            <dd className="mt-1.5">
-              <ul className="space-y-1 text-[var(--text-primary)]">
-                {shape.inputs.map((input) => (
-                  <li key={input} className="flex gap-1.5">
-                    <span aria-hidden className="text-[var(--text-muted)]">
-                      •
-                    </span>
-                    <span>{input}</span>
-                  </li>
-                ))}
-              </ul>
-            </dd>
-          </div>
-          <div className="bg-[var(--surface-chrome)] p-4">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              Output
-            </dt>
-            <dd className="mt-1.5 text-[var(--text-primary)]">{shape.output}</dd>
-          </div>
-          <div className="bg-[var(--surface-chrome)] p-4">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              Next
-            </dt>
-            <dd className="mt-1.5">
-              {nextLinks.length > 0 ? (
-                <ul className="space-y-1">
-                  {nextLinks.map((link) => (
-                    <li key={link.href}>
-                      <Link
-                        href={link.href}
-                        className="font-medium text-[var(--brand)] underline-offset-2 hover:underline"
-                      >
-                        {link.label} →
-                      </Link>
+        <OverviewContainer>
+          {collapseOverview ? (
+            <summary className="mb-2 cursor-pointer text-sm text-[var(--text-muted)]">Tool guide and related tools</summary>
+          ) : null}
+          <dl className="grid gap-px overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--border-subtle)] text-sm shadow-[0_1px_2px_rgba(17,34,24,0.03)] sm:grid-cols-3">
+            <div className="bg-[var(--surface-chrome)] p-4">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Inputs
+              </dt>
+              <dd className="mt-1.5">
+                <ul className="space-y-1 text-[var(--text-primary)]">
+                  {shape.inputs.map((input) => (
+                    <li key={input} className="flex gap-1.5">
+                      <span aria-hidden className="text-[var(--text-muted)]">
+                        •
+                      </span>
+                      <span>{input}</span>
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <span className="text-[var(--text-muted)]">
-                  Standalone — no handoff needed.
-                </span>
-              )}
-            </dd>
-          </div>
-        </dl>
+              </dd>
+            </div>
+            <div className="bg-[var(--surface-chrome)] p-4">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Output
+              </dt>
+              <dd className="mt-1.5 text-[var(--text-primary)]">{shape.output}</dd>
+            </div>
+            <div className="bg-[var(--surface-chrome)] p-4">
+              <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Next
+              </dt>
+              <dd className="mt-1.5">
+                {nextLinks.length > 0 ? (
+                  <ul className="space-y-1">
+                    {nextLinks.map((link) => (
+                      <li key={link.href}>
+                        <Link
+                          href={link.href}
+                          className="font-medium text-[var(--brand)] underline-offset-2 hover:underline"
+                        >
+                          {link.label} →
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="text-[var(--text-muted)]">
+                    Standalone — no handoff needed.
+                  </span>
+                )}
+              </dd>
+            </div>
+          </dl>
+        </OverviewContainer>
       ) : null}
 
       {disclosure ? <div>{disclosure}</div> : null}
